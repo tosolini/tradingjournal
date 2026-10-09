@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.8] - 2026-10-09
+
+- DB-backed user accounting (no more `.env` juggling)
+  - `users`: `is_active`, `must_change_password`, `password_changed_at`,
+    `last_login_at`, `created_by_id`; new `app_settings` table
+  - First-login onboarding wizard (password → profile → broker → account)
+    with server-side enforcement until the password is rotated
+  - Public self-registration closed by default (DB toggle + admin UI)
+  - One-time seed admin only on empty DB, forced password change included
+  - Password policy configurable in DB (admin UI in Settings)
+  - Admin users table: status, pending-change badge, last login,
+    enable/disable, protected delete when the user owns data
+  - API errors now carry machine-readable codes to the UI (`ApiError`)
+- Backend 0.1.8 / frontend 0.1.8
+
 ## [0.1.4] - 2026-05-31
 
 - Broker refactoring

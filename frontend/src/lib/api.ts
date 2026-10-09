@@ -151,6 +151,24 @@ export type Broker = {
   exchanges: Exchange[];
 };
 
+function parseXhrError(xhr: XMLHttpRequest): ApiError {
+  const status = xhr.status;
+  const text = xhr.responseText;
+  try {
+    const parsed = JSON.parse(text) as ErrorPayload;
+    if (typeof parsed.detail === "string") {
+      return new ApiError(parsed.detail, status);
+    }
+    if (parsed.detail && typeof parsed.detail === "object") {
+      const message = parsed.detail.message || "API error";
+      return new ApiError(message, status, parsed.detail.code);
+    }
+  } catch {
+    // Keep plain-text fallback when response body is not JSON.
+  }
+  return new ApiError(text || "API error", status);
+}
+
 function xhrRequest<T>(method: string, path: string, body?: string | FormData): Promise<T> {
   return new Promise((resolve, reject) => {
     const token = localStorage.getItem("token");
@@ -170,7 +188,7 @@ function xhrRequest<T>(method: string, path: string, body?: string | FormData): 
         if (!window.location.pathname.startsWith("/login")) {
           window.location.replace("/login");
         }
-        reject(new Error("Unauthorized"));
+        reject(parseXhrError(xhr));
         return;
       }
       if (xhr.status >= 200 && xhr.status < 300) {
@@ -180,7 +198,7 @@ function xhrRequest<T>(method: string, path: string, body?: string | FormData): 
           resolve(xhr.responseText as unknown as T);
         }
       } else {
-        reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+        reject(parseXhrError(xhr));
       }
     };
     xhr.onerror = () => reject(new Error("XHR failed: " + url));
@@ -196,7 +214,7 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export async function login(username_or_email: string, password: string) {
-  return api<{ access_token: string }>("/api/auth/login", {
+  return api<{ access_token: string; must_change_password?: boolean }>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ username_or_email, password }),
   });
@@ -208,6 +226,9 @@ export type User = {
   username: string;
   role: string;
   timezone?: string | null;
+  is_active: boolean;
+  must_change_password: boolean;
+  last_login_at?: string | null;
 };
 
 export type UserUpdate = {
@@ -234,6 +255,7 @@ export type AdminUserCreate = {
   username: string;
   password: string;
   role?: string;
+  must_change_password?: boolean;
 };
 
 export type AdminUserUpdate = {
@@ -241,6 +263,8 @@ export type AdminUserUpdate = {
   username?: string;
   new_password?: string;
   role?: string;
+  is_active?: boolean;
+  must_change_password?: boolean;
 };
 
 export function adminListUsers() {
@@ -257,6 +281,59 @@ export function adminUpdateUser(id: number, payload: AdminUserUpdate) {
 
 export function adminDeleteUser(id: number) {
   return api<void>(`/api/admin/users/${id}`, { method: "DELETE" });
+}
+
+// ── Admin settings (password policy, registration) ──
+export type PasswordPolicy = {
+  min_length: number;
+  max_length: number;
+  require_digit: boolean;
+  require_uppercase: boolean;
+  require_symbol: boolean;
+  reject_common: boolean;
+};
+
+export type AppSettings = {
+  registration_open: boolean;
+  password_policy: PasswordPolicy;
+};
+
+export function adminGetSettings() {
+  return api<AppSettings>("/api/admin/settings");
+}
+
+export function adminUpdateSettings(payload: {
+  registration_open?: boolean;
+  password_policy?: PasswordPolicy;
+}) {
+  return api<AppSettings>("/api/admin/settings", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Brokers / Accounts (used by onboarding wizard) ──
+export function listBrokers() {
+  return api<Broker[]>("/api/brokers");
+}
+
+export function createBroker(payload: {
+  name: string;
+  fee_mode?: "fixed" | "percent";
+  fee_value?: number;
+  fee_currency?: string;
+  capital_gain_mode?: "immediate" | "year_end";
+  capital_gain_rate?: number;
+}) {
+  return api<Broker>("/api/brokers", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function createAccount(payload: {
+  name: string;
+  broker_id?: number | null;
+  base_currency?: string;
+}) {
+  return api<Account>("/api/accounts", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export type Asset = {

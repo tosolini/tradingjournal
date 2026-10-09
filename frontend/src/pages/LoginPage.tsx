@@ -26,10 +26,15 @@ export function LoginPage() {
       setError(null);
       const result = await login(data.username_or_email, data.password);
       localStorage.setItem("token", result.access_token);
-      navigate("/");
+      localStorage.setItem("must_change_password", result.must_change_password ? "1" : "0");
+      navigate(result.must_change_password ? "/onboarding" : "/");
     } catch (err) {
       if (err instanceof ApiError && err.code === "errors.invalid_credentials") {
         setError(t("login.errors.invalid_credentials"));
+        return;
+      }
+      if (err instanceof ApiError && err.code === "errors.password_change_required") {
+        setError(t("login.errors.password_change_required"));
         return;
       }
       setError(t("login.errors.api_connection"));

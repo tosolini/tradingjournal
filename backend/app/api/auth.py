@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_current_user, get_session_user
 from app.i18n import localized_error
 from app.models import User
 from app.schemas import (
@@ -16,6 +18,7 @@ from app.schemas import (
     UserUpdate,
 )
 from app.security import create_access_token, hash_password, verify_password
+from app.services.password_policy import is_registration_open, validate_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -31,7 +34,14 @@ def _merge_preferences(current: dict, updates: dict) -> dict:
 
 
 @router.post("/register", response_model=UserResponse)
-def register(payload: UserCreate, db: Session = Depends(get_db)):
+def register(payload: UserCreate, request: Request, db: Session = Depends(get_db)):
+    if not is_registration_open(db):
+        raise localized_error(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="errors.registration_closed",
+            request=request,
+        )
+    validate_password(payload.password, db, request=request)
     existing = db.execute(
         select(User).where(or_(User.email == payload.email, User.username == payload.username))
     ).scalar_one_or_none()
@@ -43,6 +53,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         username=payload.username,
         hashed_password=hash_password(payload.password),
         role="user",
+        must_change_password=False,
     )
     db.add(user)
     db.commit()
@@ -60,17 +71,22 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
             )
         )
     ).scalar_one_or_none()
-    if not user or not verify_password(payload.password, user.hashed_password):
+    if not user or not user.is_active or not verify_password(payload.password, user.hashed_password):
         raise localized_error(
             status_code=status.HTTP_401_UNAUTHORIZED,
             code="errors.invalid_credentials",
             request=request,
         )
-    return TokenResponse(access_token=create_access_token(user.username))
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+    return TokenResponse(
+        access_token=create_access_token(user.username),
+        must_change_password=user.must_change_password,
+    )
 
 
 @router.get("/me", response_model=UserResponse)
-def me(current_user: User = Depends(get_current_user)):
+def me(current_user: User = Depends(get_session_user)):
     return current_user
 
 
@@ -79,14 +95,17 @@ def update_me(
     payload: UserUpdate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_session_user),
 ):
     if payload.new_password:
         if not payload.current_password:
             raise localized_error(status_code=400, code="errors.current_password_required")
         if not verify_password(payload.current_password, current_user.hashed_password):
             raise localized_error(status_code=400, code="errors.invalid_credentials", request=request)
+        validate_password(payload.new_password, db, request=request)
         current_user.hashed_password = hash_password(payload.new_password)
+        current_user.password_changed_at = datetime.now(timezone.utc)
+        current_user.must_change_password = False
 
     if payload.email and payload.email != current_user.email:
         conflict = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    must_change_password: bool = False
 
 
 class UserCreate(BaseModel):
@@ -22,6 +23,9 @@ class UserResponse(BaseModel):
     username: str
     role: str
     timezone: Optional[str] = None
+    is_active: bool = True
+    must_change_password: bool = False
+    last_login_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -52,6 +56,7 @@ class AdminUserCreate(BaseModel):
     username: str
     password: str = Field(min_length=8)
     role: str = "user"
+    must_change_password: bool = True
 
 
 class AdminUserUpdate(BaseModel):
@@ -59,6 +64,27 @@ class AdminUserUpdate(BaseModel):
     username: Optional[str] = None
     new_password: Optional[str] = Field(default=None, min_length=8)
     role: Optional[str] = None
+    is_active: Optional[bool] = None
+    must_change_password: Optional[bool] = None
+
+
+class PasswordPolicy(BaseModel):
+    min_length: int = Field(default=12, ge=1, le=128)
+    max_length: int = Field(default=128, ge=1, le=1024)
+    require_digit: bool = False
+    require_uppercase: bool = False
+    require_symbol: bool = False
+    reject_common: bool = True
+
+
+class AppSettingsResponse(BaseModel):
+    registration_open: bool
+    password_policy: PasswordPolicy
+
+
+class AppSettingsUpdate(BaseModel):
+    registration_open: Optional[bool] = None
+    password_policy: Optional[PasswordPolicy] = None
 
 
 class AccountCreate(BaseModel):

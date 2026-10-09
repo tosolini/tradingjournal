@@ -86,3 +86,18 @@ msgstr "Cash ledger entry not found"
 
 msgid "errors.invalid_ledger_type"
 msgstr "Entry type must be 'deposit' or 'withdrawal'"
+
+msgid "errors.weak_password"
+msgstr "Password does not meet the security policy"
+
+msgid "errors.registration_closed"
+msgstr "Public registration is disabled, contact an administrator"
+
+msgid "errors.password_change_required"
+msgstr "You must change your password before continuing"
+
+msgid "errors.cannot_deactivate_self"
+msgstr "You cannot deactivate your own account"
+
+msgid "errors.user_has_data"
+msgstr "User still owns data, disable the account instead of deleting it"
