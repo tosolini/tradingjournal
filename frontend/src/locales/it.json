@@ -21,6 +21,10 @@
       "new_trade": "Nuovo Trade",
       "new_note": "Nuova Nota"
     },
+    "search_placeholder": "Cerca azioni, pagine o premi ⌘K...",
+    "search_short": "Cerca (⌘K)",
+    "account_pill": "Conto",
+    "all_accounts": "Tutti i conti",
     "version": "Versione",
     "tosolini_site_aria": "Sito di Walter Tosolini",
     "copyright": "Tutti i diritti riservati."
@@ -283,7 +287,19 @@
     "col_return": "Rendimento",
     "col_pnl": "PnL Netto",
     "all_assets_pnl": "P&L Giornaliero (Tutti gli Asset)",
-    "no_daily_pnl": "Nessuno snapshot giornaliero disponibile."
+    "no_daily_pnl": "Nessuno snapshot giornaliero disponibile.",
+    "advanced_edge_title": "Statistiche Avanzate & Expectancy",
+    "expectancy": "Expectancy (Valore Atteso)",
+    "expectancy_sub": "Rendimento atteso per trade",
+    "payoff_ratio": "Payoff Ratio (W/L)",
+    "payoff_sub": "Rapporto media vincita / media perdita",
+    "max_drawdown": "Max Drawdown",
+    "max_drawdown_sub": "Flessione massima dal picco",
+    "kelly_criterion": "Criterio di Kelly (Edge)",
+    "best_trade": "Miglior Trade",
+    "worst_trade": "Peggior Trade",
+    "no_best_worst": "Nessun trade chiuso disponibile per il confronto.",
+    "hover_trade_count": "{{count}} trade"
   },
   "calendar": {
     "title": "Calendario",

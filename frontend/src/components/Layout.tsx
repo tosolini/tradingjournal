@@ -1,7 +1,10 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { PropsWithChildren, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { TradeCreateModal } from "./TradeCreateModal";
+import { CommandPalette } from "./CommandPalette";
+import { fetchAccounts, getMe } from "../lib/api";
 import packageJson from "../../package.json";
 import bullVectLogo from "../assets/bull_vect.svg";
 import { useTheme } from "../contexts/ThemeContext";
@@ -35,17 +38,24 @@ export function Layout({ children }: PropsWithChildren) {
   const location = useLocation();
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe });
+  const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: fetchAccounts });
 
   // Close mobile drawer on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Close mobile drawer on Escape key
+  // Global keyboard shortcuts (Cmd+K for Command Palette, Esc for drawer)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      } else if (e.key === "Escape") {
         setIsMobileMenuOpen(false);
       }
     };
@@ -174,6 +184,15 @@ export function Layout({ children }: PropsWithChildren) {
           <div className="flex items-center gap-1.5">
             <button
               type="button"
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="rounded-lg border border-slate-800 bg-slate-900 p-1.5 text-slate-300 transition hover:text-white dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700"
+              title="Cerca o comandi (⌘K)"
+              aria-label="Cerca o comandi"
+            >
+              <SearchIcon className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
               onClick={() => setIsTradeModalOpen(true)}
               className="flex items-center gap-1 rounded-lg bg-teal-500 px-2.5 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-teal-400 active:scale-95"
             >
@@ -265,7 +284,7 @@ export function Layout({ children }: PropsWithChildren) {
           {/* Desktop Persistent Sidebar */}
           <aside className="hidden md:flex flex-col border-r border-slate-800 bg-slate-950/80 p-5 backdrop-blur dark:border-slate-200 dark:bg-white sticky top-0 h-screen overflow-y-auto">
             {/* Logo */}
-            <div className="mb-7 flex items-center justify-between">
+            <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-teal-300 dark:text-teal-800">
                 <img src={bullVectLogo} alt="Bull logo" className="h-6 w-6 object-contain" />
                 <span className="titlelogo">TradingJournal</span>
@@ -274,6 +293,21 @@ export function Layout({ children }: PropsWithChildren) {
                 v{appVersion}
               </span>
             </div>
+
+            {/* Quick Command Search Button in Sidebar */}
+            <button
+              type="button"
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="mb-4 flex w-full items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-400 hover:border-slate-700 hover:text-slate-200 transition dark:border-slate-200 dark:bg-slate-100 dark:text-slate-600 dark:hover:bg-slate-200 cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <SearchIcon className="h-3.5 w-3.5 text-slate-400" />
+                <span>{t("layout.search_short", "Cerca...")}</span>
+              </div>
+              <kbd className="rounded border border-slate-700 bg-slate-800 px-1 py-0.2 text-[10px] font-mono text-slate-400 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-600">
+                ⌘K
+              </kbd>
+            </button>
 
             {/* Navigation links */}
             <div className="flex-1 overflow-y-auto pr-1">
@@ -353,16 +387,69 @@ export function Layout({ children }: PropsWithChildren) {
           {/* Desktop Content Area with Top Header */}
           <div className="flex flex-col min-h-screen">
             <header className="hidden md:flex h-14 items-center justify-between border-b border-slate-800/60 bg-slate-950/40 px-6 backdrop-blur dark:border-slate-200/50 dark:bg-white/40">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-200 dark:text-slate-800">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-200 dark:text-slate-800 min-w-44">
                 <span className="text-slate-500 dark:text-slate-400 font-normal">TradingJournal</span>
                 <span className="text-slate-600 dark:text-slate-300">/</span>
                 <span className="text-teal-300 dark:text-teal-800">{getPageTitle()}</span>
               </div>
+
+              {/* Center Quick Search / Command Palette Trigger */}
+              <div className="flex-1 max-w-sm px-4">
+                <button
+                  type="button"
+                  onClick={() => setIsCommandPaletteOpen(true)}
+                  className="group flex w-full items-center justify-between gap-3 rounded-lg border border-slate-800/80 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-400 shadow-xs transition hover:border-teal-500/40 hover:bg-slate-900 hover:text-slate-200 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-500 dark:hover:border-teal-600/50 dark:hover:text-slate-900 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <SearchIcon className="h-3.5 w-3.5 text-slate-500 group-hover:text-teal-400 dark:text-slate-400 dark:group-hover:text-teal-700 transition-colors shrink-0" />
+                    <span className="truncate">{t("layout.search_placeholder", "Cerca azioni, pagine o premi ⌘K...")}</span>
+                  </div>
+                  <kbd className="shrink-0 rounded border border-slate-700/80 bg-slate-800/80 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 shadow-2xs group-hover:border-teal-500/40 group-hover:text-teal-300 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-600">
+                    ⌘K
+                  </kbd>
+                </button>
+              </div>
+
+              {/* Right User & Actions */}
               <div className="flex items-center gap-3">
+                {/* Account quick badge */}
+                {accounts && accounts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/accounts")}
+                    className="hidden lg:flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-2.5 py-1 text-xs text-slate-300 hover:border-slate-700 hover:text-white transition dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
+                    title="Gestione conti"
+                  >
+                    <WalletIcon className="h-3.5 w-3.5 text-teal-400 dark:text-teal-600" />
+                    <span className="font-medium max-w-[120px] truncate">{accounts[0].name}</span>
+                    {accounts.length > 1 && (
+                      <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-400 dark:bg-slate-200 dark:text-slate-600">
+                        +{accounts.length - 1}
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {/* User Profile avatar pill */}
+                {me && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/settings")}
+                    className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/50 px-2 py-1 text-xs text-slate-300 hover:border-slate-700 hover:text-white transition dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
+                    title={`Profilo utente (${me.username})`}
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-500/20 text-[10px] font-bold text-teal-300 border border-teal-500/40 dark:bg-teal-100 dark:text-teal-800 dark:border-teal-300">
+                      {(me.username?.[0] || "U").toUpperCase()}
+                    </span>
+                    <span className="font-medium hidden sm:inline max-w-[90px] truncate">{me.username}</span>
+                  </button>
+                )}
+
+                {/* New Trade Primary Button */}
                 <button
                   type="button"
                   onClick={() => setIsTradeModalOpen(true)}
-                  className="flex items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-xs transition hover:bg-teal-400"
+                  className="flex items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-xs transition hover:bg-teal-400 active:scale-95 cursor-pointer"
                 >
                   <PlusIcon className="h-3.5 w-3.5 stroke-[2.5]" />
                   <span>{t("layout.actions.new_trade")}</span>
@@ -378,6 +465,11 @@ export function Layout({ children }: PropsWithChildren) {
       </div>
 
       <TradeCreateModal open={isTradeModalOpen} onClose={() => setIsTradeModalOpen(false)} />
+      <CommandPalette
+        open={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onOpenNewTrade={() => setIsTradeModalOpen(true)}
+      />
     </>
   );
 }

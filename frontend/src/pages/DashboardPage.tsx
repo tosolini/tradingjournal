@@ -340,6 +340,7 @@ function AllAssetsDailyPnlPanel({ data }: { data: AllAssetsPnlPoint[] }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const recent = data.slice(-30);
   const cumulative = data.length > 0 ? asNumber(data[data.length - 1].cumulative_pnl) : 0;
   const maxAbs = Math.max(1, ...recent.map((p) => Math.abs(asNumber(p.day_pnl))));
@@ -350,13 +351,26 @@ function AllAssetsDailyPnlPanel({ data }: { data: AllAssetsPnlPoint[] }) {
   const scale = (H / 2 - pad) / maxAbs;
   const barW = Math.min(10, (W - pad * 2) / Math.max(recent.length, 1) - 2);
 
+  const hoveredItem = hoveredIndex !== null ? recent[hoveredIndex] : null;
+
   return (
     <Panel
       title={t("dashboard.all_assets_pnl")}
       aside={
-        <span className={`text-sm font-semibold tabular-nums ${pnlTone(cumulative)}`}>
-          {formatSignedMoney(cumulative, undefined, locale)}
-        </span>
+        hoveredItem ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+              {hoveredItem.date}:
+            </span>
+            <span className={`text-sm font-bold tabular-nums ${pnlTone(asNumber(hoveredItem.day_pnl))}`}>
+              {formatSignedMoney(hoveredItem.day_pnl, undefined, locale)}
+            </span>
+          </div>
+        ) : (
+          <span className={`text-sm font-semibold tabular-nums ${pnlTone(cumulative)}`}>
+            {formatSignedMoney(cumulative, undefined, locale)}
+          </span>
+        )
       }
     >
       {recent.length === 0 ? (
@@ -364,7 +378,7 @@ function AllAssetsDailyPnlPanel({ data }: { data: AllAssetsPnlPoint[] }) {
           {t("dashboard.no_daily_pnl")}
         </div>
       ) : (
-        <div className="px-2 py-3">
+        <div className="px-2 py-3" onMouseLeave={() => setHoveredIndex(null)}>
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img">
             <line x1={pad} y1={zero} x2={W - pad} y2={zero} stroke="#64748b" strokeOpacity="0.35" strokeWidth="1" />
             {recent.map((p, i) => {
@@ -372,19 +386,35 @@ function AllAssetsDailyPnlPanel({ data }: { data: AllAssetsPnlPoint[] }) {
               const h = Math.abs(value) * scale;
               const x = pad + i * ((W - pad * 2) / recent.length) + (W - pad * 2) / recent.length / 2 - barW / 2;
               const y = value >= 0 ? zero - h : zero;
+              const isHovered = hoveredIndex === i;
               return (
-                <rect
-                  key={p.date}
-                  x={x}
-                  y={y}
-                  width={barW}
-                  height={Math.max(h, 1.5)}
-                  rx="1.5"
-                  fill={value >= 0 ? (isDark ? "#2dd4bf" : "#0d9488") : (isDark ? "#f87171" : "#dc2626")}
-                  className="transition-opacity hover:opacity-80"
-                >
-                  <title>{`${p.date}: ${formatSignedMoney(asNumber(p.day_pnl), undefined, locale)}`}</title>
-                </rect>
+                <g key={p.date} className="cursor-pointer">
+                  {isHovered && (
+                    <rect
+                      x={x - 1.5}
+                      y={Math.min(y, zero) - 2}
+                      width={barW + 3}
+                      height={Math.max(h, 1.5) + 4}
+                      rx="2.5"
+                      fill="none"
+                      stroke={value >= 0 ? "#2dd4bf" : "#f87171"}
+                      strokeWidth="1.5"
+                    />
+                  )}
+                  <rect
+                    x={x}
+                    y={y}
+                    width={barW}
+                    height={Math.max(h, 1.5)}
+                    rx="1.5"
+                    fill={value >= 0 ? (isDark ? "#2dd4bf" : "#0d9488") : (isDark ? "#f87171" : "#dc2626")}
+                    opacity={hoveredIndex === null || isHovered ? 1 : 0.45}
+                    onMouseEnter={() => setHoveredIndex(i)}
+                    className="transition-all duration-150"
+                  >
+                    <title>{`${p.date}: ${formatSignedMoney(asNumber(p.day_pnl), undefined, locale)}`}</title>
+                  </rect>
+                </g>
               );
             })}
           </svg>
@@ -400,6 +430,7 @@ function MonthlyBars({ monthly }: { monthly: MonthlyPnlPoint[] }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const months = monthly.slice(-12);
   const maxAbs = Math.max(1, ...months.map((m) => Math.abs(asNumber(m.realized))));
   const total = months.reduce((s, m) => s + asNumber(m.realized), 0);
@@ -410,13 +441,29 @@ function MonthlyBars({ monthly }: { monthly: MonthlyPnlPoint[] }) {
   const scale = (H - pad * 2) / 2 / maxAbs;
   const barW = Math.min(26, (W - pad * 2) / Math.max(months.length, 1) - 8);
 
+  const hoveredItem = hoveredIndex !== null ? months[hoveredIndex] : null;
+
   return (
     <Panel
       title={t("dashboard.monthly_pnl")}
       aside={
-        <span className={`text-sm font-semibold tabular-nums ${pnlTone(total)}`}>
-          {formatSignedMoney(total, undefined, locale)}
-        </span>
+        hoveredItem ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+              {monthLabel(hoveredItem.month, locale)}:
+            </span>
+            <span className={`text-sm font-bold tabular-nums ${pnlTone(asNumber(hoveredItem.realized))}`}>
+              {formatSignedMoney(hoveredItem.realized, undefined, locale)}
+            </span>
+            <span className="rounded bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-400 dark:bg-slate-200 dark:text-slate-600">
+              {hoveredItem.count} {t("dashboard.cards.trades", "trade")}
+            </span>
+          </div>
+        ) : (
+          <span className={`text-sm font-semibold tabular-nums ${pnlTone(total)}`}>
+            {formatSignedMoney(total, undefined, locale)}
+          </span>
+        )
       }
     >
       {months.length === 0 ? (
@@ -424,7 +471,7 @@ function MonthlyBars({ monthly }: { monthly: MonthlyPnlPoint[] }) {
           {t("dashboard.no_monthly")}
         </div>
       ) : (
-        <div className="px-2 py-3">
+        <div className="px-2 py-3" onMouseLeave={() => setHoveredIndex(null)}>
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={t("dashboard.monthly_pnl")}>
             <line x1={pad} y1={zero} x2={W - pad} y2={zero} stroke="#64748b" strokeOpacity="0.35" strokeWidth="1" />
             {months.map((m, i) => {
@@ -432,8 +479,21 @@ function MonthlyBars({ monthly }: { monthly: MonthlyPnlPoint[] }) {
               const h = Math.abs(value) * scale;
               const x = pad + i * ((W - pad * 2) / months.length) + (W - pad * 2) / months.length / 2 - barW / 2;
               const y = value >= 0 ? zero - h : zero;
+              const isHovered = hoveredIndex === i;
               return (
-                <g key={m.month}>
+                <g key={m.month} className="cursor-pointer">
+                  {isHovered && (
+                    <rect
+                      x={x - 2}
+                      y={Math.min(y, zero) - 2}
+                      width={barW + 4}
+                      height={Math.max(h, 1.5) + 4}
+                      rx="3"
+                      fill="none"
+                      stroke={value >= 0 ? "#2dd4bf" : "#f87171"}
+                      strokeWidth="1.5"
+                    />
+                  )}
                   <rect
                     x={x}
                     y={y}
@@ -441,7 +501,9 @@ function MonthlyBars({ monthly }: { monthly: MonthlyPnlPoint[] }) {
                     height={Math.max(h, 1.5)}
                     rx="2"
                     fill={value >= 0 ? (isDark ? "#2dd4bf" : "#0d9488") : (isDark ? "#f87171" : "#dc2626")}
-                    className="transition-opacity hover:opacity-80"
+                    opacity={hoveredIndex === null || isHovered ? 1 : 0.45}
+                    onMouseEnter={() => setHoveredIndex(i)}
+                    className="transition-all duration-150"
                   >
                     <title>{`${monthLabel(m.month, locale)}: ${formatSignedMoney(m.realized)} (${m.count})`}</title>
                   </rect>
@@ -450,7 +512,8 @@ function MonthlyBars({ monthly }: { monthly: MonthlyPnlPoint[] }) {
                     y={H - 3}
                     textAnchor="middle"
                     fontSize="9"
-                    fill={isDark ? "#94a3b8" : "#64748b"}
+                    fontWeight={isHovered ? "bold" : "normal"}
+                    fill={isHovered ? (isDark ? "#ffffff" : "#0f172a") : (isDark ? "#94a3b8" : "#64748b")}
                   >
                     {monthLabel(m.month, locale)}
                   </text>
@@ -584,6 +647,222 @@ function TopTradesTable({ trades }: { trades: TradeStat[] }) {
   );
 }
 
+/* ─── Advanced Expectancy & Edge Panel ── */
+function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
+  const currency = kpis?.kpi_currency;
+
+  const wins = kpis?.wins || 0;
+  const losses = kpis?.losses || 0;
+  const total = wins + losses;
+
+  const winRate = total > 0 ? wins / total : 0;
+  const lossRate = total > 0 ? losses / total : 0;
+
+  const avgWin = asNumber(kpis?.avg_win);
+  const avgLoss = Math.abs(asNumber(kpis?.avg_loss));
+
+  // Expectancy = (WinRate * AvgWin) - (LossRate * AvgLoss)
+  const expectancy = total > 0 ? (winRate * avgWin) - (lossRate * avgLoss) : 0;
+
+  // Payoff Ratio = AvgWin / AvgLoss
+  const payoffRatio = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? 99 : 0;
+
+  // Profit Factor
+  const pf = asNumber(kpis?.profit_factor);
+  const pfText = pf > 0 && asNumber(kpis?.gross_losses) === 0 ? "∞" : pf.toFixed(2);
+
+  // Max Drawdown & Peak from portfolio_history
+  const history = kpis?.portfolio_history || [];
+  let peak = 0;
+  let maxDrawdownPct = 0;
+  for (const p of history) {
+    const val = p.value;
+    if (val > peak) peak = val;
+    if (peak > 0) {
+      const dd = ((val - peak) / peak) * 100;
+      if (dd < maxDrawdownPct) maxDrawdownPct = dd;
+    }
+  }
+
+  // Kelly Criterion fraction (percentage)
+  const kelly = payoffRatio > 0 ? (winRate - ((1 - winRate) / payoffRatio)) * 100 : 0;
+
+  return (
+    <Panel
+      title={t("dashboard.advanced_edge_title", "Statistiche Avanzate & Expectancy")}
+      className="xl:col-span-2"
+    >
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-800 dark:divide-slate-200 p-2">
+        {/* 1. Expectancy */}
+        <div className="p-4 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              {t("dashboard.expectancy", "Expectancy")}
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                expectancy > 0
+                  ? "bg-teal-500/15 text-teal-300 dark:bg-teal-100 dark:text-teal-800"
+                  : expectancy < 0
+                    ? "bg-red-500/15 text-red-300 dark:bg-red-100 dark:text-red-800"
+                    : "bg-slate-800 text-slate-400 dark:bg-slate-200 dark:text-slate-600"
+              }`}
+            >
+              {expectancy > 0 ? "+ Edge" : expectancy < 0 ? "- Edge" : "Neutro"}
+            </span>
+          </div>
+          <div className={`text-xl font-bold tabular-nums ${pnlTone(expectancy)}`}>
+            {formatSignedMoney(expectancy, currency, locale)}
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+            {t("dashboard.expectancy_sub", "Rendimento atteso per trade")}
+          </p>
+        </div>
+
+        {/* 2. Payoff Ratio */}
+        <div className="p-4 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              {t("dashboard.payoff_ratio", "Payoff Ratio")}
+            </span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+              W/L
+            </span>
+          </div>
+          <div className={`text-xl font-bold tabular-nums ${payoffRatio >= 1.5 ? "text-teal-300 dark:text-teal-700" : payoffRatio >= 1 ? "text-slate-100 dark:text-slate-800" : "text-amber-400 dark:text-amber-600"}`}>
+            {total > 0 && avgLoss > 0 ? `${payoffRatio.toFixed(2)} : 1` : total > 0 ? `${avgWin.toFixed(2)} : 0` : "—"}
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+            {t("dashboard.payoff_sub", "Rapporto media vincita / media perdita")}
+          </p>
+        </div>
+
+        {/* 3. Max Drawdown */}
+        <div className="p-4 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              {t("dashboard.max_drawdown", "Max Drawdown")}
+            </span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+              Peak
+            </span>
+          </div>
+          <div className={`text-xl font-bold tabular-nums ${maxDrawdownPct <= -20 ? "text-red-400 dark:text-red-600" : maxDrawdownPct <= -10 ? "text-amber-400 dark:text-amber-600" : "text-slate-100 dark:text-slate-800"}`}>
+            {history.length > 0 ? `${maxDrawdownPct.toFixed(2)}%` : "0.00%"}
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+            {peak > 0 ? `Picco: ${formatMoney(peak, currency, locale)}` : t("dashboard.max_drawdown_sub", "Flessione massima dal picco")}
+          </p>
+        </div>
+
+        {/* 4. Profit Factor & Kelly */}
+        <div className="p-4 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Profit Factor
+            </span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+              {pf >= 1 ? "Profittevole" : "In perdita"}
+            </span>
+          </div>
+          <div className={`text-xl font-bold tabular-nums ${pf >= 1.5 ? "text-teal-300 dark:text-teal-700" : pf >= 1 ? "text-slate-100 dark:text-slate-800" : "text-red-400 dark:text-red-600"}`}>
+            {total > 0 ? pfText : "—"}
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+            {kelly > 0 ? `Kelly sizing: ${kelly.toFixed(1)}%` : "Profitti lordi / perdite"}
+          </p>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+/* ─── Best & Worst Trades Highlight ── */
+function BestWorstTradesPanel({
+  bestTrade,
+  worstTrade,
+  currency,
+}: {
+  bestTrade: TradeStat | null | undefined;
+  worstTrade: TradeStat | null | undefined;
+  currency?: string;
+}) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
+
+  return (
+    <Panel title={t("dashboard.top_trades", "Miglior e Peggior Trade")} className="xl:col-span-1">
+      {!bestTrade && !worstTrade ? (
+        <div className="flex h-44 items-center justify-center p-6 text-center text-xs text-slate-400 dark:text-slate-500">
+          {t("dashboard.no_best_worst", "Nessun trade chiuso disponibile per il confronto.")}
+        </div>
+      ) : (
+        <div className="p-3.5 space-y-2.5">
+          {/* Best Trade */}
+          {bestTrade ? (
+            <div className="rounded-xl border border-teal-500/30 bg-teal-500/5 p-3 dark:border-teal-300/60 dark:bg-teal-50/50">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-teal-400 dark:text-teal-700">
+                  <span>🏆</span>
+                  <span>{t("dashboard.best_trade", "Miglior Trade")}</span>
+                </span>
+                <span className="rounded-md border border-teal-500/40 bg-teal-500/10 px-2 py-0.5 text-xs font-bold text-teal-300 dark:text-teal-800">
+                  {formatPct(bestTrade.return_pct)}
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between">
+                <div>
+                  <span className="text-base font-extrabold text-teal-300 dark:text-teal-800">{bestTrade.symbol}</span>
+                  <span className="ml-2 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">{bestTrade.side}</span>
+                </div>
+                <span className="text-lg font-bold tabular-nums text-teal-300 dark:text-teal-700">
+                  {formatSignedMoney(bestTrade.net_pnl, currency, locale)}
+                </span>
+              </div>
+              {bestTrade.closed_date && (
+                <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  {bestTrade.closed_date}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {/* Worst Trade */}
+          {worstTrade ? (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 dark:border-red-300/60 dark:bg-red-50/50">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-red-400 dark:text-red-600">
+                  <span>⚠️</span>
+                  <span>{t("dashboard.worst_trade", "Peggior Trade")}</span>
+                </span>
+                <span className="rounded-md border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-xs font-bold text-red-400 dark:text-red-700">
+                  {formatPct(worstTrade.return_pct)}
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between">
+                <div>
+                  <span className="text-base font-extrabold text-red-300 dark:text-red-800">{worstTrade.symbol}</span>
+                  <span className="ml-2 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">{worstTrade.side}</span>
+                </div>
+                <span className="text-lg font-bold tabular-nums text-red-400 dark:text-red-600">
+                  {formatSignedMoney(worstTrade.net_pnl, currency, locale)}
+                </span>
+              </div>
+              {worstTrade.closed_date && (
+                <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  {worstTrade.closed_date}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /* ─── Page ───────────────────────── */
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -687,6 +966,15 @@ export function DashboardPage() {
           <section className="grid gap-4 xl:grid-cols-3">
             <EquityChartPanel data={data?.portfolio_history ?? []} />
             <OutcomeDonut kpis={data as DashboardKpis} />
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-3">
+            <TradingEdgePanel kpis={data as DashboardKpis} />
+            <BestWorstTradesPanel
+              bestTrade={data?.best_trade}
+              worstTrade={data?.worst_trade}
+              currency={currency}
+            />
           </section>
 
           <section className="grid gap-4 xl:grid-cols-3">

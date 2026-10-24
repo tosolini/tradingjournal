@@ -21,6 +21,10 @@
       "new_trade": "New Trade",
       "new_note": "New Note"
     },
+    "search_placeholder": "Search symbols, pages or press ⌘K...",
+    "search_short": "Search (⌘K)",
+    "account_pill": "Account",
+    "all_accounts": "All accounts",
     "version": "Version",
     "tosolini_site_aria": "Walter Tosolini Website",
     "copyright": "All rights reserved."
@@ -283,7 +287,19 @@
     "col_return": "Return",
     "col_pnl": "Net PnL",
     "all_assets_pnl": "Daily P&L (All Assets)",
-    "no_daily_pnl": "No daily snapshots yet."
+    "no_daily_pnl": "No daily snapshots yet.",
+    "advanced_edge_title": "Advanced Stats & Expectancy",
+    "expectancy": "Expectancy (Expected Value)",
+    "expectancy_sub": "Expected net return per closed trade",
+    "payoff_ratio": "Payoff Ratio (W/L)",
+    "payoff_sub": "Average win / average loss ratio",
+    "max_drawdown": "Max Drawdown",
+    "max_drawdown_sub": "Maximum drop from equity peak",
+    "kelly_criterion": "Kelly Criterion (Edge)",
+    "best_trade": "Best Trade",
+    "worst_trade": "Worst Trade",
+    "no_best_worst": "No closed trades available for comparison.",
+    "hover_trade_count": "{{count}} trades"
   },
   "calendar": {
     "title": "Calendar",
