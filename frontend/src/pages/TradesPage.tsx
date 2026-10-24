@@ -1134,7 +1134,6 @@ export function TradesPage() {
             </div>
           </div>
         )}
-        </table>
         {deleteError ? <div className="p-3 text-sm text-red-400 dark:text-red-600">{deleteError}</div> : null}
       </section>
       {deletePendingId !== null && (() => {
