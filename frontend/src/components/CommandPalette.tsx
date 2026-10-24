@@ -36,9 +36,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onOpenNewTrade: () => void;
+  onOpenCredits?: () => void;
 };
 
-export function CommandPalette({ open, onClose, onOpenNewTrade }: Props) {
+export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -250,8 +251,19 @@ export function CommandPalette({ open, onClose, onOpenNewTrade }: Props) {
         icon: GlobeIcon,
         onSelect: toggleLanguage,
       },
+      {
+        id: "act-credits",
+        title: "Credits & Sviluppatore (Walter Tosolini)",
+        subtitle: "Info sull'autore, link www.tosolini.info, GitHub e LinkedIn",
+        category: "action",
+        icon: HelpCircleIcon,
+        onSelect: () => {
+          onClose();
+          onOpenCredits?.();
+        },
+      },
     ];
-  }, [t, i18n.resolvedLanguage, theme, navigate, onClose, onOpenNewTrade, toggleTheme]);
+  }, [t, i18n.resolvedLanguage, theme, navigate, onClose, onOpenNewTrade, onOpenCredits, toggleTheme]);
 
   // Filter commands by search term
   const filteredCommands = useMemo(() => {

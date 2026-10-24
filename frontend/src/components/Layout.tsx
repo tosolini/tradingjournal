@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { TradeCreateModal } from "./TradeCreateModal";
 import { CommandPalette } from "./CommandPalette";
+import { CreditsModal } from "./CreditsModal";
 import { fetchAccounts, getMe } from "../lib/api";
 import packageJson from "../../package.json";
 import bullVectLogo from "../assets/bull_vect.svg";
@@ -39,6 +40,7 @@ export function Layout({ children }: PropsWithChildren) {
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe });
@@ -273,7 +275,19 @@ export function Layout({ children }: PropsWithChildren) {
               </div>
 
               <div className="mt-auto border-t border-slate-800 pt-4 dark:border-slate-200 text-xs text-slate-400 dark:text-slate-500 text-center">
-                <p>v{appVersion} · © {currentYear} Walter Tosolini</p>
+                <p>
+                  v{appVersion} ·{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsCreditsModalOpen(true);
+                    }}
+                    className="hover:text-teal-400 dark:hover:text-teal-700 transition cursor-pointer underline underline-offset-2 decoration-dotted font-medium"
+                  >
+                    © {currentYear} Walter Tosolini
+                  </button>
+                </p>
               </div>
             </aside>
           </div>
@@ -379,7 +393,14 @@ export function Layout({ children }: PropsWithChildren) {
                 >
                   Bug Report
                 </a>
-                <span>© {currentYear} W. Tosolini</span>
+                <button
+                  type="button"
+                  onClick={() => setIsCreditsModalOpen(true)}
+                  className="hover:text-teal-400 dark:hover:text-teal-700 transition cursor-pointer underline underline-offset-2 decoration-dotted font-medium"
+                  title="Informazioni e Credits"
+                >
+                  © {currentYear} W. Tosolini
+                </button>
               </div>
             </div>
           </aside>
@@ -469,6 +490,11 @@ export function Layout({ children }: PropsWithChildren) {
         open={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         onOpenNewTrade={() => setIsTradeModalOpen(true)}
+        onOpenCredits={() => setIsCreditsModalOpen(true)}
+      />
+      <CreditsModal
+        open={isCreditsModalOpen}
+        onClose={() => setIsCreditsModalOpen(false)}
       />
     </>
   );
