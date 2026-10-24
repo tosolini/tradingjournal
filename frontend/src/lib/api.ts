@@ -546,6 +546,12 @@ export type MonthlyPnlPoint = {
   count: number;
 };
 
+export type WeeklyPnlPoint = {
+  week: string; // "YYYY-Www"
+  realized: string;
+  count: number;
+};
+
 export type DashboardAllocation = {
   symbol: string;
   name: string;
@@ -569,6 +575,7 @@ export type DashboardKpis = {
   worst_trade: TradeStat | null;
   top_trades: TradeStat[];
   monthly_pnl: MonthlyPnlPoint[];
+  weekly_pnl?: WeeklyPnlPoint[];
   open_positions: number;
   realized_pnl: string;
   unrealized_pnl: string;

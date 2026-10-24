@@ -198,6 +198,61 @@ export function CalendarPage() {
     return cells;
   }, [month, year]);
 
+  const weekRows = useMemo(() => {
+    const rows: Array<{
+      days: typeof monthGrid;
+      weekPnl: number;
+      greenDays: number;
+      redDays: number;
+      executionsCount: number;
+      weekNumber: number;
+    }> = [];
+
+    for (let i = 0; i < monthGrid.length; i += 7) {
+      const daysChunk = monthGrid.slice(i, i + 7);
+      let weekPnl = 0;
+      let greenDays = 0;
+      let redDays = 0;
+      let executionsCount = 0;
+      let refDate: Date | null = null;
+
+      for (const cell of daysChunk) {
+        if (cell.isoDate) {
+          if (!refDate) refDate = new Date(cell.isoDate);
+          const pnlPoint = pnlByDate.get(cell.isoDate);
+          if (pnlPoint) {
+            const val = asNumber(pnlPoint.day_pnl);
+            weekPnl += val;
+            if (val > 0.001) greenDays += 1;
+            else if (val < -0.001) redDays += 1;
+          }
+          const dayData = byDate.get(cell.isoDate);
+          if (dayData) {
+            executionsCount += dayData.executions.length;
+          }
+        }
+      }
+
+      // Compute ISO week number
+      const target = refDate || new Date(year, month - 1, 1);
+      const d = new Date(Date.UTC(target.getFullYear(), target.getMonth(), target.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const weekNumber = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+
+      rows.push({
+        days: daysChunk,
+        weekPnl,
+        greenDays,
+        redDays,
+        executionsCount,
+        weekNumber,
+      });
+    }
+    return rows;
+  }, [monthGrid, pnlByDate, byDate, month, year]);
+
   const selectedDayData = selectedDay ? byDate.get(selectedDay) : null;
   const selectedDayPnl = selectedDay ? pnlByDate.get(selectedDay) : null;
 
@@ -346,7 +401,7 @@ export function CalendarPage() {
           ) : (
             <div className="space-y-2">
               {/* Day headers */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-2 lg:grid-cols-[repeat(7,1fr)_120px]">
                 {weekDays.map((weekday) => (
                   <div
                     key={weekday}
@@ -355,119 +410,180 @@ export function CalendarPage() {
                     {weekday}
                   </div>
                 ))}
+                <div className="hidden lg:flex items-center justify-center rounded-lg border border-teal-500/30 bg-teal-500/10 px-2 py-1 text-center text-xs font-bold uppercase tracking-wider text-teal-300 dark:border-teal-300 dark:bg-teal-50 dark:text-teal-800">
+                  {t("calendar.col_week_pnl", "Tot. Settimana")}
+                </div>
               </div>
 
-              {/* Calendar Grid */}
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-7">
-                {monthGrid.map((cell, index) => {
-                  if (!cell.isoDate || !cell.dayNumber) {
-                    return (
-                      <div
-                        key={`empty-${index}`}
-                        className="hidden md:block min-h-32 rounded-xl border border-slate-900/50 bg-slate-950/30 dark:border-slate-200/40 dark:bg-slate-100/30"
-                      />
-                    );
-                  }
-
-                  const dayData = byDate.get(cell.isoDate);
-                  const pnlPoint = pnlByDate.get(cell.isoDate);
-                  const executions = dayData?.executions || [];
-                  const notes = dayData?.notes || [];
-
-                  const dayPnlVal = pnlPoint ? asNumber(pnlPoint.day_pnl) : null;
-                  const isProfit = dayPnlVal !== null && dayPnlVal > 0.001;
-                  const isLoss = dayPnlVal !== null && dayPnlVal < -0.001;
-                  const hasActivity = executions.length > 0 || notes.length > 0 || dayPnlVal !== null;
-
-                  return (
-                    <div
-                      key={cell.isoDate}
-                      onClick={() => setSelectedDay(cell.isoDate)}
-                      className={`min-h-32 rounded-xl border p-2.5 transition-all flex flex-col justify-between cursor-pointer ${
-                        hasActivity
-                          ? "hover:border-teal-500/60 hover:shadow-lg hover:-translate-y-0.5"
-                          : ""
-                      } ${
-                        isProfit
-                          ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:border-emerald-200 dark:bg-emerald-50/40"
-                          : isLoss
-                          ? "border-red-500/30 bg-red-500/[0.04] dark:border-red-200 dark:bg-red-50/40"
-                          : "border-slate-800/80 bg-slate-900/40 dark:border-slate-200 dark:bg-white"
-                      }`}
-                    >
-                      {/* Cell Header: Day Number + Note indicator */}
-                      <div>
-                        <div className="flex items-center justify-between gap-1 mb-1.5">
-                          <span
-                            className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ${
-                              isProfit
-                                ? "bg-emerald-500/20 text-emerald-300 dark:bg-emerald-100 dark:text-emerald-800"
-                                : isLoss
-                                ? "bg-red-500/20 text-red-300 dark:bg-red-100 dark:text-red-800"
-                                : "text-slate-300 dark:text-slate-800"
-                            }`}
-                          >
-                            {cell.dayNumber}
-                          </span>
-
-                          {notes.length > 0 && (
-                            <span
-                              className="flex items-center gap-1 rounded-full border border-teal-500/30 bg-teal-500/10 px-1.5 py-0.5 text-[10px] text-teal-300 dark:text-teal-800"
-                              title={`${notes.length} note(s)`}
-                            >
-                              <BookOpenIcon className="h-3 w-3" />
-                              <span>{notes.length}</span>
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Daily PnL prominent badge */}
-                        {dayPnlVal !== null && (
+              {/* Calendar Grid by Weeks */}
+              <div className="space-y-2">
+                {weekRows.map((weekRow, rowIndex) => (
+                  <div
+                    key={`week-${rowIndex}`}
+                    className="grid grid-cols-1 gap-2 md:grid-cols-7 lg:grid-cols-[repeat(7,1fr)_120px]"
+                  >
+                    {weekRow.days.map((cell, cellIndex) => {
+                      if (!cell.isoDate || !cell.dayNumber) {
+                        return (
                           <div
-                            className={`mb-2 rounded-lg px-2 py-1 text-center font-bold tabular-nums text-xs shadow-xs ${
-                              isProfit
-                                ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 dark:bg-emerald-100 dark:border-emerald-300 dark:text-emerald-800"
-                                : isLoss
-                                ? "bg-red-500/15 border border-red-500/40 text-red-300 dark:bg-red-100 dark:border-red-300 dark:text-red-800"
-                                : "bg-slate-800/60 border border-slate-700 text-slate-300 dark:bg-slate-100 dark:border-slate-200 dark:text-slate-700"
-                            }`}
-                          >
-                            <div>{formatSignedMoney(dayPnlVal, "EUR", locale)}</div>
-                            {pnlPoint?.day_pnl_pct && (
-                              <div className="text-[10px] opacity-80 font-normal">
-                                {asNumber(pnlPoint.day_pnl_pct) >= 0 ? "+" : ""}
-                                {asNumber(pnlPoint.day_pnl_pct).toFixed(2)}%
+                            key={`empty-${rowIndex}-${cellIndex}`}
+                            className="hidden md:block min-h-32 rounded-xl border border-slate-900/50 bg-slate-950/30 dark:border-slate-200/40 dark:bg-slate-100/30"
+                          />
+                        );
+                      }
+
+                      const dayData = byDate.get(cell.isoDate);
+                      const pnlPoint = pnlByDate.get(cell.isoDate);
+                      const executions = dayData?.executions || [];
+                      const notes = dayData?.notes || [];
+
+                      const dayPnlVal = pnlPoint ? asNumber(pnlPoint.day_pnl) : null;
+                      const isProfit = dayPnlVal !== null && dayPnlVal > 0.001;
+                      const isLoss = dayPnlVal !== null && dayPnlVal < -0.001;
+                      const hasActivity = executions.length > 0 || notes.length > 0 || dayPnlVal !== null;
+
+                      return (
+                        <div
+                          key={cell.isoDate}
+                          onClick={() => setSelectedDay(cell.isoDate)}
+                          className={`min-h-32 rounded-xl border p-2.5 transition-all flex flex-col justify-between cursor-pointer ${
+                            hasActivity
+                              ? "hover:border-teal-500/60 hover:shadow-lg hover:-translate-y-0.5"
+                              : ""
+                          } ${
+                            isProfit
+                              ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:border-emerald-200 dark:bg-emerald-50/40"
+                              : isLoss
+                              ? "border-red-500/30 bg-red-500/[0.04] dark:border-red-200 dark:bg-red-50/40"
+                              : "border-slate-800/80 bg-slate-900/40 dark:border-slate-200 dark:bg-white"
+                          }`}
+                        >
+                          {/* Cell Header: Day Number + Note indicator */}
+                          <div>
+                            <div className="flex items-center justify-between gap-1 mb-1.5">
+                              <span
+                                className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ${
+                                  isProfit
+                                    ? "bg-emerald-500/20 text-emerald-300 dark:bg-emerald-100 dark:text-emerald-800"
+                                    : isLoss
+                                    ? "bg-red-500/20 text-red-300 dark:bg-red-100 dark:text-red-800"
+                                    : "text-slate-300 dark:text-slate-800"
+                                }`}
+                              >
+                                {cell.dayNumber}
+                              </span>
+
+                              {notes.length > 0 && (
+                                <span
+                                  className="flex items-center gap-1 rounded-full border border-teal-500/30 bg-teal-500/10 px-1.5 py-0.5 text-[10px] text-teal-300 dark:text-teal-800"
+                                  title={`${notes.length} note(s)`}
+                                >
+                                  <BookOpenIcon className="h-3 w-3" />
+                                  <span>{notes.length}</span>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Daily PnL prominent badge */}
+                            {dayPnlVal !== null && (
+                              <div
+                                className={`mb-2 rounded-lg px-2 py-1 text-center font-bold tabular-nums text-xs shadow-xs ${
+                                  isProfit
+                                    ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 dark:bg-emerald-100 dark:border-emerald-300 dark:text-emerald-800"
+                                    : isLoss
+                                    ? "bg-red-500/15 border border-red-500/40 text-red-300 dark:bg-red-100 dark:border-red-300 dark:text-red-800"
+                                    : "bg-slate-800/60 border border-slate-700 text-slate-300 dark:bg-slate-100 dark:border-slate-200 dark:text-slate-700"
+                                }`}
+                              >
+                                <div>{formatSignedMoney(dayPnlVal, "EUR", locale)}</div>
+                                {pnlPoint?.day_pnl_pct && (
+                                  <div className="text-[10px] opacity-80 font-normal">
+                                    {asNumber(pnlPoint.day_pnl_pct) >= 0 ? "+" : ""}
+                                    {asNumber(pnlPoint.day_pnl_pct).toFixed(2)}%
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        )}
+
+                          {/* Cell Executions list / chips */}
+                          <div className="space-y-1 mt-auto">
+                            {executions.slice(0, 2).map((execution) => (
+                              <div
+                                key={execution.id}
+                                className="flex items-center justify-between rounded-md border border-slate-700/60 bg-slate-800/70 px-1.5 py-0.5 text-[10px] text-slate-200 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-800 truncate"
+                                title={`${execution.symbol} ${execution.action} ${execution.quantity} @ ${execution.price}`}
+                              >
+                                <span className="font-semibold text-teal-300 dark:text-teal-800">
+                                  {execution.symbol}
+                                </span>
+                                <span className="text-[9px] uppercase font-medium text-slate-400 dark:text-slate-500">
+                                  {execution.action}
+                                </span>
+                              </div>
+                            ))}
+                            {executions.length > 2 && (
+                              <div className="text-right text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                                +{executions.length - 2} altro
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Desktop Week Summary Column (8th column) */}
+                    <div
+                      className={`hidden lg:flex min-h-32 flex-col justify-between rounded-xl border p-2.5 transition-all ${
+                        weekRow.weekPnl > 0.001
+                          ? "border-emerald-500/40 bg-emerald-500/[0.08] dark:border-emerald-300 dark:bg-emerald-50/60"
+                          : weekRow.weekPnl < -0.001
+                          ? "border-red-500/40 bg-red-500/[0.08] dark:border-red-300 dark:bg-red-50/60"
+                          : "border-slate-800/80 bg-slate-900/40 dark:border-slate-200 dark:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          Sett. {weekRow.weekNumber}
+                        </span>
+                        <span className="rounded bg-slate-800/80 px-1 py-0.2 text-[9px] font-mono text-slate-400 dark:bg-slate-200 dark:text-slate-600">
+                          W{weekRow.weekNumber}
+                        </span>
                       </div>
 
-                      {/* Cell Executions list / chips */}
-                      <div className="space-y-1 mt-auto">
-                        {executions.slice(0, 2).map((execution) => (
-                          <div
-                            key={execution.id}
-                            className="flex items-center justify-between rounded-md border border-slate-700/60 bg-slate-800/70 px-1.5 py-0.5 text-[10px] text-slate-200 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-800 truncate"
-                            title={`${execution.symbol} ${execution.action} ${execution.quantity} @ ${execution.price}`}
-                          >
-                            <span className="font-semibold text-teal-300 dark:text-teal-800">
-                              {execution.symbol}
-                            </span>
-                            <span className="text-[9px] uppercase font-medium text-slate-400 dark:text-slate-500">
-                              {execution.action}
-                            </span>
-                          </div>
-                        ))}
-                        {executions.length > 2 && (
-                          <div className="text-right text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-                            +{executions.length - 2} altro
-                          </div>
-                        )}
+                      <div className="my-auto py-2 text-center">
+                        <div
+                          className={`text-sm font-black tabular-nums ${
+                            weekRow.weekPnl > 0.001
+                              ? "text-emerald-400 dark:text-emerald-700"
+                              : weekRow.weekPnl < -0.001
+                              ? "text-red-400 dark:text-red-600"
+                              : "text-slate-400 dark:text-slate-500"
+                          }`}
+                        >
+                          {formatSignedMoney(weekRow.weekPnl, "EUR", locale)}
+                        </div>
+                        <div className="mt-1 text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5 font-medium">
+                          <span className="text-emerald-400 dark:text-emerald-600 font-bold">{weekRow.greenDays}W</span>
+                          <span>·</span>
+                          <span className="text-red-400 dark:text-red-600 font-bold">{weekRow.redDays}L</span>
+                        </div>
+                      </div>
+
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500 text-center border-t border-slate-800/60 dark:border-slate-200/60 pt-1">
+                        {weekRow.executionsCount} {t("dashboard.cards.trades", "trade")}
                       </div>
                     </div>
-                  );
-                })}
+
+                    {/* Mobile Week Summary Banner */}
+                    <div className="lg:hidden flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs dark:border-slate-200 dark:bg-slate-100">
+                      <span className="font-semibold text-slate-400 dark:text-slate-600">Settimana {weekRow.weekNumber}</span>
+                      <span className={`font-bold tabular-nums ${weekRow.weekPnl > 0.001 ? "text-emerald-400 dark:text-emerald-700" : weekRow.weekPnl < -0.001 ? "text-red-400 dark:text-red-600" : "text-slate-400"}`}>
+                        {formatSignedMoney(weekRow.weekPnl, "EUR", locale)} ({weekRow.greenDays}W - {weekRow.redDays}L)
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

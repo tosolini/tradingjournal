@@ -3,7 +3,7 @@ import { AreaSeries, ColorType, LineSeries, createChart } from "lightweight-char
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../contexts/ThemeContext";
-import { AllAssetsPnlPoint, DashboardAllocation, DashboardKpis, MonthlyPnlPoint, TradeStat, dashboardKpis } from "../lib/api";
+import { AllAssetsPnlPoint, DashboardAllocation, DashboardKpis, MonthlyPnlPoint, TradeStat, WeeklyPnlPoint, dashboardKpis } from "../lib/api";
 
 function asNumber(value: string | number | undefined): number {
   if (value === undefined) return 0;
@@ -424,64 +424,151 @@ function AllAssetsDailyPnlPanel({ data }: { data: AllAssetsPnlPoint[] }) {
   );
 }
 
-/* ─── Monthly PnL bars ───────────── */
-function MonthlyBars({ monthly }: { monthly: MonthlyPnlPoint[] }) {
+/* ─── Monthly & Weekly PnL bars ───────────── */
+function PeriodicPnlBars({
+  monthly,
+  weekly,
+  daily,
+}: {
+  monthly: MonthlyPnlPoint[];
+  weekly?: WeeklyPnlPoint[];
+  daily?: AllAssetsPnlPoint[];
+}) {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
+  const [period, setPeriod] = useState<"month" | "week">("month");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const months = monthly.slice(-12);
-  const maxAbs = Math.max(1, ...months.map((m) => Math.abs(asNumber(m.realized))));
-  const total = months.reduce((s, m) => s + asNumber(m.realized), 0);
+
+  // Compute weekly series if not supplied by backend
+  const computedWeekly = useMemo<WeeklyPnlPoint[]>(() => {
+    if (weekly && weekly.length > 0) return weekly;
+    if (!daily || daily.length === 0) return [];
+
+    const weekMap = new Map<string, { realized: number; count: number }>();
+    for (const p of daily) {
+      const d = new Date(p.date);
+      const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNr = target.getUTCDay() || 7;
+      target.setUTCDate(target.getUTCDate() + 4 - dayNr);
+      const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+      const weekNr = Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+      const key = `${target.getUTCFullYear()}-W${String(weekNr).padStart(2, "0")}`;
+
+      const curr = weekMap.get(key) || { realized: 0, count: 0 };
+      curr.realized += asNumber(p.day_pnl);
+      curr.count += 1;
+      weekMap.set(key, curr);
+    }
+
+    return Array.from(weekMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([week, val]) => ({
+        week,
+        realized: String(val.realized),
+        count: val.count,
+      }));
+  }, [weekly, daily]);
+
+  const items = period === "month" ? monthly.slice(-12) : computedWeekly.slice(-12);
+  const maxAbs = Math.max(1, ...items.map((m) => Math.abs(asNumber(m.realized))));
+  const total = items.reduce((s, m) => s + asNumber(m.realized), 0);
   const W = 280;
   const H = 150;
   const pad = 12;
   const zero = pad + (H - pad * 2) * (maxAbs / (maxAbs * 2));
   const scale = (H - pad * 2) / 2 / maxAbs;
-  const barW = Math.min(26, (W - pad * 2) / Math.max(months.length, 1) - 8);
+  const barW = Math.min(period === "month" ? 26 : 18, (W - pad * 2) / Math.max(items.length, 1) - 6);
 
-  const hoveredItem = hoveredIndex !== null ? months[hoveredIndex] : null;
+  const hoveredItem = hoveredIndex !== null ? items[hoveredIndex] : null;
+
+  const itemLabel = (key: string) => {
+    if (period === "month") {
+      return monthLabel(key, locale);
+    }
+    const weekNum = key.split("-W")[1] || key;
+    return `S${weekNum}`;
+  };
+
+  const itemFullTitle = (item: MonthlyPnlPoint | WeeklyPnlPoint) => {
+    if ("month" in item) {
+      return `${monthLabel(item.month, locale)}: ${formatSignedMoney(item.realized)} (${item.count})`;
+    }
+    return `${t("calendar.week_summary", { week: item.week.split("-W")[1] || item.week })}: ${formatSignedMoney(item.realized)} (${item.count})`;
+  };
 
   return (
     <Panel
-      title={t("dashboard.monthly_pnl")}
+      title={period === "month" ? t("dashboard.monthly_pnl") : t("dashboard.weekly_pnl")}
       aside={
-        hoveredItem ? (
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
-              {monthLabel(hoveredItem.month, locale)}:
+        <div className="flex items-center gap-2.5">
+          {hoveredItem ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                {itemLabel("month" in hoveredItem ? hoveredItem.month : hoveredItem.week)}:
+              </span>
+              <span className={`text-xs font-bold tabular-nums ${pnlTone(asNumber(hoveredItem.realized))}`}>
+                {formatSignedMoney(hoveredItem.realized, undefined, locale)}
+              </span>
+            </div>
+          ) : (
+            <span className={`text-xs font-semibold tabular-nums ${pnlTone(total)}`}>
+              {formatSignedMoney(total, undefined, locale)}
             </span>
-            <span className={`text-sm font-bold tabular-nums ${pnlTone(asNumber(hoveredItem.realized))}`}>
-              {formatSignedMoney(hoveredItem.realized, undefined, locale)}
-            </span>
-            <span className="rounded bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-400 dark:bg-slate-200 dark:text-slate-600">
-              {hoveredItem.count} {t("dashboard.cards.trades", "trade")}
-            </span>
+          )}
+
+          {/* Period Switcher */}
+          <div className="flex rounded-md border border-slate-700/60 p-0.5 text-[10px] dark:border-slate-300/60">
+            <button
+              type="button"
+              onClick={() => {
+                setPeriod("month");
+                setHoveredIndex(null);
+              }}
+              className={`rounded px-1.5 py-0.5 transition cursor-pointer font-medium ${
+                period === "month"
+                  ? "bg-teal-500 font-bold text-slate-950"
+                  : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
+              }`}
+            >
+              {t("dashboard.period_monthly", "Mese")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPeriod("week");
+                setHoveredIndex(null);
+              }}
+              className={`rounded px-1.5 py-0.5 transition cursor-pointer font-medium ${
+                period === "week"
+                  ? "bg-teal-500 font-bold text-slate-950"
+                  : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
+              }`}
+            >
+              {t("dashboard.period_weekly", "Settimana")}
+            </button>
           </div>
-        ) : (
-          <span className={`text-sm font-semibold tabular-nums ${pnlTone(total)}`}>
-            {formatSignedMoney(total, undefined, locale)}
-          </span>
-        )
+        </div>
       }
     >
-      {months.length === 0 ? (
+      {items.length === 0 ? (
         <div className="flex h-52 items-center justify-center px-6 text-center text-sm text-slate-400 dark:text-slate-500">
-          {t("dashboard.no_monthly")}
+          {period === "month" ? t("dashboard.no_monthly") : t("dashboard.no_weekly")}
         </div>
       ) : (
         <div className="px-2 py-3" onMouseLeave={() => setHoveredIndex(null)}>
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={t("dashboard.monthly_pnl")}>
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="PnL Chart">
             <line x1={pad} y1={zero} x2={W - pad} y2={zero} stroke="#64748b" strokeOpacity="0.35" strokeWidth="1" />
-            {months.map((m, i) => {
-              const value = asNumber(m.realized);
+            {items.map((item, i) => {
+              const value = asNumber(item.realized);
               const h = Math.abs(value) * scale;
-              const x = pad + i * ((W - pad * 2) / months.length) + (W - pad * 2) / months.length / 2 - barW / 2;
+              const x = pad + i * ((W - pad * 2) / items.length) + (W - pad * 2) / items.length / 2 - barW / 2;
               const y = value >= 0 ? zero - h : zero;
               const isHovered = hoveredIndex === i;
+              const key = "month" in item ? item.month : item.week;
               return (
-                <g key={m.month} className="cursor-pointer">
+                <g key={key} className="cursor-pointer">
                   {isHovered && (
                     <rect
                       x={x - 2}
@@ -505,24 +592,24 @@ function MonthlyBars({ monthly }: { monthly: MonthlyPnlPoint[] }) {
                     onMouseEnter={() => setHoveredIndex(i)}
                     className="transition-all duration-150"
                   >
-                    <title>{`${monthLabel(m.month, locale)}: ${formatSignedMoney(m.realized)} (${m.count})`}</title>
+                    <title>{itemFullTitle(item)}</title>
                   </rect>
                   <text
                     x={x + barW / 2}
                     y={H - 3}
                     textAnchor="middle"
-                    fontSize="9"
+                    fontSize={period === "month" ? "9" : "8"}
                     fontWeight={isHovered ? "bold" : "normal"}
                     fill={isHovered ? (isDark ? "#ffffff" : "#0f172a") : (isDark ? "#94a3b8" : "#64748b")}
                   >
-                    {monthLabel(m.month, locale)}
+                    {itemLabel(key)}
                   </text>
                 </g>
               );
             })}
           </svg>
           <div className="px-3 pb-1 text-right text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            {months.length} {t("dashboard.months")}
+            {items.length} {period === "month" ? t("dashboard.months") : t("dashboard.weeks")}
           </div>
         </div>
       )}
@@ -874,6 +961,35 @@ export function DashboardPage() {
 
   const currency = data?.kpi_currency;
 
+  const currentWeekPnl = useMemo(() => {
+    const now = new Date();
+    const currentDay = now.getDay() || 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - currentDay + 1);
+    monday.setHours(0, 0, 0, 0);
+    const mondayIso = monday.toISOString().slice(0, 10);
+
+    const currentYear = now.getFullYear();
+    const target = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const dayNr = target.getUTCDay() || 7;
+    target.setUTCDate(target.getUTCDate() + 4 - dayNr);
+    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+    const currentWeekNr = Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+    const currentWeekKey = `${currentYear}-W${String(currentWeekNr).padStart(2, "0")}`;
+
+    if (data?.weekly_pnl) {
+      const found = data.weekly_pnl.find((w) => w.week === currentWeekKey);
+      if (found) return asNumber(found.realized);
+    }
+
+    if (data?.all_assets_daily_pnl) {
+      return data.all_assets_daily_pnl
+        .filter((p) => p.date >= mondayIso)
+        .reduce((sum, p) => sum + asNumber(p.day_pnl), 0);
+    }
+    return 0;
+  }, [data]);
+
   const heroCards = [
     {
       label: t("dashboard.cards.total_pnl"),
@@ -887,6 +1003,12 @@ export function DashboardPage() {
       value: formatSignedMoney(data?.realized_pnl, currency, locale),
       tone: pnlTone(asNumber(data?.realized_pnl)),
       caption: t("dashboard.caption_realized"),
+    },
+    {
+      label: t("dashboard.cards.weekly_pnl", "PnL Questa Settimana"),
+      value: formatSignedMoney(currentWeekPnl, currency, locale),
+      tone: pnlTone(currentWeekPnl),
+      caption: t("dashboard.cards.current_week", "Questa settimana"),
     },
     {
       label: t("dashboard.cards.unrealized_pnl"),
@@ -945,7 +1067,7 @@ export function DashboardPage() {
         </div>
       ) : (
         <>
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {heroCards.map((card, i) => (
               <KpiCard key={card.label} {...card} delay={i * 60} />
             ))}
@@ -978,7 +1100,11 @@ export function DashboardPage() {
           </section>
 
           <section className="grid gap-4 xl:grid-cols-3">
-            <MonthlyBars monthly={data?.monthly_pnl ?? []} />
+            <PeriodicPnlBars
+              monthly={data?.monthly_pnl ?? []}
+              weekly={data?.weekly_pnl ?? []}
+              daily={data?.all_assets_daily_pnl ?? []}
+            />
             <AllAssetsDailyPnlPanel data={data?.all_assets_daily_pnl ?? []} />
             <AllocationPanel allocation={data?.asset_allocation ?? []} classes={data?.asset_classes ?? []} />
           </section>
