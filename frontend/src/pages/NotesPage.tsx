@@ -1140,7 +1140,7 @@ export function NotesPage() {
                 <button
                   type="button"
                   onClick={onCancelModal}
-                  className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-300 dark:text-slate-900"
+                  className="rounded-lg border border-slate-600 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-700 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-800 dark:hover:bg-slate-200"
                 >
                   {t("common.cancel")}
                 </button>

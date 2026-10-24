@@ -408,7 +408,11 @@ export function TradeEditPage() {
         ) : null}
 
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => navigate(`/trades/${tradeId}`)} className="rounded bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 dark:text-slate-900">
+          <button
+            type="button"
+            onClick={() => navigate(`/trades/${tradeId}`)}
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-800 dark:hover:bg-slate-300"
+          >
             {t("common.cancel")}
           </button>
           <button type="submit" disabled={saveMutation.isPending} className="rounded bg-teal-500 px-4 py-2 text-sm font-semibold text-slate-900">

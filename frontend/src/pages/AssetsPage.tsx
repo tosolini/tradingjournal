@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Asset, api } from "../lib/api";
+import { useToast } from "../contexts/ToastContext";
 
 const INSTRUMENT_TYPES = ["etf", "stock", "bond", "fund"];
 
@@ -16,6 +17,7 @@ function AssetFormModal({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [symbol, setSymbol] = useState(editAsset?.symbol ?? "");
   const [name, setName] = useState(editAsset?.name ?? "");
   const [isin, setIsin] = useState(editAsset?.isin ?? "");
@@ -35,11 +37,12 @@ function AssetFormModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
+      toast.success(isEditing ? t("assets.updated_success", "Asset aggiornato") : t("assets.created_success", "Asset creato"));
       onClose();
     },
     onError: (err: Error) => {
       console.error("Asset mutation error:", err);
-      alert(`Error: ${err.message}`);
+      toast.error(`Error: ${err.message}`);
     },
   });
 
