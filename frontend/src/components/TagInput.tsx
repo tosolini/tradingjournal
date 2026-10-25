@@ -5,6 +5,7 @@ type TagInputProps = {
   placeholder?: string;
   value: string[];
   suggestions?: string[];
+  formatTagLabel?: (tag: string) => string;
   onChange: (next: string[]) => void;
 };
 
@@ -12,7 +13,14 @@ function normalizeTag(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
 }
 
-export function TagInput({ label, placeholder, value, suggestions = [], onChange }: TagInputProps) {
+export function TagInput({
+  label,
+  placeholder,
+  value,
+  suggestions = [],
+  formatTagLabel,
+  onChange,
+}: TagInputProps) {
   const [inputValue, setInputValue] = useState("");
 
   const availableSuggestions = useMemo(() => {
@@ -65,7 +73,7 @@ export function TagInput({ label, placeholder, value, suggestions = [], onChange
               className="rounded-full border border-teal-500/40 bg-teal-500/15 px-2 py-1 text-xs text-teal-200 dark:text-teal-900"
               title="Rimuovi tag"
             >
-              {tag} ×
+              {(formatTagLabel?.(tag) ?? tag)} ×
             </button>
           ))}
           {value.length === 0 ? <span className="text-xs text-slate-500">Nessun tag</span> : null}
@@ -88,7 +96,7 @@ export function TagInput({ label, placeholder, value, suggestions = [], onChange
               onClick={() => addTag(suggestion)}
               className="rounded-full border border-slate-600 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 px-2 py-1 text-xs text-slate-300 dark:text-slate-700 hover:border-teal-500/50 hover:text-teal-200 dark:hover:text-teal-900"
             >
-              {suggestion}
+              {formatTagLabel?.(suggestion) ?? suggestion}
             </button>
           ))}
         </div>
