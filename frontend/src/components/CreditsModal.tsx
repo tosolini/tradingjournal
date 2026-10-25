@@ -66,8 +66,8 @@ export function CreditsModal({ open, onClose }: Props) {
     },
     {
       title: "Segnala un Bug o Richiesta",
-      url: "https://github.com/tosolini/tradejournal/issues",
-      display: "github.com/tosolini/tradejournal/issues",
+      url: "https://github.com/tosolini/tradingjournal/issues",
+      display: "github.com/tosolini/tradingjournal/issues",
       desc: "Issue tracker e roadmap di sviluppo per TradingJournal",
       icon: HelpCircleIcon,
       color: "text-amber-400 dark:text-amber-600",

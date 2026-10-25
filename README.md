@@ -44,8 +44,8 @@ More details on change log and versioning strategy in the [changelog.md](changel
 
 Pre-built images are published to GitHub Container Registry for `linux/amd64` and `linux/arm64`:
 
-- `ghcr.io/tosolini/tradejournal/backend`
-- `ghcr.io/tosolini/tradejournal/frontend`
+- `ghcr.io/tosolini/tradingjournal/backend`
+- `ghcr.io/tosolini/tradingjournal/frontend`
 
 Tags: `main` (latest build of the `main` branch), a short commit SHA, and semver tags like `0.1.7` / `0.1` once a release is tagged. Pin to a specific tag instead of `main` for reproducible deployments.
 
@@ -61,6 +61,8 @@ docker compose -f docker-compose.prod.yml up -d
 > ⚠️ The backend **refuses to start** when `ENVIRONMENT=production` with a weak/default `JWT_SECRET_KEY` (must be ≥ 32 random chars) or a weak `SEED_ADMIN_PASSWORD` (must be ≥ 12 chars, not a known default). Generate a secret with `openssl rand -hex 32`.
 
 ```yaml
+name: tradingjournal
+
 services:
   db:
     image: postgres:16-alpine
@@ -72,7 +74,7 @@ services:
       - db_data:/var/lib/postgresql/data
 
   backend:
-    image: ghcr.io/tosolini/tradejournal/backend:main
+    image: ghcr.io/tosolini/tradingjournal/backend:main
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       DATABASE_URL: ${DATABASE_URL}
@@ -95,7 +97,7 @@ services:
       - media_data:/app/media
 
   frontend:
-    image: ghcr.io/tosolini/tradejournal/frontend:main
+    image: ghcr.io/tosolini/tradingjournal/frontend:main
     depends_on:
       - backend
     ports:
@@ -124,7 +126,7 @@ Run the frontend with `BACKEND_URL` pointing at the reachable backend (the proxy
 
 ```yaml
   frontend:
-    image: ghcr.io/tosolini/tradejournal/frontend:main
+    image: ghcr.io/tosolini/tradingjournal/frontend:main
     environment:
       BACKEND_URL: http://192.168.1.20:18000
     ports:
@@ -138,8 +140,8 @@ Run the frontend with `BACKEND_URL` pointing at the reachable backend (the proxy
 Build the same images locally instead of pulling them:
 
 ```bash
-docker build -f docker/backend.Dockerfile -t ghcr.io/tosolini/tradejournal/backend:main ./backend
-docker build -f docker/frontend.Dockerfile -t ghcr.io/tosolini/tradejournal/frontend:main ./frontend
+docker build -f docker/backend.Dockerfile -t ghcr.io/tosolini/tradingjournal/backend:main ./backend
+docker build -f docker/frontend.Dockerfile -t ghcr.io/tosolini/tradingjournal/frontend:main ./frontend
 ```
 
 The production Dockerfiles live in `docker/` (the `backend/Dockerfile` and `frontend/Dockerfile` are dev-only and used by the dev compose stack).

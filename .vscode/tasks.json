@@ -9,33 +9,33 @@
 		{
 			"label": "gh-merge-open-prs",
 			"type": "shell",
-			"command": "set -euo pipefail; prs=$(gh pr list -R tosolini/tradejournal --state open --json number -q '.[].number'); if [ -z \"$prs\" ]; then echo 'NESSUN_PR_APERTO'; exit 0; fi; for n in $prs; do echo \"MERGE_PR_START #$n\"; if gh pr merge -R tosolini/tradejournal \"$n\" --squash --delete-branch; then echo \"MERGE_PR_OK #$n\"; else echo \"MERGE_PR_FAIL #$n\"; fi; done; echo 'MERGE_BATCH_DONE'",
+			"command": "set -euo pipefail; prs=$(gh pr list -R tosolini/tradingjournal --state open --json number -q '.[].number'); if [ -z \"$prs\" ]; then echo 'NESSUN_PR_APERTO'; exit 0; fi; for n in $prs; do echo \"MERGE_PR_START #$n\"; if gh pr merge -R tosolini/tradingjournal \"$n\" --squash --delete-branch; then echo \"MERGE_PR_OK #$n\"; else echo \"MERGE_PR_FAIL #$n\"; fi; done; echo 'MERGE_BATCH_DONE'",
 			"args": []
 		},
 		{
 			"label": "gh-merge-open-prs-v2",
 			"type": "shell",
-			"command": "set -euo pipefail; list=$(gh pr list -R tosolini/tradejournal --state open --json number -q '.[].number'); if [ -z \"$list\" ]; then echo 'NESSUN_PR_APERTO'; exit 0; fi; printf '%s\n' \"$list\" | while IFS= read -r n; do [ -z \"$n\" ] && continue; echo \"MERGE_PR_START #$n\"; if gh pr merge -R tosolini/tradejournal \"$n\" --squash --delete-branch; then echo \"MERGE_PR_OK #$n\"; else echo \"MERGE_PR_FAIL #$n\"; fi; done; echo 'MERGE_BATCH_DONE'"
+			"command": "set -euo pipefail; list=$(gh pr list -R tosolini/tradingjournal --state open --json number -q '.[].number'); if [ -z \"$list\" ]; then echo 'NESSUN_PR_APERTO'; exit 0; fi; printf '%s\n' \"$list\" | while IFS= read -r n; do [ -z \"$n\" ] && continue; echo \"MERGE_PR_START #$n\"; if gh pr merge -R tosolini/tradingjournal \"$n\" --squash --delete-branch; then echo \"MERGE_PR_OK #$n\"; else echo \"MERGE_PR_FAIL #$n\"; fi; done; echo 'MERGE_BATCH_DONE'"
 		},
 		{
 			"label": "gh-list-open-prs-after-merge",
 			"type": "shell",
-			"command": "gh pr list -R tosolini/tradejournal --state open --json number,title,mergeStateStatus,url -q '.[] | \"#\\(.number)\\t\\(.mergeStateStatus)\\t\\(.title)\\t\\(.url)\"'"
+			"command": "gh pr list -R tosolini/tradingjournal --state open --json number,title,mergeStateStatus,url -q '.[] | \"#\\(.number)\\t\\(.mergeStateStatus)\\t\\(.title)\\t\\(.url)\"'"
 		},
 		{
 			"label": "gh-list-open-prs-after-merge-v2",
 			"type": "shell",
-			"command": "out=$(gh pr list -R tosolini/tradejournal --state open --json number,title,mergeStateStatus,url -q '.[] | \"#\\(.number)\\t\\(.mergeStateStatus)\\t\\(.title)\\t\\(.url)\"'); if [ -z \"$out\" ]; then echo 'NESSUN_PR_APERTO'; else echo \"$out\"; fi"
+			"command": "out=$(gh pr list -R tosolini/tradingjournal --state open --json number,title,mergeStateStatus,url -q '.[] | \"#\\(.number)\\t\\(.mergeStateStatus)\\t\\(.title)\\t\\(.url)\"'); if [ -z \"$out\" ]; then echo 'NESSUN_PR_APERTO'; else echo \"$out\"; fi"
 		},
 		{
 			"label": "gh-merge-pr-40",
 			"type": "shell",
-			"command": "gh pr merge -R tosolini/tradejournal 40 --squash --delete-branch"
+			"command": "gh pr merge -R tosolini/tradingjournal 40 --squash --delete-branch"
 		},
 		{
 			"label": "gh-list-open-prs-final",
 			"type": "shell",
-			"command": "out=$(gh pr list -R tosolini/tradejournal --state open --json number -q '.[].number'); if [ -z \"$out\" ]; then echo 'NESSUN_PR_APERTO'; else echo \"$out\"; fi"
+			"command": "out=$(gh pr list -R tosolini/tradingjournal --state open --json number -q '.[].number'); if [ -z \"$out\" ]; then echo 'NESSUN_PR_APERTO'; else echo \"$out\"; fi"
 		},
 		{
 			"label": "start-backend",

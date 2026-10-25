@@ -386,7 +386,7 @@ export function Layout({ children }: PropsWithChildren) {
               {/* Logo & Credits */}
               <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                 <a
-                  href="https://github.com/tosolini/tradejournal/issues"
+                  href="https://github.com/tosolini/tradingjournal/issues"
                   target="_blank"
                   rel="noreferrer"
                   className="underline hover:text-slate-300 dark:hover:text-slate-700"
