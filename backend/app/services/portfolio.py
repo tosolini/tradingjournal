@@ -26,7 +26,12 @@ def get_holding_details(
     results: list[HoldingDetailResponse] = []
 
     for h in holdings:
-        current_price = get_current_price(h.asset.symbol, h.asset.exchange) or Decimal("0")
+        fetched_price = get_current_price(h.asset.symbol, h.asset.exchange)
+        current_price = (
+            fetched_price
+            if fetched_price is not None and fetched_price > Decimal("0")
+            else h.avg_cost
+        )
         qty = h.quantity
         mkt_val = current_price * qty
         cost_basis = h.avg_cost * qty

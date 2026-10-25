@@ -57,24 +57,32 @@ def get_current_price(
     if cached and (now - cached[0]) < CACHE_TTL:
         return cached[1]
 
-    try:
-        ticker = yf.Ticker(yf_symbol)
-        info = ticker.info
-        # Try multiple price fields yfinance may populate
-        price = (
-            info.get("currentPrice")
-            or info.get("regularMarketPrice")
-            or info.get("previousClose")
-        )
-        if price is not None:
-            result = Decimal(str(price))
-            _price_cache[yf_symbol] = (now, result)
-            return result
-    except Exception:
-        pass
+    def _fetch_quote(sym: str) -> Optional[Decimal]:
+        try:
+            ticker = yf.Ticker(sym)
+            info = ticker.info
+            # Try multiple price fields yfinance may populate
+            price = (
+                info.get("currentPrice")
+                or info.get("regularMarketPrice")
+                or info.get("previousClose")
+            )
+            if price is not None:
+                return Decimal(str(price))
+        except Exception:
+            pass
+        return None
 
-    _price_cache[yf_symbol] = (now, None)
-    return None
+    result = _fetch_quote(yf_symbol)
+    # If not found and market suffix was appended, try bare symbol
+    if result is None and yf_symbol != symbol.upper():
+        result = _fetch_quote(symbol.upper())
+    # If still not found and original symbol had no dot, try .MI (popular for Milan / Euronext ETFs and Italian stocks)
+    if result is None and "." not in symbol:
+        result = _fetch_quote(symbol.upper() + ".MI")
+
+    _price_cache[yf_symbol] = (now, result)
+    return result
 
 
 def get_close_price(
@@ -94,18 +102,24 @@ def get_close_price(
     if cached and (now - cached[0]) < CACHE_TTL:
         return cached[1]
 
-    try:
-        ticker = yf.Ticker(yf_symbol)
-        # yfinance end date is exclusive — use next day to include target_date
-        from datetime import timedelta
-        end_date = (target_date + timedelta(days=1)).isoformat()
-        hist = ticker.history(start=target_date.isoformat(), end=end_date)
-        if not hist.empty:
-            close = Decimal(str(hist["Close"].iloc[-1]))
-            _price_cache[cache_key] = (now, close)
-            return close
-    except Exception:
-        pass
+    from datetime import timedelta
+    end_date = (target_date + timedelta(days=1)).isoformat()
 
-    _price_cache[cache_key] = (now, None)
-    return None
+    def _fetch_hist(sym: str) -> Optional[Decimal]:
+        try:
+            ticker = yf.Ticker(sym)
+            hist = ticker.history(start=target_date.isoformat(), end=end_date)
+            if not hist.empty:
+                return Decimal(str(hist["Close"].iloc[-1]))
+        except Exception:
+            pass
+        return None
+
+    result = _fetch_hist(yf_symbol)
+    if result is None and yf_symbol != symbol.upper():
+        result = _fetch_hist(symbol.upper())
+    if result is None and "." not in symbol:
+        result = _fetch_hist(symbol.upper() + ".MI")
+
+    _price_cache[cache_key] = (now, result)
+    return result
