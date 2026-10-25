@@ -1,25 +1,28 @@
-from sqlalchemy import or_, select
+import logging
+
+from sqlalchemy import func, select
 
 from app.config import settings
 from app.database import SessionLocal
 from app.models import Exchange, User
 from app.security import hash_password
 
+logger = logging.getLogger(__name__)
+
 
 def ensure_seed_admin() -> None:
+    """One-time bootstrap: create the initial admin only on an empty users table.
+
+    All later user accounting lives in the database (admin UI / API).
+    Changing SEED_* in .env afterwards has no effect by design; the seeded
+    admin must rotate the bootstrap password at first login.
+    """
     if not settings.seed_admin_enabled:
         return
 
     with SessionLocal() as db:
-        existing = db.execute(
-            select(User).where(
-                or_(
-                    User.username == settings.seed_admin_username,
-                    User.email == settings.seed_admin_email,
-                )
-            )
-        ).scalar_one_or_none()
-        if existing:
+        user_count = db.execute(select(func.count()).select_from(User)).scalar() or 0
+        if user_count > 0:
             return
 
         user = User(
@@ -27,9 +30,16 @@ def ensure_seed_admin() -> None:
             username=settings.seed_admin_username,
             hashed_password=hash_password(settings.seed_admin_password),
             role="admin",
+            must_change_password=True,
         )
         db.add(user)
         db.commit()
+        logger.warning(
+            "Bootstrapped initial admin '%s' from SEED_* settings. "
+            "A password change is enforced at first login; later SEED_* "
+            "changes are ignored, manage users via the admin API.",
+            user.username,
+        )
 
 
 def ensure_seed_exchanges(user_id: int) -> None:

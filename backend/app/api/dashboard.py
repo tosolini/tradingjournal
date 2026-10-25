@@ -58,6 +58,7 @@ def dashboard_kpis(
     year_end_rates: dict[int, Decimal] = {}
     loss_offset = Decimal("0")
     monthly: dict[str, dict] = {}
+    weekly: dict[str, dict] = {}
     trade_rows: list[dict] = []
 
     for trade in trades:
@@ -106,6 +107,12 @@ def dashboard_kpis(
         bucket = monthly.setdefault(month_key, {"realized": Decimal("0"), "count": 0})
         bucket["realized"] += net
         bucket["count"] += 1
+
+        iso_year, iso_week, _ = closed_at.isocalendar()
+        week_key = f"{iso_year}-W{iso_week:02d}"
+        w_bucket = weekly.setdefault(week_key, {"realized": Decimal("0"), "count": 0})
+        w_bucket["realized"] += net
+        w_bucket["count"] += 1
 
         trade_rows.append(
             {
@@ -169,6 +176,11 @@ def dashboard_kpis(
     monthly_pnl = [
         {"month": key, "realized": str(bucket["realized"]), "count": bucket["count"]}
         for key, bucket in sorted(monthly.items())
+    ]
+
+    weekly_pnl = [
+        {"week": key, "realized": str(bucket["realized"]), "count": bucket["count"]}
+        for key, bucket in sorted(weekly.items())
     ]
 
     account_ids = (
@@ -270,6 +282,7 @@ def dashboard_kpis(
         "worst_trade": trade_stat(worst) if worst else None,
         "top_trades": top_trades,
         "monthly_pnl": monthly_pnl,
+        "weekly_pnl": weekly_pnl,
         "open_positions": open_positions,
         "realized_pnl": str(realized),
         "unrealized_pnl": str(unrealized),

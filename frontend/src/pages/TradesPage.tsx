@@ -4,6 +4,14 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ApiError, RecentExecution, Trade, api } from "../lib/api";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { useToast } from "../contexts/ToastContext";
+import {
+  EditIcon,
+  EyeIcon as ViewIcon,
+  ImageIcon,
+  TrashIcon as DeleteIcon,
+  XIcon as CloseIcon,
+} from "../components/icons";
 
 function asNumber(value: string | number | undefined): number {
   if (value === undefined) {
@@ -92,55 +100,6 @@ function computeSlAbs(side: string, entry: number, stopLoss: number, qty: number
     return (stopLoss - entry) * qty;
   }
   return (entry - stopLoss) * qty;
-}
-
-function ViewIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-    </svg>
-  );
-}
-
-function ImageIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-      <circle cx="8.5" cy="8.5" r="1.5" />
-      <path d="m21 15-5-5L5 21" />
-    </svg>
-  );
-}
-
-function DeleteIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 6h18" />
-      <path d="M8 6V4h8v2" />
-      <path d="M19 6l-1 14H6L5 6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 6l12 12" />
-      <path d="M18 6 6 18" />
-    </svg>
-  );
 }
 
 type OptionalTradeColumnKey =
@@ -284,6 +243,7 @@ export function TradesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const toast = useToast();
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletePendingId, setDeletePendingId] = useState<number | null>(null);
   const [quickCloseTradeId, setQuickCloseTradeId] = useState<number | null>(null);
@@ -294,6 +254,10 @@ export function TradesPage() {
   const [recentSearch, setRecentSearch] = useState("");
   const [tradeSearch, setTradeSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "7d" | "month" | "ytd">("all");
+  const [outcomeFilter, setOutcomeFilter] = useState<"all" | "win" | "loss">("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [showColumnsMenu, setShowColumnsMenu] = useState(false);
   const [recentSortConfig, setRecentSortConfig] = useState<{ key: SortableRecentExecutionColumnKey; direction: "asc" | "desc" }>({
     key: "date",
@@ -328,6 +292,7 @@ export function TradesPage() {
     onSuccess: () => {
       setDeleteError(null);
       qc.invalidateQueries({ queryKey: ["trades"] });
+      toast.success(t("trades.deleted_success", "Trade eliminato con successo"));
     },
   });
 
@@ -351,6 +316,7 @@ export function TradesPage() {
       qc.invalidateQueries({ queryKey: ["trades"] });
       qc.invalidateQueries({ queryKey: ["recent-executions"] });
       qc.invalidateQueries({ queryKey: ["kpis"] });
+      toast.success(t("trades.closed_success", "Trade chiuso con successo"));
     },
   });
 
@@ -421,8 +387,32 @@ export function TradesPage() {
     }
 
     const term = tradeSearch.trim().toLowerCase();
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const currentYearPrefix = `${now.getFullYear()}`;
+
     return data.filter((trade) => {
       if (statusFilter !== "all" && trade.status !== statusFilter) {
+        return false;
+      }
+      if (outcomeFilter === "win" && asNumber(trade.net_return) <= 0) {
+        return false;
+      }
+      if (outcomeFilter === "loss" && asNumber(trade.net_return) >= 0) {
+        return false;
+      }
+      if (dateFilter === "today" && !trade.created_at.startsWith(todayStr)) {
+        return false;
+      }
+      if (dateFilter === "7d" && trade.created_at < sevenDaysAgo) {
+        return false;
+      }
+      if (dateFilter === "month" && !trade.created_at.startsWith(currentMonthPrefix)) {
+        return false;
+      }
+      if (dateFilter === "ytd" && !trade.created_at.startsWith(currentYearPrefix)) {
         return false;
       }
       if (!term) {
@@ -431,7 +421,7 @@ export function TradesPage() {
       const haystack = `${trade.id} ${trade.symbol} ${trade.side} ${trade.status}`.toLowerCase();
       return haystack.includes(term);
     });
-  }, [data, statusFilter, tradeSearch]);
+  }, [data, statusFilter, tradeSearch, dateFilter, outcomeFilter]);
 
   const quickCloseTrade = useMemo(() => {
     if (!quickCloseTradeId || !data?.length) {
@@ -534,6 +524,13 @@ export function TradesPage() {
     return result;
   }, [filteredTrades, sortConfig]);
 
+  const totalPages = Math.max(1, Math.ceil(sortedTrades.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedTrades = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedTrades.slice(start, start + pageSize);
+  }, [sortedTrades, currentPage, pageSize]);
+
   const toggleSort = (key: SortableTradeColumnKey) => {
     setSortConfig((previous) => {
       if (previous.key === key) {
@@ -596,7 +593,7 @@ export function TradesPage() {
           />
         </div>
         <table className="min-w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10 bg-slate-900/95 dark:bg-slate-100/95 backdrop-blur-xs shadow-xs">
             <tr className="border-b border-slate-700 dark:border-slate-300 text-left text-slate-400 dark:text-slate-900">
               <th className="px-3 py-2">
                 <button type="button" onClick={() => toggleRecentSort("date")} className="text-left hover:text-slate-200 dark:text-slate-900">
@@ -655,23 +652,70 @@ export function TradesPage() {
 
       <section className="card overflow-x-auto">
         <div className="flex flex-col gap-2 border-b border-slate-700/80 px-4 py-3 md:flex-row md:items-center md:justify-between">
-          <div className="text-lg font-semibold">{t("trades.title")}</div>
-          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+          <div className="flex flex-col gap-1">
+            <div className="text-lg font-bold">{t("trades.title")}</div>
+            {/* Quick date range presets */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1">
+              {[
+                { key: "all", label: "Tutti" },
+                { key: "today", label: "Oggi" },
+                { key: "7d", label: "7 giorni" },
+                { key: "month", label: "Questo mese" },
+                { key: "ytd", label: "YTD" },
+              ].map((preset) => (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => {
+                    setDateFilter(preset.key as "all" | "today" | "7d" | "month" | "ytd");
+                    setPage(1);
+                  }}
+                  className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                    dateFilter === preset.key
+                      ? "bg-teal-500 text-slate-950 shadow-xs"
+                      : "border border-slate-700/80 bg-slate-900/60 text-slate-400 hover:text-slate-200 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-600"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
             <input
               value={tradeSearch}
-              onChange={(event) => setTradeSearch(event.target.value)}
-              className="w-full rounded border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-2 text-sm md:w-64"
+              onChange={(event) => {
+                setTradeSearch(event.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-1.5 text-sm md:w-56"
               placeholder={t("trades.search_placeholder")}
             />
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-2 text-sm"
+              onChange={(event) => {
+                setStatusFilter(event.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-1.5 text-sm"
             >
               <option value="all">{t("trades.all_statuses")}</option>
               <option value="open">{t("trades.status.open")}</option>
               <option value="partial">{t("trades.status.partial")}</option>
               <option value="close">{t("trades.status.close")}</option>
+            </select>
+            <select
+              value={outcomeFilter}
+              onChange={(event) => {
+                setOutcomeFilter(event.target.value as "all" | "win" | "loss");
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-1.5 text-sm"
+            >
+              <option value="all">Esito: Tutti</option>
+              <option value="win">Solo Win (+)</option>
+              <option value="loss">Solo Loss (-)</option>
             </select>
             <div className="relative" ref={columnsMenuRef}>
               <button
@@ -775,7 +819,7 @@ export function TradesPage() {
           </div>
         ) : null}
         <table className="min-w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10 bg-slate-900/95 dark:bg-slate-100/95 backdrop-blur-xs shadow-xs">
             <tr className="border-b border-slate-700 dark:border-slate-300 text-left text-slate-400 dark:text-slate-900">
               <th className="px-3 py-2">
                 <button type="button" onClick={() => toggleSort("date")} className="text-left hover:text-slate-200 dark:text-slate-900">
@@ -885,7 +929,7 @@ export function TradesPage() {
             </tr>
           </thead>
           <tbody>
-            {sortedTrades.map((trade) => {
+            {pagedTrades.map((trade) => {
               const entry = asNumber(trade.average_entry_price);
               const openQty = asNumber(trade.open_position_qty);
               const tp = asNumber(trade.target_price);
@@ -897,36 +941,48 @@ export function TradesPage() {
               const slAbs = computeSlAbs(trade.side, entry, sl, openQty);
 
               return (
-              <tr key={trade.id} className="border-b border-slate-800/80">
+              <tr key={trade.id} className="border-b border-slate-800/80 hover:bg-slate-800/30 transition">
                 <td
-                  className="cursor-pointer px-3 py-2 hover:text-teal-300 dark:text-teal-900"
+                  className="cursor-pointer px-3 py-2.5 hover:text-teal-300 dark:text-teal-900 tabular-nums text-xs"
                   onClick={() => navigate(`/trades/${trade.id}`)}
                   title={t("trades.view_trade") ?? "Visualizza trade"}
                 >
                   {new Date(trade.created_at).toLocaleDateString()}
                 </td>
                 <td
-                  className="cursor-pointer px-3 py-2 font-semibold text-teal-200 dark:text-teal-900 hover:text-teal-100 dark:text-teal-900 hover:underline"
+                  className="cursor-pointer px-3 py-2.5 font-bold text-teal-300 dark:text-teal-800 hover:underline text-sm"
                   onClick={() => navigate(`/trades/${trade.id}`)}
                   title={t("trades.view_trade") ?? "Visualizza trade"}
                 >
                   {trade.symbol}
                 </td>
-                <td className="px-3 py-2">{trade.status}</td>
-                <td className="px-3 py-2">{trade.side}</td>
-                {visibleOptionalColumns.avgEntry ? <td className="px-3 py-2">{formatMoney(trade.average_entry_price, trade.account_currency)}</td> : null}
-                {visibleOptionalColumns.avgExit ? <td className="px-3 py-2">{formatMoney(trade.average_exit_price, trade.account_currency)}</td> : null}
-                {visibleOptionalColumns.entryTotal ? <td className="px-3 py-2">{formatMoney(trade.entry_total, trade.account_currency)}</td> : null}
-                {visibleOptionalColumns.exitTotal ? <td className="px-3 py-2">{formatMoney(trade.exit_total, trade.account_currency)}</td> : null}
-                {visibleOptionalColumns.openQty ? <td className="px-3 py-2">{formatMetric(trade.open_position_qty)}</td> : null}
-                {visibleOptionalColumns.hold ? <td className="px-3 py-2">{formatHoldHours(trade.hold_duration_hours)}</td> : null}
+                <td className="px-3 py-2.5">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                      trade.status === "open"
+                        ? "bg-teal-500/15 border-teal-500/30 text-teal-300 dark:bg-teal-50 dark:border-teal-300 dark:text-teal-900"
+                        : trade.status === "partial"
+                        ? "bg-amber-500/15 border-amber-500/30 text-amber-300 dark:bg-amber-50 dark:border-amber-300 dark:text-amber-800"
+                        : "bg-slate-800/80 border-slate-700 text-slate-400 dark:bg-slate-100 dark:border-slate-300 dark:text-slate-600"
+                    }`}
+                  >
+                    {trade.status}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 uppercase font-semibold text-xs">{trade.side}</td>
+                {visibleOptionalColumns.avgEntry ? <td className="px-3 py-2.5 tabular-nums">{formatMoney(trade.average_entry_price, trade.account_currency)}</td> : null}
+                {visibleOptionalColumns.avgExit ? <td className="px-3 py-2.5 tabular-nums">{formatMoney(trade.average_exit_price, trade.account_currency)}</td> : null}
+                {visibleOptionalColumns.entryTotal ? <td className="px-3 py-2.5 tabular-nums">{formatMoney(trade.entry_total, trade.account_currency)}</td> : null}
+                {visibleOptionalColumns.exitTotal ? <td className="px-3 py-2.5 tabular-nums">{formatMoney(trade.exit_total, trade.account_currency)}</td> : null}
+                {visibleOptionalColumns.openQty ? <td className="px-3 py-2.5 tabular-nums">{formatMetric(trade.open_position_qty)}</td> : null}
+                {visibleOptionalColumns.hold ? <td className="px-3 py-2.5 tabular-nums">{formatHoldHours(trade.hold_duration_hours)}</td> : null}
                 {visibleOptionalColumns.return ? (
                   <td
-                    className={`px-3 py-2 ${
+                    className={`px-3 py-2.5 font-bold tabular-nums ${
                       trade.net_return === undefined
                         ? "text-slate-300 dark:text-slate-900"
                         : asNumber(trade.net_return) >= 0
-                          ? "text-emerald-300 dark:text-emerald-800"
+                          ? "text-emerald-400 dark:text-emerald-700"
                           : "text-red-400 dark:text-red-600"
                     }`}
                   >
@@ -935,49 +991,49 @@ export function TradesPage() {
                 ) : null}
                 {visibleOptionalColumns.returnPct ? (
                   <td
-                    className={`px-3 py-2 ${
+                    className={`px-3 py-2.5 font-bold tabular-nums ${
                       trade.return_pct === undefined
                         ? "text-slate-300 dark:text-slate-900"
                         : asNumber(trade.return_pct) >= 0
-                          ? "text-emerald-300 dark:text-emerald-800"
+                          ? "text-emerald-400 dark:text-emerald-700"
                           : "text-red-400 dark:text-red-600"
                     }`}
                   >
                     {formatMetric(trade.return_pct)}%
                   </td>
                 ) : null}
-                {visibleOptionalColumns.tpPct ? <td className="px-3 py-2 text-emerald-300 dark:text-emerald-800">{tpPct === null ? "-" : `${tpPct.toFixed(2)}%`}</td> : null}
-                {visibleOptionalColumns.slPct ? <td className="px-3 py-2 text-red-300 dark:text-red-600">{slPct === null ? "-" : `${slPct.toFixed(2)}%`}</td> : null}
-                {visibleOptionalColumns.tpAbs ? <td className="px-3 py-2 text-emerald-300 dark:text-emerald-800">{tpAbs === null ? "-" : formatMoney(tpAbs, trade.account_currency)}</td> : null}
-                {visibleOptionalColumns.slAbs ? <td className="px-3 py-2 text-red-300 dark:text-red-600">{slAbs === null ? "-" : formatMoney(slAbs, trade.account_currency)}</td> : null}
-                <td className="px-3 py-2">
-                  <div className="flex gap-2">
+                {visibleOptionalColumns.tpPct ? <td className="px-3 py-2.5 text-emerald-400 dark:text-emerald-700 tabular-nums">{tpPct === null ? "-" : `${tpPct.toFixed(2)}%`}</td> : null}
+                {visibleOptionalColumns.slPct ? <td className="px-3 py-2.5 text-red-400 dark:text-red-600 tabular-nums">{slPct === null ? "-" : `${slPct.toFixed(2)}%`}</td> : null}
+                {visibleOptionalColumns.tpAbs ? <td className="px-3 py-2.5 text-emerald-400 dark:text-emerald-700 tabular-nums">{tpAbs === null ? "-" : formatMoney(tpAbs, trade.account_currency)}</td> : null}
+                {visibleOptionalColumns.slAbs ? <td className="px-3 py-2.5 text-red-400 dark:text-red-600 tabular-nums">{slAbs === null ? "-" : formatMoney(slAbs, trade.account_currency)}</td> : null}
+                <td className="px-3 py-2.5">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => navigate(`/trades/${trade.id}`)}
-                      className="rounded bg-slate-700 p-2 text-white"
+                      className="rounded-lg border border-slate-700/80 bg-slate-800/80 p-1.5 text-slate-300 transition hover:bg-slate-700 hover:text-white dark:border-slate-300 dark:bg-slate-100 dark:text-slate-700 dark:hover:bg-slate-200"
                       title={t("trades.view_detail")}
                       aria-label={t("trades.view_detail")}
                     >
-                      <ViewIcon />
+                      <ViewIcon className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate(`/trades/${trade.id}/edit`)}
-                      className="rounded bg-sky-500 p-2 text-slate-950"
+                      className="rounded-lg border border-sky-500/30 bg-sky-500/15 p-1.5 text-sky-300 transition hover:bg-sky-500/30 dark:border-sky-300 dark:bg-sky-50 dark:text-sky-800"
                       title={t("trades.edit_trade")}
                       aria-label={t("trades.edit_trade")}
                     >
-                      <EditIcon />
+                      <EditIcon className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate(`/trades/${trade.id}/images`)}
-                      className="rounded bg-indigo-500 p-2 text-white"
+                      className="rounded-lg border border-indigo-500/30 bg-indigo-500/15 p-1.5 text-indigo-300 transition hover:bg-indigo-500/30 dark:border-indigo-300 dark:bg-indigo-50 dark:text-indigo-800"
                       title={t("trades.manage_images")}
                       aria-label={t("trades.manage_images")}
                     >
-                      <ImageIcon />
+                      <ImageIcon className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
@@ -990,11 +1046,11 @@ export function TradesPage() {
                         setQuickClosePrice(suggestedPrice > 0 ? String(suggestedPrice) : "");
                       }}
                       disabled={trade.status === "close"}
-                      className="rounded bg-amber-500 p-2 text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-lg border border-amber-500/30 bg-amber-500/15 p-1.5 text-amber-300 transition hover:bg-amber-500/30 disabled:cursor-not-allowed disabled:opacity-40 dark:border-amber-300 dark:bg-amber-50 dark:text-amber-800"
                       title={t("trades.quick_close")}
                       aria-label={t("trades.quick_close")}
                     >
-                      <CloseIcon />
+                      <CloseIcon className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
@@ -1002,11 +1058,11 @@ export function TradesPage() {
                         setDeleteError(null);
                         setDeletePendingId(trade.id);
                       }}
-                      className="rounded bg-red-500 p-2 text-white"
+                      className="rounded-lg border border-red-500/30 bg-red-500/15 p-1.5 text-red-400 transition hover:bg-red-500/30 dark:border-red-300 dark:bg-red-50 dark:text-red-700"
                       title={t("trades.delete_trade")}
                       aria-label={t("trades.delete_trade")}
                     >
-                      <DeleteIcon />
+                      <DeleteIcon className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </td>
@@ -1014,13 +1070,70 @@ export function TradesPage() {
             );})}
             {!filteredTrades.length ? (
               <tr>
-                <td colSpan={5 + visibleOptionalCount} className="px-3 py-2 text-slate-400 dark:text-slate-900">
+                <td colSpan={5 + visibleOptionalCount} className="px-3 py-6 text-center text-slate-400 dark:text-slate-600">
                   {t("trades.no_trades")}
                 </td>
               </tr>
             ) : null}
           </tbody>
         </table>
+
+        {/* Pagination Bar */}
+        {sortedTrades.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-700/80 px-4 py-3 text-xs text-slate-400 dark:border-slate-300 dark:text-slate-600">
+            <div className="flex items-center gap-2">
+              <span>
+                Visualizzati{" "}
+                <strong className="text-slate-200 dark:text-slate-900 font-semibold">
+                  {(currentPage - 1) * pageSize + 1}
+                </strong>{" "}
+                -{" "}
+                <strong className="text-slate-200 dark:text-slate-900 font-semibold">
+                  {Math.min(currentPage * pageSize, sortedTrades.length)}
+                </strong>{" "}
+                di{" "}
+                <strong className="text-slate-200 dark:text-slate-900 font-semibold">{sortedTrades.length}</strong>{" "}
+                trade
+              </span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="ml-2 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200 dark:border-slate-300 dark:bg-white dark:text-slate-800"
+              >
+                <option value={10}>10 per pagina</option>
+                <option value={15}>15 per pagina</option>
+                <option value={25}>25 per pagina</option>
+                <option value={50}>50 per pagina</option>
+                <option value={100}>100 per pagina</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="rounded-lg border border-slate-700/80 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-700 disabled:opacity-40 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-800"
+              >
+                ← Precedente
+              </button>
+              <span className="px-2 font-medium">
+                Pagina {currentPage} di {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="rounded-lg border border-slate-700/80 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-700 disabled:opacity-40 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-800"
+              >
+                Successiva →
+              </button>
+            </div>
+          </div>
+        )}
         {deleteError ? <div className="p-3 text-sm text-red-400 dark:text-red-600">{deleteError}</div> : null}
       </section>
       {deletePendingId !== null && (() => {

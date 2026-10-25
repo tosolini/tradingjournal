@@ -14,6 +14,7 @@ import {
   fetchPortfolioSummary,
 } from "../lib/api";
 import { useTheme } from "../contexts/ThemeContext";
+import { useToast } from "../contexts/ToastContext";
 
 function asNumber(value: string | number | undefined): number {
   if (value === undefined) return 0;
@@ -146,6 +147,7 @@ function HoldingFormModal({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: fetchAccounts });
   const { data: assets } = useQuery<Asset[]>({ queryKey: ["assets"], queryFn: () => api<Asset[]>("/api/assets") });
 
@@ -171,6 +173,7 @@ function HoldingFormModal({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      toast.success(t("portfolio.holding_created", "Posizione registrata con successo"));
       onClose();
       setAccountId("");
       setAssetId("");
@@ -181,7 +184,7 @@ function HoldingFormModal({
     },
     onError: (err: Error) => {
       console.error("Holding creation error:", err);
-      alert(`Error: ${err.message}`);
+      toast.error(`Error: ${err.message}`);
     },
   });
 
@@ -278,6 +281,7 @@ function HoldingEditFormModal({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const toast = useToast();
 
   const [accountId, setAccountId] = useState("");
   const [assetId, setAssetId] = useState("");
@@ -321,11 +325,12 @@ function HoldingEditFormModal({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      toast.success(t("portfolio.holding_updated", "Posizione aggiornata con successo"));
       onClose();
     },
     onError: (err: Error) => {
       console.error("Holding update error:", err);
-      alert(`Error: ${err.message}`);
+      toast.error(`Error: ${err.message}`);
     },
   });
 

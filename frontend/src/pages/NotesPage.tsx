@@ -1106,6 +1106,44 @@ export function NotesPage() {
                 suggestions={marketConditionSuggestions}
                 onChange={setMarketConditionTags}
               />
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">
+                  Checklist & Tag Disciplina
+                </span>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {[
+                    "Piano Rispettato",
+                    "Stop Loss Rispettato",
+                    "Target Raggiunto",
+                    "FOMO",
+                    "Overtrading",
+                    "Revenge Trading",
+                    "Uscita Anticipata",
+                  ].map((presetTag) => {
+                    const isSelected = marketConditionTags.includes(presetTag);
+                    return (
+                      <button
+                        key={presetTag}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setMarketConditionTags(marketConditionTags.filter((t) => t !== presetTag));
+                          } else {
+                            setMarketConditionTags([...marketConditionTags, presetTag]);
+                          }
+                        }}
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition ${
+                          isSelected
+                            ? "bg-teal-500 text-slate-950 font-semibold"
+                            : "border border-slate-700 bg-slate-800/60 text-slate-300 hover:border-slate-500 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-700"
+                        }`}
+                      >
+                        {isSelected ? `✓ ${presetTag}` : `+ ${presetTag}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <select
                 {...register("market_volatility")}
                 className="w-full rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2"
@@ -1140,7 +1178,7 @@ export function NotesPage() {
                 <button
                   type="button"
                   onClick={onCancelModal}
-                  className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-300 dark:text-slate-900"
+                  className="rounded-lg border border-slate-600 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-700 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-800 dark:hover:bg-slate-200"
                 >
                   {t("common.cancel")}
                 </button>

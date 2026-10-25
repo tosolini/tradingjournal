@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Account, Broker, Ticker, Trade, api, tickersApi } from "../lib/api";
+import { XIcon } from "./icons";
 
 // ── Step definitions ─────────────────────────────────────────────────
 const STEPS = [
@@ -218,6 +219,81 @@ function StepCard({ title, children }: { title: string; children: ReactNode }) {
     <div className="animate-[fadeSlideIn_0.35s_ease-out] space-y-4">
       <h3 className="text-base font-semibold text-slate-100 dark:text-slate-900">{title}</h3>
       {children}
+    </div>
+  );
+}
+
+function RiskRewardPreview({
+  direction,
+  entryPrice,
+  stopLoss,
+  takeProfit,
+  quantity,
+}: {
+  direction: Direction;
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit: number;
+  quantity: number;
+}) {
+  if (entryPrice <= 0) return null;
+  const isLong = direction === "long";
+  const riskPerShare = isLong
+    ? stopLoss > 0 ? entryPrice - stopLoss : null
+    : stopLoss > 0 ? stopLoss - entryPrice : null;
+  const rewardPerShare = isLong
+    ? takeProfit > 0 ? takeProfit - entryPrice : null
+    : takeProfit > 0 ? entryPrice - takeProfit : null;
+
+  const hasRisk = riskPerShare !== null && riskPerShare > 0;
+  const hasReward = rewardPerShare !== null && rewardPerShare > 0;
+
+  if (!hasRisk && !hasReward) return null;
+
+  const ratio = hasRisk && hasReward && riskPerShare! > 0 ? rewardPerShare! / riskPerShare! : null;
+  const totalRisk = hasRisk ? riskPerShare! * quantity : null;
+  const totalReward = hasReward ? rewardPerShare! * quantity : null;
+
+  return (
+    <div className="rounded-xl border border-slate-700/80 bg-slate-950/60 p-3.5 dark:border-slate-300 dark:bg-slate-50 my-3">
+      <div className="flex items-center justify-between text-xs font-semibold mb-2">
+        <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+          Risk / Reward (R:R)
+        </span>
+        {ratio !== null && (
+          <span
+            className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+              ratio >= 2
+                ? "bg-emerald-500/15 text-emerald-300 dark:bg-emerald-100 dark:text-emerald-800"
+                : ratio >= 1
+                ? "bg-amber-500/15 text-amber-300 dark:bg-amber-100 dark:text-amber-800"
+                : "bg-red-500/15 text-red-300 dark:bg-red-100 dark:text-red-800"
+            }`}
+          >
+            1 : {ratio.toFixed(2)}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-2 dark:border-red-200 dark:bg-red-50">
+          <div className="text-[10px] text-red-300 dark:text-red-700 uppercase font-semibold">
+            Rischio Max (Stop Loss)
+          </div>
+          <div className="text-sm font-bold text-red-400 dark:text-red-600 tabular-nums mt-0.5">
+            {totalRisk !== null ? `-€${totalRisk.toFixed(2)}` : "Non impostato"}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 dark:border-emerald-200 dark:bg-emerald-50">
+          <div className="text-[10px] text-emerald-300 dark:text-emerald-700 uppercase font-semibold">
+            Target Max (Take Profit)
+          </div>
+          <div className="text-sm font-bold text-emerald-400 dark:text-emerald-600 tabular-nums mt-0.5">
+            {totalReward !== null ? `+€${totalReward.toFixed(2)}` : "Non impostato"}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -485,6 +561,15 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
           {t("trades.new_trade.errors.create_failed")}
         </div>
       )}
+
+      {/* Risk / Reward live indicator */}
+      <RiskRewardPreview
+        direction={direction}
+        entryPrice={ep}
+        stopLoss={slNum}
+        takeProfit={tpNum}
+        quantity={qty}
+      />
 
       {/* Footer */}
       <div className="flex items-end gap-3 pt-2">
@@ -1192,6 +1277,14 @@ export function TradeCreateModal({ open, onClose }: Props) {
               </div>
             </div>
 
+            <RiskRewardPreview
+              direction={st.direction}
+              entryPrice={ep}
+              stopLoss={computedSlPrice}
+              takeProfit={computedTpPrice}
+              quantity={displayQuantity}
+            />
+
             {createTrade.error && (
               <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
                 {t("trades.new_trade.errors.create_failed")}
@@ -1220,15 +1313,38 @@ export function TradeCreateModal({ open, onClose }: Props) {
             className="rounded p-1 text-slate-500 hover:text-slate-200 dark:hover:text-slate-900 transition"
             aria-label={t("trades.new_trade.close")}
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
+            <XIcon className="h-5 w-5" />
           </button>
         </div>
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-500">
+        <p className="mb-3 text-xs text-slate-500 dark:text-slate-500">
           {t("trades.new_trade.subtitle")}
         </p>
+
+        {/* Mode Selector Tabs */}
+        <div className="mb-4 flex rounded-lg border border-slate-700/80 bg-slate-950/70 p-1 dark:border-slate-300 dark:bg-slate-100">
+          <button
+            type="button"
+            onClick={() => setQuickMode(true)}
+            className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
+              quickMode
+                ? "bg-teal-500 text-slate-950 shadow-xs"
+                : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
+            }`}
+          >
+            ⚡ Inserimento Rapido
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickMode(false)}
+            className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
+              !quickMode
+                ? "bg-teal-500 text-slate-950 shadow-xs"
+                : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
+            }`}
+          >
+            🧭 Wizard Guidato (6 Step)
+          </button>
+        </div>
 
         {quickMode ? (
           <QuickTradeForm onClose={onClose} />

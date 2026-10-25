@@ -86,3 +86,18 @@ msgstr "Movimento di cassa non trovato"
 
 msgid "errors.invalid_ledger_type"
 msgstr "Il tipo movimento deve essere 'deposit' o 'withdrawal'"
+
+msgid "errors.weak_password"
+msgstr "La password non rispetta i criteri di sicurezza"
+
+msgid "errors.registration_closed"
+msgstr "La registrazione pubblica è disabilitata, contatta un amministratore"
+
+msgid "errors.password_change_required"
+msgstr "Devi cambiare la password prima di continuare"
+
+msgid "errors.cannot_deactivate_self"
+msgstr "Non puoi disattivare il tuo stesso account"
+
+msgid "errors.user_has_data"
+msgstr "L'utente possiede ancora dati, disattivalo invece di eliminarlo"

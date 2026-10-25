@@ -21,6 +21,10 @@
       "new_trade": "New Trade",
       "new_note": "New Note"
     },
+    "search_placeholder": "Search symbols, pages or press ⌘K...",
+    "search_short": "Search (⌘K)",
+    "account_pill": "Account",
+    "all_accounts": "All accounts",
     "version": "Version",
     "tosolini_site_aria": "Walter Tosolini Website",
     "copyright": "All rights reserved."
@@ -32,7 +36,8 @@
     "submit": "Login",
     "errors": {
       "invalid_credentials": "Invalid credentials",
-      "api_connection": "API connection error. Check backend status and CORS configuration."
+      "api_connection": "API connection error. Check backend status and CORS configuration.",
+      "password_change_required": "You must change your password before continuing."
     }
   },
   "settings": {
@@ -99,7 +104,14 @@
       "new_password_optional": "New password (leave blank to keep current)",
       "you": "you",
       "confirm_delete": "Are you sure you want to delete this user?",
-      "save_error": "Error while saving."
+      "save_error": "Error while saving.",
+      "status_label": "Status",
+      "last_login_label": "Last login",
+      "active": "Active",
+      "disabled": "Disabled",
+      "pending_change": "Password change pending",
+      "active_label": "Account active",
+      "force_change_label": "Require password change at next login"
     },
     "snapshots": {
       "title": "Daily Snapshots",
@@ -109,6 +121,17 @@
       "saving": "Saving...",
       "saved": "Snapshot time saved",
       "error": "Failed to save snapshot time"
+    },
+    "security": {
+      "title": "Security settings",
+      "description": "Password policy for new and changed passwords, and public registration switch. Changes apply immediately.",
+      "registration_open": "Allow public self-registration",
+      "min_length": "Minimum password length",
+      "require_digit": "Require at least one digit",
+      "require_uppercase": "Require at least one uppercase letter",
+      "require_symbol": "Require at least one symbol",
+      "reject_common": "Reject common passwords",
+      "saved": "Security settings saved."
     }
   },
   "tickers": {
@@ -211,7 +234,8 @@
   "common": {
     "cancel": "Cancel",
     "close": "Close",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "loading": "Loading..."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -226,6 +250,7 @@
       "realized_pnl": "Realized PnL",
       "unrealized_pnl": "Unrealized (MTM)",
       "total_pnl": "Total PnL",
+      "weekly_pnl": "This Week PnL",
       "win_rate": "Win rate",
       "capital_gain_tax": "Capital gain tax",
       "minus_offsets": "Minus offsets"
@@ -249,8 +274,13 @@
     "outcomes": "Trade outcomes",
     "no_outcomes": "No closed trades yet — add and close trades to see win/loss analytics.",
     "monthly_pnl": "Monthly PnL",
+    "weekly_pnl": "Weekly PnL",
+    "period_monthly": "Month",
+    "period_weekly": "Week",
     "months": "months",
+    "weeks": "weeks",
     "no_monthly": "No trade history yet.",
+    "no_weekly": "No weekly history yet.",
     "allocation": "Asset allocation",
     "no_allocation": "No holdings yet — add holdings to see your allocation.",
     "by_class": "By type",
@@ -263,10 +293,24 @@
     "col_return": "Return",
     "col_pnl": "Net PnL",
     "all_assets_pnl": "Daily P&L (All Assets)",
-    "no_daily_pnl": "No daily snapshots yet."
+    "no_daily_pnl": "No daily snapshots yet.",
+    "advanced_edge_title": "Advanced Stats & Expectancy",
+    "expectancy": "Expectancy (Expected Value)",
+    "expectancy_sub": "Expected net return per closed trade",
+    "payoff_ratio": "Payoff Ratio (W/L)",
+    "payoff_sub": "Average win / average loss ratio",
+    "max_drawdown": "Max Drawdown",
+    "max_drawdown_sub": "Maximum drop from equity peak",
+    "kelly_criterion": "Kelly Criterion (Edge)",
+    "best_trade": "Best Trade",
+    "worst_trade": "Worst Trade",
+    "no_best_worst": "No closed trades available for comparison.",
+    "hover_trade_count": "{{count}} trades"
   },
   "calendar": {
     "title": "Calendar",
+    "col_week_pnl": "Week Total",
+    "week_summary": "W{{week}}",
     "tab_calendar": "Calendar",
     "tab_markets": "Markets",
     "prev_month": "Previous month",
@@ -692,5 +736,28 @@
     "win_days": "{{pct}}% green days",
     "prev_month": "Previous month",
     "next_month": "Next month"
+  },
+  "onboarding": {
+    "title": "Welcome to TradeJournal",
+    "subtitle": "Let's set up your account in a few steps.",
+    "step_of": "Step {{current}} of {{total}}",
+    "continue": "Continue",
+    "skip": "Skip for now",
+    "password_message": "Your administrator issued a temporary password. Choose a new personal password to continue.",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "confirm_password": "Confirm new password",
+    "password_required": "Enter your current and a new password.",
+    "profile_message": "Set your timezone so dates and market times display correctly.",
+    "broker_message": "Add your first broker. You can add more later from Brokers.",
+    "broker_exists": "You already have {{count}} broker(s). You can add another one or continue.",
+    "broker_name": "Broker name",
+    "broker_name_required": "Enter a broker name or skip this step.",
+    "account_message": "Create your first trading account. You can add more later from Accounts.",
+    "account_name": "Account name",
+    "account_name_required": "Enter an account name or skip this step.",
+    "no_broker": "No broker",
+    "done_message": "Your account is ready. You can review everything later in Settings.",
+    "go_dashboard": "Go to dashboard"
   }
 }

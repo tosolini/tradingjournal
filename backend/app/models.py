@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Table, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Table, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,12 +28,36 @@ class User(TimestampMixin, Base):
     role: Mapped[str] = mapped_column(String(20), default="user")
     timezone: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     preferences: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true"), nullable=False
+    )
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false"), nullable=False
+    )
+    password_changed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_by_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
 
     accounts: Mapped[list["Account"]] = relationship(back_populates="owner")
     brokers: Mapped[list["Broker"]] = relationship(back_populates="owner")
     assets: Mapped[list["Asset"]] = relationship(back_populates="owner")
     holdings: Mapped[list["Holding"]] = relationship(back_populates="owner")
     exchanges: Mapped[list["Exchange"]] = relationship(back_populates="owner")
+
+
+class AppSetting(TimestampMixin, Base):
+    """DB-backed application settings (password policy, registration toggle, ...)."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[object] = mapped_column(JSONB, nullable=False)
 
 
 class Exchange(TimestampMixin, Base):

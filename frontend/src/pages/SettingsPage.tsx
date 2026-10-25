@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import {
   AdminUserCreate, AdminUserUpdate,
   ApiError, User, UserUpdate,
-  adminCreateUser, adminDeleteUser, adminListUsers, adminUpdateUser,
+  adminCreateUser, adminDeleteUser, adminGetSettings, adminListUsers, adminUpdateSettings, adminUpdateUser,
   exportAllData, getMe, importAllData, updateMe, api,
 } from "../lib/api";
 
@@ -225,6 +225,8 @@ function UserFormModal({
   const [email, setEmail] = useState(editUser?.email ?? "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState(editUser?.role ?? "user");
+  const [isActive, setIsActive] = useState(editUser?.is_active ?? true);
+  const [forceChange, setForceChange] = useState(editUser?.must_change_password ?? true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -235,9 +237,11 @@ function UserFormModal({
         if (email !== editUser.email) payload.email = email;
         if (password) payload.new_password = password;
         if (role !== editUser.role) payload.role = role;
+        if (isActive !== editUser.is_active) payload.is_active = isActive;
+        if (forceChange !== editUser.must_change_password) payload.must_change_password = forceChange;
         return adminUpdateUser(editUser.id, payload);
       }
-      return adminCreateUser({ username, email, password, role } as AdminUserCreate);
+      return adminCreateUser({ username, email, password, role, must_change_password: forceChange } as AdminUserCreate);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
@@ -295,6 +299,22 @@ function UserFormModal({
               <option value="admin">admin</option>
             </select>
           </div>
+          <label className="flex items-center gap-2 text-sm text-slate-300 dark:text-slate-900">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+            />
+            {t("settings.admin_users.active_label")}
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-300 dark:text-slate-900">
+            <input
+              type="checkbox"
+              checked={forceChange}
+              onChange={(e) => setForceChange(e.target.checked)}
+            />
+            {t("settings.admin_users.force_change_label")}
+          </label>
         </div>
         {errorMsg && <p className="mt-3 text-sm text-rose-400">{errorMsg}</p>}
         <div className="mt-5 flex justify-end gap-3">
@@ -355,6 +375,8 @@ function AdminUsersSection({ currentUser }: { currentUser: User }) {
               <th className="px-3 py-2">{t("settings.account.username")}</th>
               <th className="px-3 py-2">{t("settings.account.email")}</th>
               <th className="px-3 py-2">{t("settings.account.role_label")}</th>
+              <th className="px-3 py-2">{t("settings.admin_users.status_label")}</th>
+              <th className="px-3 py-2">{t("settings.admin_users.last_login_label")}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -378,6 +400,25 @@ function AdminUsersSection({ currentUser }: { currentUser: User }) {
                   }`}>
                     {u.role}
                   </span>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-col gap-1">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      u.is_active
+                        ? "bg-teal-500/20 text-teal-300 dark:text-teal-900"
+                        : "bg-red-500/20 text-red-300 dark:text-red-700"
+                    }`}>
+                      {u.is_active ? t("settings.admin_users.active") : t("settings.admin_users.disabled")}
+                    </span>
+                    {u.must_change_password && (
+                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-300 dark:text-amber-700">
+                        {t("settings.admin_users.pending_change")}
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-slate-300 dark:text-slate-900">
+                  {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "—"}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
@@ -439,6 +480,120 @@ function AdminUsersSection({ currentUser }: { currentUser: User }) {
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+function SecuritySettingsSection() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const { data: settings } = useQuery({ queryKey: ["admin-settings"], queryFn: adminGetSettings });
+  const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null);
+  const [minLength, setMinLength] = useState<number | null>(null);
+  const [requireDigit, setRequireDigit] = useState<boolean | null>(null);
+  const [requireUppercase, setRequireUppercase] = useState<boolean | null>(null);
+  const [requireSymbol, setRequireSymbol] = useState<boolean | null>(null);
+  const [rejectCommon, setRejectCommon] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!settings) return;
+    setRegistrationOpen((v) => (v === null ? settings.registration_open : v));
+    setMinLength((v) => (v === null ? settings.password_policy.min_length : v));
+    setRequireDigit((v) => (v === null ? settings.password_policy.require_digit : v));
+    setRequireUppercase((v) => (v === null ? settings.password_policy.require_uppercase : v));
+    setRequireSymbol((v) => (v === null ? settings.password_policy.require_symbol : v));
+    setRejectCommon((v) => (v === null ? settings.password_policy.reject_common : v));
+  }, [settings]);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      adminUpdateSettings({
+        registration_open: registrationOpen ?? settings?.registration_open ?? false,
+        password_policy: settings
+          ? {
+              ...settings.password_policy,
+              min_length: minLength ?? settings.password_policy.min_length,
+              require_digit: requireDigit ?? settings.password_policy.require_digit,
+              require_uppercase: requireUppercase ?? settings.password_policy.require_uppercase,
+              require_symbol: requireSymbol ?? settings.password_policy.require_symbol,
+              reject_common: rejectCommon ?? settings.password_policy.reject_common,
+            }
+          : undefined,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+      setRegistrationOpen(null);
+      setMinLength(null);
+      setRequireDigit(null);
+      setRequireUppercase(null);
+      setRequireSymbol(null);
+      setRejectCommon(null);
+      setErrorMsg(null);
+      setSavedMsg(t("settings.security.saved"));
+    },
+    onError: (err: unknown) => {
+      setSavedMsg(null);
+      setErrorMsg(err instanceof ApiError ? err.message : t("settings.admin_users.save_error"));
+    },
+  });
+
+  return (
+    <section className="card p-4">
+      <h2 className="mb-2 text-lg font-semibold">{t("settings.security.title")}</h2>
+      <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">{t("settings.security.description")}</p>
+      <label className="mb-4 flex items-center gap-2 text-sm text-slate-200 dark:text-slate-900">
+        <input
+          type="checkbox"
+          checked={registrationOpen ?? settings?.registration_open ?? false}
+          onChange={(e) => setRegistrationOpen(e.target.checked)}
+        />
+        {t("settings.security.registration_open")}
+      </label>
+      <div className="mb-2 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
+            {t("settings.security.min_length")}
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={128}
+            value={minLength ?? settings?.password_policy.min_length ?? 12}
+            onChange={(e) => setMinLength(Number(e.target.value))}
+            className="w-full rounded border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 px-3 py-2 text-sm text-slate-200 dark:text-slate-900"
+          />
+        </div>
+      </div>
+      {(
+        [
+          ["requireDigit", requireDigit, setRequireDigit, "settings.security.require_digit"],
+          ["requireUppercase", requireUppercase, setRequireUppercase, "settings.security.require_uppercase"],
+          ["requireSymbol", requireSymbol, setRequireSymbol, "settings.security.require_symbol"],
+          ["rejectCommon", rejectCommon, setRejectCommon, "settings.security.reject_common"],
+        ] as const
+      ).map(([key, value, setter, label]) => (
+        <label key={key} className="mb-2 flex items-center gap-2 text-sm text-slate-200 dark:text-slate-900">
+          <input
+            type="checkbox"
+            checked={value ?? false}
+            onChange={(e) => setter(e.target.checked)}
+          />
+          {t(label)}
+        </label>
+      ))}
+      {errorMsg && <p className="mt-3 text-sm text-rose-400">{errorMsg}</p>}
+      {savedMsg && <p className="mt-3 text-sm text-teal-300 dark:text-teal-900">{savedMsg}</p>}
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending || !settings}
+          className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+        >
+          {mutation.isPending ? t("settings.account.saving") : t("settings.account.save")}
+        </button>
+      </div>
     </section>
   );
 }
@@ -629,6 +784,8 @@ export function SettingsPage() {
 
       {user?.role === "admin" && <AdminUsersSection currentUser={user} />}
 
+      {user?.role === "admin" && <SecuritySettingsSection />}
+
       <section className="card p-4">
         <h2 className="mb-2 text-lg font-semibold">{t("settings.language.title")}</h2>
         <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">{t("settings.language.description")}</p>
@@ -669,6 +826,7 @@ export function SettingsPage() {
         <button
           onClick={() => {
             localStorage.removeItem("token");
+            localStorage.removeItem("must_change_password");
             navigate("/login");
           }}
           className="rounded bg-red-500 px-3 py-2 text-sm font-semibold text-white"

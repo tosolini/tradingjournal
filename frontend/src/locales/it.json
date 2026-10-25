@@ -21,6 +21,10 @@
       "new_trade": "Nuovo Trade",
       "new_note": "Nuova Nota"
     },
+    "search_placeholder": "Cerca azioni, pagine o premi ⌘K...",
+    "search_short": "Cerca (⌘K)",
+    "account_pill": "Conto",
+    "all_accounts": "Tutti i conti",
     "version": "Versione",
     "tosolini_site_aria": "Sito di Walter Tosolini",
     "copyright": "Tutti i diritti riservati."
@@ -32,7 +36,8 @@
     "submit": "Accedi",
     "errors": {
       "invalid_credentials": "Credenziali non valide",
-      "api_connection": "Errore di connessione API. Verifica backend attivo e configurazione CORS."
+      "api_connection": "Errore di connessione API. Verifica backend attivo e configurazione CORS.",
+      "password_change_required": "Devi cambiare la password prima di continuare."
     }
   },
   "settings": {
@@ -99,7 +104,14 @@
       "new_password_optional": "Nuova password (lascia vuoto per non cambiare)",
       "you": "tu",
       "confirm_delete": "Sei sicuro di voler eliminare questo utente?",
-      "save_error": "Errore durante il salvataggio."
+      "save_error": "Errore durante il salvataggio.",
+      "status_label": "Stato",
+      "last_login_label": "Ultimo accesso",
+      "active": "Attivo",
+      "disabled": "Disabilitato",
+      "pending_change": "Cambio password in sospeso",
+      "active_label": "Account attivo",
+      "force_change_label": "Richiedi cambio password al prossimo accesso"
     },
     "snapshots": {
       "title": "Snapshot Giornalieri",
@@ -109,6 +121,17 @@
       "saving": "Salvataggio...",
       "saved": "Orario snapshot salvato",
       "error": "Errore nel salvataggio dell'orario snapshot"
+    },
+    "security": {
+      "title": "Impostazioni di sicurezza",
+      "description": "Criteri password per password nuove e modificate, e interruttore per la registrazione pubblica. Le modifiche sono immediate.",
+      "registration_open": "Consenti registrazione pubblica",
+      "min_length": "Lunghezza minima password",
+      "require_digit": "Richiedi almeno una cifra",
+      "require_uppercase": "Richiedi almeno una maiuscola",
+      "require_symbol": "Richiedi almeno un simbolo",
+      "reject_common": "Rifiuta password comuni",
+      "saved": "Impostazioni di sicurezza salvate."
     }
   },
   "tickers": {
@@ -211,7 +234,8 @@
   "common": {
     "cancel": "Annulla",
     "close": "Chiudi",
-    "saving": "Salvataggio..."
+    "saving": "Salvataggio...",
+    "loading": "Caricamento..."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -226,6 +250,7 @@
       "realized_pnl": "PnL Realizzato",
       "unrealized_pnl": "Non realizzato (MTM)",
       "total_pnl": "PnL Totale",
+      "weekly_pnl": "PnL Questa Settimana",
       "win_rate": "Win rate",
       "capital_gain_tax": "Tassa capital gain",
       "minus_offsets": "Compensazione minus"
@@ -248,9 +273,14 @@
     "no_history": "Nessuno snapshot di portafoglio. Gli snapshot vengono salvati ogni giorno alla chiusura del mercato; esegui il ricalcolo portafoglio per riempirli.",
     "outcomes": "Esiti trade",
     "no_outcomes": "Nessun trade chiuso — aggiungi e chiudi trade per vedere le statistiche.",
-    "monthly_pnl": "PnL mensile",
+    "monthly_pnl": "PnL Mensile",
+    "weekly_pnl": "PnL Settimanale",
+    "period_monthly": "Mese",
+    "period_weekly": "Settimana",
     "months": "mesi",
+    "weeks": "settimane",
     "no_monthly": "Nessuna cronologia trade.",
+    "no_weekly": "Nessuna cronologia settimanale.",
     "allocation": "Allocazione asset",
     "no_allocation": "Nessuna posizione — aggiungi posizioni per vedere l'allocazione.",
     "by_class": "Per tipo",
@@ -263,10 +293,24 @@
     "col_return": "Rendimento",
     "col_pnl": "PnL Netto",
     "all_assets_pnl": "P&L Giornaliero (Tutti gli Asset)",
-    "no_daily_pnl": "Nessuno snapshot giornaliero disponibile."
+    "no_daily_pnl": "Nessuno snapshot giornaliero disponibile.",
+    "advanced_edge_title": "Statistiche Avanzate & Expectancy",
+    "expectancy": "Expectancy (Valore Atteso)",
+    "expectancy_sub": "Rendimento atteso per trade",
+    "payoff_ratio": "Payoff Ratio (W/L)",
+    "payoff_sub": "Rapporto media vincita / media perdita",
+    "max_drawdown": "Max Drawdown",
+    "max_drawdown_sub": "Flessione massima dal picco",
+    "kelly_criterion": "Criterio di Kelly (Edge)",
+    "best_trade": "Miglior Trade",
+    "worst_trade": "Peggior Trade",
+    "no_best_worst": "Nessun trade chiuso disponibile per il confronto.",
+    "hover_trade_count": "{{count}} trade"
   },
   "calendar": {
     "title": "Calendario",
+    "col_week_pnl": "Tot. Settimana",
+    "week_summary": "Sett. {{week}}",
     "tab_calendar": "Calendario",
     "tab_markets": "Mercati",
     "prev_month": "Mese precedente",
@@ -692,5 +736,28 @@
     "win_days": "{{pct}}% giorni positivi",
     "prev_month": "Mese precedente",
     "next_month": "Mese successivo"
+  },
+  "onboarding": {
+    "title": "Benvenuto in TradeJournal",
+    "subtitle": "Configuriamo il tuo account in pochi passi.",
+    "step_of": "Passo {{current}} di {{total}}",
+    "continue": "Continua",
+    "skip": "Salta per ora",
+    "password_message": "Il tuo amministratore ha impostato una password temporanea. Scegli una nuova password personale per continuare.",
+    "current_password": "Password attuale",
+    "new_password": "Nuova password",
+    "confirm_password": "Conferma la nuova password",
+    "password_required": "Inserisci la password attuale e una nuova password.",
+    "profile_message": "Imposta il tuo fuso orario per visualizzare correttamente date e orari di mercato.",
+    "broker_message": "Aggiungi il tuo primo broker. Potrai aggiungerne altri da Broker.",
+    "broker_exists": "Hai già {{count}} broker. Puoi aggiungerne un altro o continuare.",
+    "broker_name": "Nome broker",
+    "broker_name_required": "Inserisci un nome broker o salta questo passo.",
+    "account_message": "Crea il tuo primo conto di trading. Potrai aggiungerne altri da Conti.",
+    "account_name": "Nome conto",
+    "account_name_required": "Inserisci un nome conto o salta questo passo.",
+    "no_broker": "Nessun broker",
+    "done_message": "Il tuo account è pronto. Potrai rivedere tutto in Impostazioni.",
+    "go_dashboard": "Vai alla dashboard"
   }
 }
