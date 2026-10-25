@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+- Notes / discipline tags hardening
+  - Preset discipline tags are now persisted as canonical stable keys (`tag_*`)
+    and localized only at render time
+  - Added normalization for legacy Italian/English preset labels to prevent
+    cross-language duplicates in filters/suggestions
+- i18n cleanup
+  - Removed unused command palette translation keys:
+    `category_navigation`, `category_action`, `category_ticker`
+- Package naming alignment
+  - Renamed package identifiers from `tradejournal-*` to `tradingjournal-*`
+    in frontend/backend manifests and lock files
+
 ## [0.1.8] - 2026-10-09
 
 - DB-backed user accounting (no more `.env` juggling)
