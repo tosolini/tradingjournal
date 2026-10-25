@@ -14,6 +14,7 @@ from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = "20261009_0009"
@@ -64,7 +65,7 @@ def upgrade() -> None:
     op.create_table(
         "app_settings",
         sa.Column("key", sa.String(100), primary_key=True),
-        sa.Column("value", sa.JSON(), nullable=False),
+        sa.Column("value", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

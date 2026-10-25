@@ -41,6 +41,16 @@ function sanitizeRichText(value?: string | null): string {
   });
 }
 
+const DISCIPLINE_PRESET_TAGS = [
+  { key: "tag_plan_followed", fallback: "Piano Rispettato" },
+  { key: "tag_stop_loss_respected", fallback: "Stop Loss Rispettato" },
+  { key: "tag_target_reached", fallback: "Target Raggiunto" },
+  { key: "tag_fomo", fallback: "FOMO" },
+  { key: "tag_overtrading", fallback: "Overtrading" },
+  { key: "tag_revenge_trading", fallback: "Revenge Trading" },
+  { key: "tag_early_exit", fallback: "Uscita Anticipata" },
+] as const;
+
 type NotePayload = {
   note_date: string;
   mood?: string;
@@ -1108,22 +1118,15 @@ export function NotesPage() {
               />
               <div className="space-y-1">
                 <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">
-                  Checklist & Tag Disciplina
+                  {t("notes.discipline_heading", "Checklist & Tag Disciplina")}
                 </span>
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {[
-                    "Piano Rispettato",
-                    "Stop Loss Rispettato",
-                    "Target Raggiunto",
-                    "FOMO",
-                    "Overtrading",
-                    "Revenge Trading",
-                    "Uscita Anticipata",
-                  ].map((presetTag) => {
+                  {DISCIPLINE_PRESET_TAGS.map(({ key, fallback }) => {
+                    const presetTag = t(`notes.${key}`, fallback);
                     const isSelected = marketConditionTags.includes(presetTag);
                     return (
                       <button
-                        key={presetTag}
+                        key={key}
                         type="button"
                         onClick={() => {
                           if (isSelected) {

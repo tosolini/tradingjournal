@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import packageJson from "../../package.json";
 import bullVectLogo from "../assets/bull_vect.svg";
+import tosoliniLogoLight from "../assets/tosolini-logo-light.png";
+import tosoliniLogoDark from "../assets/tosolini-logo-dark.png";
 import { useTheme } from "../contexts/ThemeContext";
 import {
   ExternalLinkIcon,
@@ -11,9 +13,6 @@ import {
   XIcon,
 } from "./icons";
 
-const LIGHT_BG_LOGO_URL = "https://www.tosolini.info/wp-content/uploads/2021/01/tosolini-logo-200.png";
-const DARK_BG_LOGO_URL = "https://www.tosolini.info/wp-content/uploads/2021/01/tosolini_nero_200.png";
-
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -23,7 +22,7 @@ export function CreditsModal({ open, onClose }: Props) {
   const { theme } = useTheme();
   const currentYear = new Date().getFullYear();
   const appVersion = packageJson.version;
-  const logoUrl = theme === "dark" ? LIGHT_BG_LOGO_URL : DARK_BG_LOGO_URL;
+  const logoUrl = theme === "dark" ? tosoliniLogoLight : tosoliniLogoDark;
 
   // Close on Escape key
   useEffect(() => {
