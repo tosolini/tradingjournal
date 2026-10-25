@@ -8,6 +8,8 @@ import { CreditsModal } from "./CreditsModal";
 import { fetchAccounts, getMe } from "../lib/api";
 import packageJson from "../../package.json";
 import bullVectLogo from "../assets/bull_vect.svg";
+import tosoliniLogoLight from "../assets/tosolini-logo-light.png";
+import tosoliniLogoDark from "../assets/tosolini-logo-dark.png";
 import { useTheme } from "../contexts/ThemeContext";
 import {
   ActivityIcon,
@@ -30,9 +32,6 @@ import {
   WalletIcon,
   XIcon,
 } from "./icons";
-
-const LIGHT_BG_LOGO_URL = "https://www.tosolini.info/wp-content/uploads/2021/01/tosolini-logo-200.png";
-const DARK_BG_LOGO_URL = "https://www.tosolini.info/wp-content/uploads/2021/01/tosolini_nero_200.png";
 
 export function Layout({ children }: PropsWithChildren) {
   const { t, i18n } = useTranslation();
@@ -109,7 +108,7 @@ export function Layout({ children }: PropsWithChildren) {
 
   const appVersion = packageJson.version;
   const currentYear = new Date().getFullYear();
-  const logoUrl = theme === "dark" ? LIGHT_BG_LOGO_URL : DARK_BG_LOGO_URL;
+  const logoUrl = theme === "dark" ? tosoliniLogoLight : tosoliniLogoDark;
 
   const currentLang = i18n.resolvedLanguage === "it" ? "it" : "en";
   const toggleLanguage = () => {
