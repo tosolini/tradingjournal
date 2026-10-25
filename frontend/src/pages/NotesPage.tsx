@@ -42,13 +42,37 @@ function sanitizeRichText(value?: string | null): string {
 }
 
 const DISCIPLINE_PRESET_TAGS = [
-  { key: "tag_plan_followed", fallback: "Piano Rispettato" },
-  { key: "tag_stop_loss_respected", fallback: "Stop Loss Rispettato" },
-  { key: "tag_target_reached", fallback: "Target Raggiunto" },
-  { key: "tag_fomo", fallback: "FOMO" },
-  { key: "tag_overtrading", fallback: "Overtrading" },
-  { key: "tag_revenge_trading", fallback: "Revenge Trading" },
-  { key: "tag_early_exit", fallback: "Uscita Anticipata" },
+  {
+    key: "tag_plan_followed",
+    fallback: "Piano Rispettato",
+    aliases: ["Piano Rispettato", "Plan Followed"],
+  },
+  {
+    key: "tag_stop_loss_respected",
+    fallback: "Stop Loss Rispettato",
+    aliases: ["Stop Loss Rispettato", "Stop Loss Respected"],
+  },
+  {
+    key: "tag_target_reached",
+    fallback: "Target Raggiunto",
+    aliases: ["Target Raggiunto", "Target Reached"],
+  },
+  { key: "tag_fomo", fallback: "FOMO", aliases: ["FOMO"] },
+  {
+    key: "tag_overtrading",
+    fallback: "Overtrading",
+    aliases: ["Overtrading"],
+  },
+  {
+    key: "tag_revenge_trading",
+    fallback: "Revenge Trading",
+    aliases: ["Revenge Trading"],
+  },
+  {
+    key: "tag_early_exit",
+    fallback: "Uscita Anticipata",
+    aliases: ["Uscita Anticipata", "Early Exit"],
+  },
 ] as const;
 
 type NotePayload = {
@@ -107,6 +131,43 @@ function parseMarketConditionTags(value?: string | null): string[] {
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+function normalizeMarketConditionTagValue(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+  const lowerValue = trimmed.toLowerCase();
+  for (const preset of DISCIPLINE_PRESET_TAGS) {
+    if (lowerValue === preset.key.toLowerCase()) {
+      return preset.key;
+    }
+    if (
+      preset.aliases.some((alias) => alias.toLowerCase() === lowerValue)
+    ) {
+      return preset.key;
+    }
+  }
+  return trimmed;
+}
+
+function normalizeMarketConditionTags(tags: string[]): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const tag of tags) {
+    const normalized = normalizeMarketConditionTagValue(tag);
+    if (!normalized) {
+      continue;
+    }
+    const fingerprint = normalized.toLowerCase();
+    if (seen.has(fingerprint)) {
+      continue;
+    }
+    seen.add(fingerprint);
+    result.push(normalized);
+  }
+  return result;
 }
 
 function MoodGlyph({ mood }: { mood: MoodValue }) {
@@ -213,6 +274,19 @@ export function NotesPage() {
   const noteSymbolDebounceRef =
     useRef<ReturnType<typeof setTimeout>>(undefined);
   const noteSymbolContainerRef = useRef<HTMLDivElement>(null);
+  const formatMarketConditionTag = useCallback(
+    (tag: string): string => {
+      const normalized = normalizeMarketConditionTagValue(tag);
+      const preset = DISCIPLINE_PRESET_TAGS.find(
+        (candidate) => candidate.key === normalized,
+      );
+      if (!preset) {
+        return tag;
+      }
+      return t(`notes.${preset.key}`, preset.fallback);
+    },
+    [t],
+  );
   const openNoteDatePicker = () => {
     const input = noteDateInputRef.current;
     if (!input) return;
@@ -413,10 +487,11 @@ export function NotesPage() {
   }, []);
 
   const onSubmit = (values: NotePayload) => {
+    const normalizedTags = normalizeMarketConditionTags(marketConditionTags);
     const payload: NotePayload = {
       ...values,
-      market_condition: marketConditionTags.length
-        ? marketConditionTags.join(", ")
+      market_condition: normalizedTags.length
+        ? normalizedTags.join(", ")
         : undefined,
       mood: values.mood || undefined,
       market_volatility: values.market_volatility || undefined,
@@ -433,7 +508,11 @@ export function NotesPage() {
 
   const onEdit = (note: DailyNote) => {
     setEditingNoteId(note.id);
-    setMarketConditionTags(parseMarketConditionTags(note.market_condition));
+    setMarketConditionTags(
+      normalizeMarketConditionTags(
+        parseMarketConditionTags(note.market_condition),
+      ),
+    );
     setNoteSymbolInput(note.symbol || "");
     setNoteSelectedTicker(
       note.symbol ? ({ symbol: note.symbol } as Ticker) : null,
@@ -480,7 +559,9 @@ export function NotesPage() {
   const allAvailableTags = useMemo(() => {
     const source = new Set<string>();
     for (const note of data || []) {
-      for (const tag of parseMarketConditionTags(note.market_condition)) {
+      for (const tag of normalizeMarketConditionTags(
+        parseMarketConditionTags(note.market_condition),
+      )) {
         source.add(tag);
       }
     }
@@ -490,7 +571,9 @@ export function NotesPage() {
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const filteredNotes = useMemo(() => {
     return (data || []).filter((note) => {
-      const noteTags = parseMarketConditionTags(note.market_condition);
+      const noteTags = normalizeMarketConditionTags(
+        parseMarketConditionTags(note.market_condition),
+      );
       const hasAllSelectedTags = activeFilterTags.every((filterTag) =>
         noteTags.some((tag) => tag.toLowerCase() === filterTag.toLowerCase()),
       );
@@ -515,12 +598,18 @@ export function NotesPage() {
   }, [activeFilterTags, data, normalizedSearch]);
 
   const toggleFilterTag = (tag: string) => {
+    const normalized = normalizeMarketConditionTagValue(tag);
+    if (!normalized) {
+      return;
+    }
     setActiveFilterTags((current) =>
-      current.some((existing) => existing.toLowerCase() === tag.toLowerCase())
+      current.some(
+        (existing) => existing.toLowerCase() === normalized.toLowerCase(),
+      )
         ? current.filter(
-            (existing) => existing.toLowerCase() !== tag.toLowerCase(),
+            (existing) => existing.toLowerCase() !== normalized.toLowerCase(),
           )
-        : [...current, tag],
+        : [...current, normalized],
     );
   };
 
@@ -552,8 +641,13 @@ export function NotesPage() {
     if (!query) {
       return allAvailableTags;
     }
-    return allAvailableTags.filter((tag) => tag.toLowerCase().includes(query));
-  }, [allAvailableTags, tagManagerSearch]);
+    return allAvailableTags.filter((tag) => {
+      const localizedTag = formatMarketConditionTag(tag).toLowerCase();
+      return (
+        tag.toLowerCase().includes(query) || localizedTag.includes(query)
+      );
+    });
+  }, [allAvailableTags, formatMarketConditionTag, tagManagerSearch]);
 
   const onRenameTag = (tag: string) => {
     setRenamePendingTag({ old: tag, next: tag });
@@ -574,8 +668,10 @@ export function NotesPage() {
       }
       if (Array.isArray(savedFilters.activeTags)) {
         setActiveFilterTags(
-          savedFilters.activeTags.filter(
-            (tag): tag is string => typeof tag === "string",
+          normalizeMarketConditionTags(
+            savedFilters.activeTags.filter(
+              (tag): tag is string => typeof tag === "string",
+            ),
           ),
         );
       }
@@ -585,8 +681,10 @@ export function NotesPage() {
             ? savedFilters.searchQuery
             : "",
         activeTags: Array.isArray(savedFilters.activeTags)
-          ? savedFilters.activeTags.filter(
-              (tag): tag is string => typeof tag === "string",
+          ? normalizeMarketConditionTags(
+              savedFilters.activeTags.filter(
+                (tag): tag is string => typeof tag === "string",
+              ),
             )
           : [],
       });
@@ -735,7 +833,7 @@ export function NotesPage() {
                       : "border-slate-600 bg-slate-900 dark:bg-white text-slate-300 dark:text-slate-900 hover:border-teal-500/50 hover:text-teal-200 dark:text-teal-900"
                   }`}
                 >
-                  {tag}
+                  {formatMarketConditionTag(tag)}
                 </button>
               );
             })}
@@ -783,7 +881,7 @@ export function NotesPage() {
                   className="flex items-center justify-between gap-2 rounded border border-slate-700 dark:border-slate-300 px-2 py-1"
                 >
                   <span className="truncate text-sm text-slate-200 dark:text-slate-900">
-                    {tag}
+                    {formatMarketConditionTag(tag)}
                   </span>
                   <div className="flex gap-1">
                     <button
@@ -936,7 +1034,9 @@ export function NotesPage() {
                   <div className="mt-1 flex flex-wrap gap-2">
                     {parseMarketConditionTags(note.market_condition).length >
                     0 ? (
-                      parseMarketConditionTags(note.market_condition).map(
+                      normalizeMarketConditionTags(
+                        parseMarketConditionTags(note.market_condition),
+                      ).map(
                         (tag) => (
                           <button
                             key={`${note.id}-${tag}`}
@@ -944,7 +1044,7 @@ export function NotesPage() {
                             onClick={() => toggleFilterTag(tag)}
                             className="rounded-full border border-teal-500/40 bg-teal-500/15 px-2 py-0.5 text-xs text-teal-200 dark:text-teal-900"
                           >
-                            {tag}
+                            {formatMarketConditionTag(tag)}
                           </button>
                         ),
                       )
@@ -1113,8 +1213,13 @@ export function NotesPage() {
                 label={t("notes.market_condition")}
                 placeholder={t("notes.tag_input_placeholder")}
                 value={marketConditionTags}
-                suggestions={marketConditionSuggestions}
-                onChange={setMarketConditionTags}
+                suggestions={normalizeMarketConditionTags(
+                  marketConditionSuggestions,
+                )}
+                formatTagLabel={formatMarketConditionTag}
+                onChange={(next) =>
+                  setMarketConditionTags(normalizeMarketConditionTags(next))
+                }
               />
               <div className="space-y-1">
                 <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">
@@ -1122,17 +1227,29 @@ export function NotesPage() {
                 </span>
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   {DISCIPLINE_PRESET_TAGS.map(({ key, fallback }) => {
-                    const presetTag = t(`notes.${key}`, fallback);
-                    const isSelected = marketConditionTags.includes(presetTag);
+                    const presetTag = key;
+                    const presetLabel = t(`notes.${key}`, fallback);
+                    const isSelected = marketConditionTags.some(
+                      (tag) => tag.toLowerCase() === presetTag.toLowerCase(),
+                    );
                     return (
                       <button
                         key={key}
                         type="button"
                         onClick={() => {
                           if (isSelected) {
-                            setMarketConditionTags(marketConditionTags.filter((t) => t !== presetTag));
+                            setMarketConditionTags(
+                              marketConditionTags.filter(
+                                (tag) =>
+                                  tag.toLowerCase() !==
+                                  presetTag.toLowerCase(),
+                              ),
+                            );
                           } else {
-                            setMarketConditionTags([...marketConditionTags, presetTag]);
+                            setMarketConditionTags([
+                              ...marketConditionTags,
+                              presetTag,
+                            ]);
                           }
                         }}
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition ${
@@ -1141,7 +1258,9 @@ export function NotesPage() {
                             : "border border-slate-700 bg-slate-800/60 text-slate-300 hover:border-slate-500 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-700"
                         }`}
                       >
-                        {isSelected ? `✓ ${presetTag}` : `+ ${presetTag}`}
+                        {isSelected
+                          ? `✓ ${presetLabel}`
+                          : `+ ${presetLabel}`}
                       </button>
                     );
                   })}
@@ -1208,7 +1327,9 @@ export function NotesPage() {
       )}
       {deletePendingTag !== null && (
         <ConfirmModal
-          message={t("notes.delete_tag_confirm", { tag: deletePendingTag })}
+          message={t("notes.delete_tag_confirm", {
+            tag: formatMarketConditionTag(deletePendingTag),
+          })}
           onConfirm={() => {
             deleteTag.mutate(deletePendingTag);
             setDeletePendingTag(null);

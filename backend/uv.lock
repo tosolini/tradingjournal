@@ -1393,7 +1393,7 @@ wheels = [
 ]
 
 [[package]]
-name = "tradejournal-backend"
+name = "tradingjournal-backend"
 version = "0.1.8"
 source = { editable = "." }
 dependencies = [
