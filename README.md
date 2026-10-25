@@ -6,19 +6,22 @@ Self-hosted trading journal (FastAPI + React + PostgreSQL) with weighted-average
 
 This project is a personal trading journal application designed to help traders track their performance, analyze their trades, manage users and permissions, and maintain a daily trading log. It includes features such as:
 
-- **Trade entry wizard** (6 steps) or a compact quick-trade form
+- **Trade entry wizard** (6 steps) or a compact quick-trade form, with a live **Risk/Reward (R:R) calculator gauge**
+- **Command Palette (`Cmd+K` / `Ctrl+K`)** for universal keyboard navigation, quick trade entry, note creation, live ticker search and theme/language switching
 - Weighted-average PnL calculations with fee- and tax-aware net values
-- **Dashboard** with KPIs, equity curve, monthly/daily PnL, asset allocation and top trades
+- **Dashboard** with hero KPIs (including **Current Week PnL**), equity curve, periodic PnL bar chart (**Monthly and Weekly toggle** with interactive hover tooltips), **Expectancy & Payoff (W/L) statistics**, **Best vs Worst Trade** comparison card, asset allocation and top trades
+- **Unified Trading Calendar** with color-coded daily PnL badges, **Weekly Summary column** (Weekly PnL, W/L days ratio, trade count), monthly KPI summary banner, day-detail drawer, and markets Gantt chart
+- **Trades management** with client-side pagination, quick date presets (`All`, `Today`, `7d`, `This Month`, `YTD`), outcome filters (`Win`, `Loss`), column visibility toggles, and instant quick-close
 - **Performance** page with portfolio value evolution, daily PnL and a color-coded monthly calendar
 - **Portfolio** tracking for ETFs and bonds (holdings, mark-to-market via Yahoo Finance)
-- Daily notes with a rich-text editor, mood presets and market condition tags
+- Daily notes with a rich-text editor, mood presets, market condition tags, and **trading discipline checklist** (Pre/Post-trade psychology)
+- Responsive layout with mobile sliding drawer, sticky desktop sidebar, global topbar with breadcrumb navigation and account indicator, plus centralized non-blocking toast notifications
 - Image uploads for trade annotations (PNG/JPEG/GIF/WebP) with a dedicated serving endpoint
-- Monthly journal calendar with per-day execution chips and note previews
 - Broker-level commission and capital-gain tax configuration
 - Cash ledger (deposits/withdrawals) per account
 - Daily snapshots (positions + portfolio) computed automatically at a configurable time
 - Full JSON export/import of all user data
-- Persistent light/dark theme switching, profile management and admin-only user management
+- Persistent light/dark theme switching, profile management, admin-only user management, and developer credits modal
 
 **This is not a final deployable product**, but more features are coming in the next deployment stages. The main goal is to have a working MVP to iterate on and gather feedback, while keeping the scope manageable and focused on core functionalities.
 
@@ -32,8 +35,8 @@ The entire project is meant to be used on localhost or private networks. **Do no
 
 ## Current version
 
-- Backend: `0.1.5` (`backend/pyproject.toml`)
-- Frontend: `0.1.7` (`frontend/package.json`)
+- Backend: `0.1.8` (`backend/pyproject.toml`)
+- Frontend: `0.1.8` (`frontend/package.json`)
 
 More details on change log and versioning strategy in the [changelog.md](changelog.md) file.
 
@@ -172,6 +175,9 @@ Always change these values outside local development. In `production` mode the b
 
 ## Implemented features
 
+- **Command Palette (`Cmd+K` / `Ctrl+K`)**: universal search launcher for instant page navigation, quick trade entry, note creation, theme/language switching, and live ticker lookup
+- **Responsive Layout**: mobile sliding drawer, persistent desktop sidebar, global topbar with breadcrumb navigation, quick search trigger (`⌘K`), and account indicator
+- **Toast Notifications**: non-blocking, accessible system notifications replacing native browser alerts
 - JWT auth (register/login/me); registration always yields the `user` role
 - User profile preferences persisted in DB (`users.preferences` JSONB)
 - User account settings (email, username, password change)
@@ -181,11 +187,28 @@ Always change these values outside local development. In `production` mode the b
 - Broker CRUD with commission (fixed/percent) and capital-gain tax (immediate/year-end) configuration
 - Exchanges CRUD + broker↔exchange linking + Directa seed
 - Trades CRUD with weighted-average metrics
-- **New Trade wizard** (6 steps) and quick-trade form, with symbol autocomplete
+- **New Trade modal**: tabbed switcher between **Fast Entry** and the **6-step Wizard**, with a live **Risk/Reward (R:R) calculator gauge** and symbol autocomplete
 - Executions management, auto-computed broker fees, quick close flow
 - Trade detail with TP/SL projections (price/%, absolute and net), current market data (Yahoo Finance) and close summary with tax estimate
 - Trade image upload (PNG/JPEG/GIF/WebP) + annotated image endpoint with `nosniff` serving
-- Dashboard: KPI cards, equity curve (1M/3M/6M/1Y/ALL), outcome donut, monthly and all-assets daily PnL, asset allocation, top trades
+- **Trades table**: client-side pagination (10, 25, 50, 100 per page), quick date presets (`All`, `Today`, `7d`, `This Month`, `YTD`), outcome filters (`Win`, `Loss`), column visibility toggles, and instant quick-close
+- **Dashboard**:
+  - Hero KPI cards (Total PnL, Realized PnL, **Current Week PnL**, Unrealized PnL, Win Rate)
+  - Secondary cards: Trades count, Open positions, Capital gain tax, Minus offsets
+  - Equity curve with range selector (`1M`, `3M`, `6M`, `1Y`, `ALL`)
+  - Outcome donut with win/loss/breakeven and center win rate
+  - **Statistiche Avanzate & Expectancy**: Expectancy per trade ($P_w \times \text{Avg Win} - P_l \times \text{Avg Loss}$), Payoff Ratio ($W/L$), Max Drawdown % from ATH peak, and Kelly Criterion sizing estimate
+  - **Best vs Worst Trade comparison card**: side-by-side display of all-time best and worst trades
+  - **Periodic PnL bar chart**: toggle between **Monthly PnL** and **Weekly PnL** with interactive hover tooltips and glow highlights
+  - All-assets daily PnL (trades + holdings) with hover detail
+  - Asset allocation by holding and instrument class
+  - Top trades table
+- **Unified Trading Calendar**:
+  - Color-coded daily PnL badges (`+€/-%`) inside day cells
+  - **Weekly Summary column**: 8th column showing Weekly PnL, Win/Loss days ratio (`3W · 1L`), and trade execution counts
+  - Monthly KPI banner: Total PnL, Win Rate %, Win/Loss days, Total Executions
+  - Interactive Day Detail drawer showing notes, executions, and daily breakdown
+  - Markets Gantt chart of exchange opening hours
 - Performance page: portfolio value, equity curve, daily PnL bars, color-coded monthly calendar with day detail
 - Assets registry CRUD with instrument types including ETF, stock, bond, and fund
 - Portfolio: holdings CRUD, summary, details (current price via Yahoo Finance) and history endpoints
@@ -193,13 +216,12 @@ Always change these values outside local development. In `production` mode the b
   - rich-text editor (sanitized on render)
   - mood presets (`up`, `down`, `stale`)
   - market condition tags with suggestions, rename/delete utilities
+  - **Trading discipline checklist tags** (Pre/Post-trade psychology: *Plan Followed*, *Stop Loss Respected*, *FOMO*, *Overtrading*)
   - persisted notes filters (search/tags) in user DB preferences
-- Calendar section:
-  - monthly view with per-day execution chips and note previews, deep links to trades and notes
-  - markets Gantt chart of exchange opening hours
 - Market calendar endpoints (today + monthly journal aggregation)
 - Daily snapshots (positions + portfolio) via scheduled job (APScheduler) at a configurable time, plus manual recompute endpoints
 - Full JSON data export/import (`/api/data/export`, `/api/data/import`)
+- Credits & Developer modal with author bio, previous Tosolini logo, and social links (GitHub, LinkedIn, Website)
 - Runtime schema compatibility checks for legacy DBs
 
 ## UI walkthrough
@@ -212,19 +234,19 @@ Authentication entry point for local users.
 
 ### 2. Dashboard
 
-KPI cards, equity curve, monthly/daily PnL, asset allocation and top trades — the complete operational summary.
+Complete operational summary: hero KPIs (including Current Week PnL), equity curve, periodic bar chart (Monthly & Weekly PnL), Expectancy & Edge metrics, Best vs Worst Trade comparison, asset allocation and top trades.
 
 ![Dashboard screen](screen/02-dashboard.jpeg)
 
 ### 3. Calendar
 
-Monthly journal calendar with daily notes previews, latest executions per day, and the markets Gantt tab.
+Unified trading calendar with color-coded daily PnL badges, weekly summary column (Weekly PnL & W/L ratio), monthly KPI banner, daily notes previews, latest executions, day-detail drawer, and the markets Gantt tab.
 
 ![Calendar screen](screen/03-calendar.jpeg)
 
 ### 4. Notes
 
-Daily notes workspace with rich-text editor, mood presets, market condition tags, filters, and note management.
+Daily notes workspace with rich-text editor, trading discipline checklist tags, mood presets, market condition tags, filters, and note management.
 
 ![Notes screen](screen/04-notes.jpeg)
 
@@ -236,7 +258,7 @@ Detailed trade view with TP/SL projections, fee-aware net values, current market
 
 ### 6. Trades list
 
-Trade list with sorting, status filter, toggleable columns, quick actions (view, edit, images, quick close, delete) and recent executions.
+Trade list with pagination, date presets, outcome filters, status filter, toggleable columns, quick actions (view, edit, images, quick close, delete) and recent executions.
 
 ![Trades list screen](screen/06-trade-list.jpeg)
 

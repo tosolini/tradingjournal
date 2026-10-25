@@ -1,65 +1,122 @@
 # Managing Trades
 
-Trades are the core of TradeJournal. Every buy or sell operation is recorded as a trade with all the details needed for performance analysis. Fees and capital-gain tax are configured per broker and applied automatically to every calculation.
+Trades are the core of TradeJournal. Every buy or sell operation is recorded as a trade with all the details needed for in-depth performance analysis. Broker commissions and capital-gain tax rules are configured per broker and automatically applied to every calculation.
+
+---
 
 ## Creating a New Trade
 
-Click **+ New Trade** in the sidebar. The modal offers two modes:
+Click **+ New Trade** in the sidebar or in the Trades view. The modal provides a segmented top tab bar to switch instantly between two input modes:
 
-- **Wizard** (default) — a guided 6-step flow
-- **Quick Trade** — a single compact form with the essential fields
+- **✨ Wizard Mode** — the recommended 6-step guided workflow with input validation
+- **⚡ Quick Trade** — a single compact form for lightning-fast order entry
+
+---
 
 ### The 6-Step Wizard
 
-| Step | What you set |
-|---|---|
-| 1. **Account & Ticker** | The trading account and the symbol (with autocomplete) |
-| 2. **Entry & Size** | Quantity — in **shares** or by **notional value** (€) — plus the estimated fee |
-| 3. **Direction** | **Long** or **Short** |
-| 4. **Take Profit** | Target — as a **price** or **%** from entry, with a slider |
-| 5. **Stop Loss** | Limit — as a **price** or **%** from entry, with a slider |
-| 6. **Execution** | Execution type (`Open`, `Partial`, `Close`) and a full summary before saving |
+| Step | Title | What you configure |
+|---|---|---|
+| **1** | **Account & Ticker** | Select the trading account and search for the symbol with real-time autocomplete suggestions |
+| **2** | **Entry & Size** | Entry price and position size (specified either in **shares/units** or by **notional currency value €**) with automatic broker fee estimation |
+| **3** | **Direction** | **Long** (bullish) or **Short** (bearish) order orientation |
+| **4** | **Take Profit** | Profit target specified as a **target price** or **percentage offset %** with interactive slider controls |
+| **5** | **Stop Loss & R:R** | Stop loss level (price or %) featuring a real-time **Risk/Reward (R:R) Gauge** |
+| **6** | **Execution & Summary** | Execution type (`Open`, `Partial`, `Close`), strategy notes, and complete verification before saving |
 
-Each step validates before proceeding; an indicator shows progress. The wizard resets when reopened.
+---
+
+### Live Risk / Reward (R:R) Calculator
+
+While setting or adjusting your Take Profit and Stop Loss levels (in both Wizard and Quick Trade modes), the application dynamically calculates your risk/reward ratio:
+
+- **Dynamic R:R Ratio Badge**: Displays the exact risk-to-reward ratio (e.g. `1 : 2.50`).
+- **Discipline Color-Coding**:
+  - 🟢 **Emerald Green (R:R ≥ 2.0)**: Ideal asymmetric risk/reward profile.
+  - 🟡 **Amber (1.0 ≤ R:R < 2.0)**: Acceptable profile with reduced safety margin.
+  - 🔴 **Rose Red (R:R < 1.0)**: Negative risk warning (potential risk exceeds projected gain).
+- **Monetary Projections**: Instant projections of potential profit (€) and maximum financial risk (€) calculated on position notional value net of estimated trading costs.
+
+---
 
 ### Symbol Autocomplete
 
-If you have imported tickers (see [Tickers](tickers.md)), the symbol field shows real-time suggestions with symbol, name, ISIN and market. If the ticker is not in the database, you can always type it manually.
+When the ticker database is populated (see [Tickers](tickers.md)), the symbol input suggests matches instantly showing ticker symbol, company name, ISIN code, and exchange. You can always type any ticker manually even if it is not in the database.
 
-## Trade List
+---
 
-The **Trades** section shows all operations in a sortable, filterable table.
+## Trades Table
 
-- **Recent executions** panel on top (last 12, searchable), linking to the related trade
-- **Trades table:** sort on any column; **status filter** (All / Open / Partial / Close) and full-text search
-- **12 optional columns** (Avg Entry, Avg Exit, Entry Total, Exit Total, Open Qty, Hold, Return, Return %, TP %, SL %, TP Abs, SL Abs) — toggle visibility per column; the choice is saved
-- **Row actions:** View, Edit, Manage images, Quick Close, Delete
+The **Trades** section provides an advanced tabular view for exploring, filtering, and auditing your trading history.
 
-### Quick Close
+### 1. Date Presets and Fast Filtering
 
-From the list row, open the inline **Quick Close** panel: set the exit price (pre-filled with your TP or average entry), pick a reason (`Manual`, `Take profit`, `Stop loss`), optionally add a note, and close. P&L and the capital-gain tax estimate are computed automatically.
+At the top of the table, quick filter controls let you zero in on specific trades:
 
-## Trade Detail
+- **One-Click Date Presets**:
+  - `All` — complete trading ledger
+  - `Today` — current trading session
+  - `7 Days` — past calendar week
+  - `This Month` — current calendar month
+  - `YTD (Year-to-Date)` — from January 1st of the current year to today
+- **Custom Date Range**: `From` and `To` date pickers for custom timeframes.
+- **Outcome Filter**: Filter closed trades instantly between profitable (`Win`) and losing (`Loss`) trades.
+- **Trade Status Filter**: Filter between `All`, `Open`, `Partial`, and `Closed`.
+- **Search Query**: Real-time keyword search across symbols, notes, and brokers.
 
-Clicking a trade opens the detail page with tabs:
+### 2. Table Pagination
 
-- **Overview** — symbol, side, status, TP/SL (price, %, absolute and net of fees/tax), return
-- **Chart** — TradingView chart for the symbol
-- **Technical** — TradingView technical analysis widget
-- **Close** — close form (datetime, price, reason, note) for open trades
-- **Executions** — full execution history with auto-computed broker fees
-- **Images** — upload screenshots/annotations and view them with zoom
+To ensure snappy performance and readability when managing large portfolios:
 
-### Open Trades: Current Market
+- **Page Size Selector**: Switch between `10`, `25`, `50`, or `100` trades per page.
+- **Navigation Controls**: Previous/next page buttons, direct page jump buttons, and active record range indicator (e.g. `1-25 of 142 trades`).
 
-For open trades, the **current market price** (via Yahoo Finance) is shown with market value, unrealized P&L and current return %.
+### 3. Column Visibility Customization
 
-### Closed Trades: Close Summary
+Through the optional columns menu, you can toggle columns on or off (your configuration is automatically saved in browser storage):
 
-For closed trades, a summary shows: close date and reason, exit price/fee, **gross P&L**, total fees, **net P&L after fees**, the broker's capital-gain mode and rate, the **tax estimate**, and net after tax.
+- Weighted average entry price and exit price
+- Total entry notional value and total exit notional value
+- Open quantity remaining
+- Holding duration
+- Net monetary return and percentage return
+- Target (TP) and Stop (SL) levels (price, percentage, and absolute monetary risk/reward)
 
-## Executions and Fees
+### 4. Row Action Shortcuts
 
-- Every execution records action, quantity, price, date, venue and an optional note
-- The **fee is computed automatically from the broker configuration** (fixed amount or percentage) and stored with the execution
-- Add, edit or delete executions from the detail page; metrics (weighted-average P&L, hold duration, returns) are recomputed
+Each table row offers one-click action icons:
+
+- **👁️ View** — opens the full trade dossier and analytics
+- **✏️ Edit** — update trade parameters or TP/SL levels
+- **⚡ Quick Close** — slide-out drawer to liquidate the position with exit price, exit reason (`Manual`, `Take profit`, `Stop loss`), and instant PnL & tax estimation
+- **🖼️ Images** — screenshot gallery manager to attach charts and trade annotations
+- **🗑️ Delete** — secure deletion with confirmation dialog
+
+---
+
+## Trade Detail Dossier
+
+Selecting any trade opens a comprehensive dossier organized into dedicated tabs:
+
+- **Overview** — executive summary with direction, holding duration, position value, target/stop levels, and return metrics.
+- **Chart** — interactive TradingView charting container centered on the traded instrument.
+- **Technical** — TradingView technical analysis summary widget (oscillators and moving averages).
+- **Close** — advanced close form to log partial scale-outs or final market exit.
+- **Executions** — chronological ledger of all order fills, with automated broker commission calculation.
+- **Images & Attachments** — full-screen zoomable screenshot gallery for trade review.
+
+### Open Positions: Real-Time Market Valuation
+
+For active trades, the page connects to real-time market data (via Yahoo Finance) showing:
+- Real-time market price
+- Theoretical liquidation market value
+- Unrealized PnL and percentage return updated continuously.
+
+### Closed Positions: Post-Trade Audit
+
+For closed trades, the financial summary includes:
+- Exact close timestamp and close trigger reason
+- Gross realized PnL
+- Total trading commissions deducted
+- **Net realized PnL**
+- Broker capital-gain tax regime and estimated tax liability on profits.
