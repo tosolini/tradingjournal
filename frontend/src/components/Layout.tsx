@@ -17,6 +17,7 @@ import {
   CoinsIcon,
   GlobeIcon,
   HelpCircleIcon,
+  IconProps,
   LayoutDashboardIcon,
   MenuIcon,
   MoonIcon,
@@ -65,7 +66,19 @@ export function Layout({ children }: PropsWithChildren) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const navGroups = [
+  type NavItem = {
+    to: string;
+    label: string;
+    icon: (props: IconProps) => React.ReactElement;
+    end?: boolean;
+  };
+
+  type NavGroup = {
+    label?: string;
+    items: NavItem[];
+  };
+
+  const navGroups: NavGroup[] = [
     {
       items: [
         { to: "/", label: t("layout.nav.dashboard"), icon: LayoutDashboardIcon, end: true },

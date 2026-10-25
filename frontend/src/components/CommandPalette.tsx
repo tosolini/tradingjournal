@@ -277,7 +277,7 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
     const tickerItems: CommandItem[] = tickerResults.map((ticker) => ({
       id: `ticker-${ticker.id}`,
       title: `${ticker.symbol} · ${ticker.name}`,
-      subtitle: `${ticker.exchange || "Stock"} (${ticker.currency || "EUR"})`,
+      subtitle: `${ticker.market || "Stock"} (${ticker.currency || "EUR"})`,
       category: "ticker",
       icon: SearchIcon,
       onSelect: () => {
