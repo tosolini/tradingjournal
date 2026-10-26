@@ -428,6 +428,7 @@
     },
     "fields": {
       "symbol": "Symbol",
+      "instrument_type": "Instrument Type",
       "executed_at": "Execution date/time",
       "open_picker": "Open date/time picker",
       "direction": "Direction",
@@ -582,6 +583,7 @@
       "labels": {
         "account": "Account",
         "symbol": "Symbol",
+        "instrument_type": "Instrument Type",
         "quantity": "Quantity",
         "direction": "Direction",
         "execution": "Execution",
@@ -624,6 +626,7 @@
       "tooltips": {
         "account": "Select the account where trade and execution will be recorded.",
         "symbol": "Instrument ticker, for example AAPL or ENEL.",
+        "instrument_type": "Government bonds are taxed at a preferential 12.5% rate, while stocks, ETFs and corporate bonds are taxed at 26%.",
         "quantity": "Number of units/lots executed in this operation.",
         "direction": "Long: profit if price rises. Short: profit if price falls.",
         "execution_type": "Open creates a position, Partial closes part of it, Close closes it completely.",

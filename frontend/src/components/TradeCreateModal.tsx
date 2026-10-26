@@ -493,8 +493,8 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
       <div>
         <label className="text-sm text-slate-300 dark:text-slate-900 block">
           <span className="inline-flex items-center mb-1">
-            Tipo Strumento
-            <FieldHelp text="I Titoli di Stato sono tassati con aliquota agevolata al 12,5%, mentre azioni, ETF e obbligazioni societarie sono al 26%." />
+            {t("trades.new_trade.labels.instrument_type", "Tipo Strumento")}
+            <FieldHelp text={t("trades.new_trade.tooltips.instrument_type", "I Titoli di Stato sono tassati con aliquota agevolata al 12,5%, mentre azioni, ETF e obbligazioni societarie sono al 26%.")} />
           </span>
           <select
             value={instrumentType}
@@ -959,8 +959,8 @@ export function TradeCreateModal({ open, onClose }: Props) {
             <div className="mt-3">
               <label className="text-sm text-slate-300 dark:text-slate-900 block mb-1">
                 <span className="inline-flex items-center">
-                  Tipo Strumento
-                  <FieldHelp text="I Titoli di Stato sono tassati al 12,5%, mentre azioni, ETF e corporate bond al 26%." />
+                  {t("trades.new_trade.labels.instrument_type", "Tipo Strumento")}
+                  <FieldHelp text={t("trades.new_trade.tooltips.instrument_type", "I Titoli di Stato sono tassati con aliquota agevolata al 12,5%, mentre azioni, ETF e obbligazioni societarie sono al 26%.")} />
                 </span>
               </label>
               <select

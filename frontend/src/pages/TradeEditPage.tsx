@@ -317,7 +317,7 @@ export function TradeEditPage() {
             </div>
           </div>
           <label className="text-sm text-slate-300 dark:text-slate-900">
-            Tipo Strumento
+            {t("trade_edit.fields.instrument_type", "Tipo Strumento")}
             <select
               {...form.register("instrument_type")}
               className="mt-1 w-full rounded border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-2 text-sm"

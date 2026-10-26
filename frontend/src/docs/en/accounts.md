@@ -51,7 +51,7 @@ The platform automatically applies differential taxation based on instrument typ
 
 ### Instrument Selection & Detection
 
-When adding or editing a trade, you can select the instrument type (`Stock`, `ETF`, `Government Bond / Sovereign Debt`, `Corporate Bond`, `Crypto`, `Forex`, `Commodity`).
+When adding or editing a trade, you can select the instrument type (`Stock`, `ETF`, `Corporate Bond`, `Government Bond`, `Crypto`, `Other`).
 
 If you enter an Italian ISIN starting with `IT0005` (BTP, BOT) or select the `MOT` exchange, the platform automatically detects it as a Government Bond and applies the 12.50% rate.
 
