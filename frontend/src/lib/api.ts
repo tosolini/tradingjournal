@@ -360,8 +360,15 @@ export function createAccount(payload: {
   name: string;
   broker_id?: number | null;
   base_currency?: string;
+  cash_balance?: number | string;
 }) {
-  return api<Account>("/api/accounts", { method: "POST", body: JSON.stringify(payload) });
+  return api<Account>("/api/accounts", {
+    method: "POST",
+    body: JSON.stringify({
+      ...payload,
+      cash_balance: payload.cash_balance !== undefined ? String(payload.cash_balance) : "0",
+    }),
+  });
 }
 
 export type Asset = {
@@ -434,11 +441,11 @@ export async function fetchTradeImageBlobUrl(imageId: number, variant: "original
 
 // ── Assets ──────────────────────────────────────────
 export function fetchAssets(): Promise<Asset[]> {
-  return api("/api/assets/");
+  return api("/api/assets");
 }
 
 export function createAsset(payload: Partial<Asset>): Promise<Asset> {
-  return api("/api/assets/", {
+  return api("/api/assets", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -463,7 +470,7 @@ export function fetchAccounts(): Promise<Account[]> {
 // ── Holdings ────────────────────────────────────────
 export function fetchHoldings(accountId?: number): Promise<Holding[]> {
   const params = accountId ? `?account_id=${accountId}` : "";
-  return api(`/api/holdings/${params}`);
+  return api(`/api/holdings${params}`);
 }
 
 export function createHolding(payload: {
@@ -474,7 +481,7 @@ export function createHolding(payload: {
   entry_date: string;
   exit_date?: string | null;
 }): Promise<Holding> {
-  return api("/api/holdings/", {
+  return api("/api/holdings", {
     method: "POST",
     body: JSON.stringify(payload),
   });
