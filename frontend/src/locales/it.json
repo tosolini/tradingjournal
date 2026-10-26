@@ -299,6 +299,7 @@
   "common": {
     "cancel": "Annulla",
     "close": "Chiudi",
+    "save": "Salva",
     "saving": "Salvataggio...",
     "loading": "Caricamento..."
   },

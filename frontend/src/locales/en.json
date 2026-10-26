@@ -299,6 +299,7 @@
   "common": {
     "cancel": "Cancel",
     "close": "Close",
+    "save": "Save",
     "saving": "Saving...",
     "loading": "Loading..."
   },
