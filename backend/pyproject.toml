@@ -3,7 +3,7 @@ name = "tradingjournal-backend"
 version = "0.1.8"
 requires-python = ">=3.12"
 dependencies = [
-  "fastapi>=0.143.2",
+  "fastapi>=0.161.1",
   "babel>=2.18.0",
 "uvicorn[standard]>=0.54.0",
   "sqlalchemy>=2.1.4",
