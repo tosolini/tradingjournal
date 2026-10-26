@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
@@ -8,9 +8,17 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import Account, PortfolioSnapshot, PositionDailySnapshot, Trade, TradeExecution, User
+from app.models import (
+    Account,
+    PortfolioSnapshot,
+    PositionDailySnapshot,
+    Trade,
+    TradeExecution,
+    User,
+)
 from app.services.portfolio import get_all_assets_pnl_series, get_holding_details
 from app.services.pnl import compute_weighted_average_pnl
+from app.services.price_provider import get_current_price
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -183,12 +191,15 @@ def dashboard_kpis(
         for key, bucket in sorted(weekly.items())
     ]
 
+    # ── Portfolio & Trades combined equity and cost basis history ────────
     account_ids = (
         db.execute(select(Account.id).where(Account.user_id == current_user.id)).scalars().all()
     )
-    portfolio_snapshots: list[PortfolioSnapshot] = []
+
+    # 1. Holdings snapshots (PortfolioSnapshot) per account & date
+    ps_by_acc_date: dict[tuple[int, date], tuple[Decimal, Decimal]] = {}
     if account_ids:
-        portfolio_snapshots = (
+        ps_rows = (
             db.execute(
                 select(PortfolioSnapshot)
                 .where(PortfolioSnapshot.account_id.in_(account_ids))
@@ -197,12 +208,107 @@ def dashboard_kpis(
             .scalars()
             .all()
         )
-    by_date: dict[date, dict[str, Decimal]] = defaultdict(
-        lambda: {"value": Decimal("0"), "cost": Decimal("0")}
+        for ps in ps_rows:
+            # Fallback to total_cost if total_value was saved as 0 due to historical missing quote
+            val = ps.total_value if ps.total_value > Decimal("0") else ps.total_cost
+            ps_by_acc_date[(ps.account_id, ps.snapshot_date)] = (val, ps.total_cost)
+
+    # 2. Open trade positions snapshots (PositionDailySnapshot) per account & date
+    pds_by_acc_date: dict[tuple[int, date], dict[str, Decimal]] = defaultdict(
+        lambda: {"val": Decimal("0"), "cost": Decimal("0")}
     )
-    for snap in portfolio_snapshots:
-        by_date[snap.snapshot_date]["value"] += snap.total_value
-        by_date[snap.snapshot_date]["cost"] += snap.total_cost
+    if account_ids:
+        pds_rows = (
+            db.execute(
+                select(PositionDailySnapshot)
+                .where(PositionDailySnapshot.account_id.in_(account_ids))
+                .order_by(PositionDailySnapshot.snapshot_date)
+            )
+            .scalars()
+            .all()
+        )
+        for pds in pds_rows:
+            # Nominal cost basis of position = market_value - unrealized_pnl
+            pos_cost = max(Decimal("0"), pds.market_value - pds.unrealized_pnl)
+            pds_entry = pds_by_acc_date[(pds.account_id, pds.snapshot_date)]
+            pds_entry["val"] += pds.market_value
+            pds_entry["cost"] += pos_cost
+
+    # Collect all historical snapshot dates across all user accounts
+    all_dates = sorted(
+        set([d for _, d in ps_by_acc_date.keys()] + [d for _, d in pds_by_acc_date.keys()])
+    )
+
+    by_date: dict[date, dict[str, Decimal]] = {}
+    last_ps = {acc_id: (Decimal("0"), Decimal("0")) for acc_id in account_ids}
+    last_pds = {acc_id: (Decimal("0"), Decimal("0")) for acc_id in account_ids}
+
+    for d in all_dates:
+        for acc_id in account_ids:
+            if (acc_id, d) in ps_by_acc_date:
+                last_ps[acc_id] = ps_by_acc_date[(acc_id, d)]
+            else:
+                last_ps[acc_id] = (Decimal("0"), Decimal("0"))
+            if (acc_id, d) in pds_by_acc_date:
+                pds_item = pds_by_acc_date[(acc_id, d)]
+                last_pds[acc_id] = (pds_item["val"], pds_item["cost"])
+            else:
+                last_pds[acc_id] = (Decimal("0"), Decimal("0"))
+
+        tot_val = sum(last_ps[a][0] + last_pds[a][0] for a in account_ids)
+        tot_cost = sum(last_ps[a][1] + last_pds[a][1] for a in account_ids)
+        by_date[d] = {"value": tot_val, "cost": tot_cost}
+
+    # 3. Live current day mark-to-market and nominal cost basis
+    holding_details = get_holding_details(db, current_user.id)
+    live_holdings_val = sum((h.market_value for h in holding_details), Decimal("0"))
+    live_holdings_cost = sum((h.avg_cost * h.quantity for h in holding_details), Decimal("0"))
+
+    live_trades_val = Decimal("0")
+    live_trades_cost = Decimal("0")
+    earliest_open_date: date | None = None
+    live_quotes: dict[tuple[str, str | None], Decimal | None] = {}
+
+    for trade in trades:
+        if trade.status == "open":
+            t_execs = executions_by_trade.get(trade.id, [])
+            if t_execs:
+                quote_key = (trade.symbol, trade.market)
+                if quote_key not in live_quotes:
+                    live_quotes[quote_key] = get_current_price(
+                        trade.symbol, trade.market
+                    )
+                t_pnl = compute_weighted_average_pnl(
+                    t_execs, market_price=live_quotes[quote_key]
+                )
+                if t_pnl.position_qty > Decimal("0"):
+                    live_trades_val += t_pnl.market_value
+                    live_trades_cost += t_pnl.average_entry_price * abs(t_pnl.position_qty)
+                    for ex in t_execs:
+                        ex_date = ex.executed_at.date()
+                        if earliest_open_date is None or ex_date < earliest_open_date:
+                            earliest_open_date = ex_date
+
+    for h in holding_details:
+        if earliest_open_date is None or h.entry_date < earliest_open_date:
+            earliest_open_date = h.entry_date
+
+    today = date.today()
+    live_total_val = live_holdings_val + live_trades_val
+    live_total_cost = live_holdings_cost + live_trades_cost
+
+    if live_total_cost > Decimal("0") or live_total_val > Decimal("0") or not by_date:
+        by_date[today] = {"value": live_total_val, "cost": live_total_cost}
+
+    # Ensure at least 2 points if active positions exist so the chart can draw
+    if len(by_date) == 1 and live_total_cost > Decimal("0"):
+        start_date = (
+            earliest_open_date
+            if earliest_open_date and earliest_open_date < today
+            else (today - timedelta(days=1))
+        )
+        if start_date not in by_date:
+            by_date[start_date] = {"value": live_total_cost, "cost": live_total_cost}
 
     portfolio_history = []
     for snapshot_date in sorted(by_date):
@@ -217,8 +323,6 @@ def dashboard_kpis(
                 "return_pct": float(return_pct),
             }
         )
-
-    holding_details = get_holding_details(db, current_user.id)
     by_symbol: dict[str, dict] = {}
     total_market_value = Decimal("0")
     for holding in holding_details:

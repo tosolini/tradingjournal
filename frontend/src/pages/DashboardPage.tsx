@@ -101,11 +101,20 @@ function Panel({
 /* ─── Equity curve (lightweight-charts) ── */
 type RangeKey = "1M" | "3M" | "6M" | "1Y" | "ALL";
 
-function EquityChartPanel({ data }: { data: DashboardKpis["portfolio_history"] }) {
+function EquityChartPanel({
+  data,
+  currency,
+}: {
+  data: DashboardKpis["portfolio_history"];
+  currency?: string;
+}) {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const ref = useRef<HTMLDivElement | null>(null);
   const [range, setRange] = useState<RangeKey>("ALL");
+  const [hoveredPoint, setHoveredPoint] = useState<DashboardKpis["portfolio_history"][number] | null>(null);
+
+  const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
 
   const cutoff = (months: number): string => {
     const d = new Date();
@@ -126,7 +135,7 @@ function EquityChartPanel({ data }: { data: DashboardKpis["portfolio_history"] }
     const isDark = theme === "dark";
     const chart = createChart(ref.current, {
       autoSize: true,
-      height: 300,
+      height: 320,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: isDark ? "#94a3b8" : "#64748b",
@@ -139,8 +148,14 @@ function EquityChartPanel({ data }: { data: DashboardKpis["portfolio_history"] }
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false, timeVisible: false },
       crosshair: {
-        vertLine: { color: isDark ? "rgba(45,212,191,0.4)" : "rgba(13,148,136,0.4)", labelBackgroundColor: isDark ? "#14b8a6" : "#0f766e" },
-        horzLine: { color: isDark ? "rgba(45,212,191,0.4)" : "rgba(13,148,136,0.4)", labelBackgroundColor: isDark ? "#14b8a6" : "#0f766e" },
+        vertLine: {
+          color: isDark ? "rgba(45,212,191,0.4)" : "rgba(13,148,136,0.4)",
+          labelBackgroundColor: isDark ? "#14b8a6" : "#0f766e",
+        },
+        horzLine: {
+          color: isDark ? "rgba(45,212,191,0.4)" : "rgba(13,148,136,0.4)",
+          labelBackgroundColor: isDark ? "#14b8a6" : "#0f766e",
+        },
       },
     });
 
@@ -150,27 +165,50 @@ function EquityChartPanel({ data }: { data: DashboardKpis["portfolio_history"] }
       bottomColor: isDark ? "rgba(45,212,191,0.02)" : "rgba(13,148,136,0.03)",
       lineWidth: 2,
       priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+      title: t("dashboard.market_value"),
     });
     area.setData(visible.map((p) => ({ time: p.date, value: p.value })));
 
     const hasCost = visible.some((p) => p.cost != null && p.cost > 0);
     if (hasCost) {
       const cost = chart.addSeries(LineSeries, {
-        color: isDark ? "#64748b" : "#475569",
-        lineWidth: 1,
+        color: isDark ? "#fbbf24" : "#d97706",
+        lineWidth: 2,
         lineStyle: 2 as const,
         priceLineVisible: false,
+        priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+        title: t("dashboard.nominal_cost_short"),
       });
       cost.setData(visible.map((p) => ({ time: p.date, value: p.cost })));
     }
 
+    chart.subscribeCrosshairMove((param) => {
+      if (!param || !param.time || !param.point) {
+        setHoveredPoint(null);
+        return;
+      }
+      const timeStr = typeof param.time === "string" ? param.time : "";
+      if (!timeStr) {
+        setHoveredPoint(null);
+        return;
+      }
+      const match = visible.find((p) => p.date === timeStr);
+      setHoveredPoint(match ?? null);
+    });
+
     return () => {
       chart.remove();
     };
-  }, [visible, theme]);
+  }, [visible, theme, t]);
 
   const latest = visible[visible.length - 1];
-  const returnPct = visible.length >= 2 ? ((latest.value - visible[0].value) / visible[0].value) * 100 : 0;
+  const active = hoveredPoint ?? latest;
+  const isHovered = hoveredPoint !== null;
+
+  const activeValue = active ? active.value : 0;
+  const activeCost = active ? active.cost : 0;
+  const activeDelta = activeValue - activeCost;
+  const activeDeltaPct = activeCost > 0 ? (activeDelta / activeCost) * 100 : 0;
 
   const ranges: { key: RangeKey; label: string }[] = [
     { key: "1M", label: t("dashboard.range_1m") },
@@ -185,39 +223,76 @@ function EquityChartPanel({ data }: { data: DashboardKpis["portfolio_history"] }
       title={t("dashboard.equity")}
       className="xl:col-span-2"
       aside={
-        <div className="flex items-center gap-3">
-          {latest && (
-            <div className="hidden text-right sm:block">
-              <div className="text-sm font-semibold tabular-nums text-slate-200 dark:text-slate-800">
-                {formatMoney(latest.value, undefined, i18n.resolvedLanguage === "it" ? "it-IT" : "en-US")}
-              </div>
-              <div className={`text-xs tabular-nums ${pnlTone(returnPct)}`}>{formatPct(returnPct)}</div>
-            </div>
-          )}
-          <div className="flex rounded-lg border border-slate-600/50 p-0.5 text-xs dark:border-slate-300/60">
-            {ranges.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRange(r.key)}
-                className={`rounded-md px-2 py-1 transition ${
-                  range === r.key
-                    ? "bg-teal-500 font-semibold text-slate-950"
-                    : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+        <div className="flex rounded-lg border border-slate-600/50 p-0.5 text-xs dark:border-slate-300/60">
+          {ranges.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => setRange(r.key)}
+              className={`rounded-md px-2 py-1 transition ${
+                range === r.key
+                  ? "bg-teal-500 font-semibold text-slate-950"
+                  : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
         </div>
       }
     >
+      {/* Legend & Theoretical Performance Bar */}
+      {latest && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/40 pb-3 dark:border-slate-200/60 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Valore di Mercato Badge */}
+            <div className="flex items-center gap-1.5 rounded-md border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-teal-300 dark:border-teal-300 dark:bg-teal-50 dark:text-teal-700">
+              <span className="h-2 w-2 rounded-full bg-teal-400 dark:bg-teal-600 ring-2 ring-teal-400/20" />
+              <span className="font-medium text-slate-300 dark:text-slate-600">{t("dashboard.market_value")}:</span>
+              <span className="font-bold tabular-nums text-slate-100 dark:text-slate-900">
+                {formatMoney(activeValue, currency, locale)}
+              </span>
+            </div>
+
+            {/* Valore Nominale / Capitale Acquistato Badge */}
+            <div className="flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300 dark:border-amber-300 dark:bg-amber-50 dark:text-amber-700">
+              <span className="h-0.5 w-3.5 border-t-2 border-dashed border-amber-400 dark:border-amber-600" />
+              <span className="font-medium text-slate-300 dark:text-slate-600">{t("dashboard.nominal_cost_short")}:</span>
+              <span className="font-bold tabular-nums text-slate-100 dark:text-slate-900">
+                {formatMoney(activeCost, currency, locale)}
+              </span>
+            </div>
+
+            {/* Theoretical Return vs Invested Capital */}
+            <div
+              className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 tabular-nums ${
+                activeDelta >= 0
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 dark:border-emerald-200 dark:bg-emerald-50 dark:text-emerald-700"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-300 dark:border-rose-200 dark:bg-rose-50 dark:text-rose-700"
+              }`}
+            >
+              <span className="font-medium text-slate-300 dark:text-slate-600">{t("dashboard.theoretical_gain")}:</span>
+              <span className="font-bold">
+                {formatSignedMoney(activeDelta, currency, locale)} ({formatPct(activeDeltaPct)})
+              </span>
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+            {isHovered && active ? (
+              <span className="font-semibold text-teal-400 dark:text-teal-600">📅 {active.date}</span>
+            ) : (
+              <span>{t("dashboard.updated")} <strong className="text-slate-300 dark:text-slate-700">{latest.date}</strong></span>
+            )}
+          </div>
+        </div>
+      )}
+
       {data.length < 2 ? (
         <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-slate-400 dark:text-slate-500">
           {t("dashboard.no_history")}
         </div>
       ) : (
-        <div ref={ref} className="w-full px-1 pt-2" />
+        <div ref={ref} className="w-full px-1 pt-1" />
       )}
     </Panel>
   );
@@ -1086,7 +1161,7 @@ export function DashboardPage() {
           </section>
 
           <section className="grid gap-4 xl:grid-cols-3">
-            <EquityChartPanel data={data?.portfolio_history ?? []} />
+            <EquityChartPanel data={data?.portfolio_history ?? []} currency={currency} />
             <OutcomeDonut kpis={data as DashboardKpis} />
           </section>
 
