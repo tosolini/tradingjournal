@@ -73,13 +73,18 @@ def get_current_price(
             pass
         return None
 
+    tried_symbols = {yf_symbol}
     result = _fetch_quote(yf_symbol)
     # If not found and market suffix was appended, try bare symbol
     if result is None and yf_symbol != symbol.upper():
-        result = _fetch_quote(symbol.upper())
+        bare_symbol = symbol.upper()
+        tried_symbols.add(bare_symbol)
+        result = _fetch_quote(bare_symbol)
     # If still not found and original symbol had no dot, try .MI (popular for Milan / Euronext ETFs and Italian stocks)
     if result is None and "." not in symbol:
-        result = _fetch_quote(symbol.upper() + ".MI")
+        mi_symbol = symbol.upper() + ".MI"
+        if mi_symbol not in tried_symbols:
+            result = _fetch_quote(mi_symbol)
 
     _price_cache[yf_symbol] = (now, result)
     return result
@@ -115,11 +120,16 @@ def get_close_price(
             pass
         return None
 
+    tried_symbols = {yf_symbol}
     result = _fetch_hist(yf_symbol)
     if result is None and yf_symbol != symbol.upper():
-        result = _fetch_hist(symbol.upper())
+        bare_symbol = symbol.upper()
+        tried_symbols.add(bare_symbol)
+        result = _fetch_hist(bare_symbol)
     if result is None and "." not in symbol:
-        result = _fetch_hist(symbol.upper() + ".MI")
+        mi_symbol = symbol.upper() + ".MI"
+        if mi_symbol not in tried_symbols:
+            result = _fetch_hist(mi_symbol)
 
     _price_cache[cache_key] = (now, result)
     return result

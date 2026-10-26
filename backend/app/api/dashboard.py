@@ -8,9 +8,17 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import Account, PortfolioSnapshot, PositionDailySnapshot, Trade, TradeExecution, User
+from app.models import (
+    Account,
+    PortfolioSnapshot,
+    PositionDailySnapshot,
+    Trade,
+    TradeExecution,
+    User,
+)
 from app.services.portfolio import get_all_assets_pnl_series, get_holding_details
 from app.services.pnl import compute_weighted_average_pnl
+from app.services.price_provider import get_current_price
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -239,9 +247,13 @@ def dashboard_kpis(
         for acc_id in account_ids:
             if (acc_id, d) in ps_by_acc_date:
                 last_ps[acc_id] = ps_by_acc_date[(acc_id, d)]
+            else:
+                last_ps[acc_id] = (Decimal("0"), Decimal("0"))
             if (acc_id, d) in pds_by_acc_date:
                 pds_item = pds_by_acc_date[(acc_id, d)]
                 last_pds[acc_id] = (pds_item["val"], pds_item["cost"])
+            else:
+                last_pds[acc_id] = (Decimal("0"), Decimal("0"))
 
         tot_val = sum(last_ps[a][0] + last_pds[a][0] for a in account_ids)
         tot_cost = sum(last_ps[a][1] + last_pds[a][1] for a in account_ids)
@@ -255,12 +267,20 @@ def dashboard_kpis(
     live_trades_val = Decimal("0")
     live_trades_cost = Decimal("0")
     earliest_open_date: date | None = None
+    live_quotes: dict[tuple[str, str | None], Decimal | None] = {}
 
     for trade in trades:
         if trade.status == "open":
             t_execs = executions_by_trade.get(trade.id, [])
             if t_execs:
-                t_pnl = compute_weighted_average_pnl(t_execs)
+                quote_key = (trade.symbol, trade.market)
+                if quote_key not in live_quotes:
+                    live_quotes[quote_key] = get_current_price(
+                        trade.symbol, trade.market
+                    )
+                t_pnl = compute_weighted_average_pnl(
+                    t_execs, market_price=live_quotes[quote_key]
+                )
                 if t_pnl.position_qty > Decimal("0"):
                     live_trades_val += t_pnl.market_value
                     live_trades_cost += t_pnl.average_entry_price * abs(t_pnl.position_qty)
