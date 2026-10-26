@@ -51,7 +51,7 @@ La piattaforma distingue automaticamente la tassazione in base allo strumento fi
 
 ### Selezione e Rilevamento dello Strumento
 
-Quando inserisci o modifichi un'operazione, puoi specificare il tipo di strumento (`Azione`, `ETF`, `Titolo di Stato / Obbligazione Governativa`, `Obbligazione Corporate`, `Crypto`, `Forex`, `Commodity`).
+Quando inserisci o modifichi un'operazione, puoi specificare il tipo di strumento (`Azione`, `ETF`, `Obbligazione Corporate`, `Titolo di Stato`, `Crypto`, `Altro`).
 
 Se inserisci un ISIN italiano che inizia per `IT0005` (BTP, BOT) o selezioni il mercato `MOT`, la piattaforma riconosce automaticamente lo strumento come Titolo di Stato e applica l'aliquota del 12,50%.
 

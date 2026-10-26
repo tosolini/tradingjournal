@@ -428,6 +428,7 @@
     },
     "fields": {
       "symbol": "Simbolo",
+      "instrument_type": "Tipo Strumento",
       "executed_at": "Data/Ora esecuzione",
       "open_picker": "Apri calendario e selettore ora",
       "direction": "Direzione",
@@ -582,6 +583,7 @@
       "labels": {
         "account": "Account",
         "symbol": "Simbolo",
+        "instrument_type": "Tipo Strumento",
         "quantity": "Quantita",
         "direction": "Direzione",
         "execution": "Eseguito",
@@ -624,6 +626,7 @@
       "tooltips": {
         "account": "Seleziona il conto su cui registrare trade ed esecuzione.",
         "symbol": "Ticker strumento, ad esempio AAPL o ENEL.",
+        "instrument_type": "I Titoli di Stato sono tassati con aliquota agevolata al 12,5%, mentre azioni, ETF e obbligazioni societarie sono al 26%.",
         "quantity": "Numero di pezzi/lotti eseguiti in questa operazione.",
         "direction": "Long: guadagni se sale. Short: guadagni se scende.",
         "execution_type": "Open apre posizione, Partial chiude parzialmente, Close chiude totalmente.",

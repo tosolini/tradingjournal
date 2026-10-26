@@ -13,3 +13,4 @@ frontend/.vite/deps/
 PROGRESS.md
 requisites.md
 opencode.json
+*.tsbuildinfo

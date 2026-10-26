@@ -8,17 +8,29 @@ import { ApiError, Broker, Exchange, FeeMode, api, exchangesApi } from "../lib/a
 import { BROKER_PRESETS, BrokerPresetConfig } from "../lib/fees";
 import { ConfirmModal } from "../components/ConfirmModal";
 
+const emptyToNullNumber = z.preprocess((val) => {
+  if (val === "" || val === null || val === undefined) return null;
+  const num = Number(val);
+  return Number.isNaN(num) ? val : num;
+}, z.number().min(0).nullable().optional());
+
+const emptyToNullTier = z.preprocess((val) => {
+  if (val === "" || val === null || val === undefined) return null;
+  const num = Number(val);
+  return Number.isNaN(num) ? val : num;
+}, z.number().int().min(1).max(4).nullable().optional());
+
 const brokerSchema = z.object({
   name: z.string().trim().min(2, "Inserisci un nome broker valido"),
   broker_profile: z.string().default("custom"),
   fee_mode: z.enum(["fixed", "percent", "percent_min_max", "tiered_volume", "under_30"]),
   fee_value: z.coerce.number().min(0, "Inserisci un valore fee valido"),
-  fee_min: z.coerce.number().min(0).nullable().optional(),
-  fee_max: z.coerce.number().min(0).nullable().optional(),
-  fee_us_value: z.coerce.number().min(0).nullable().optional(),
+  fee_min: emptyToNullNumber,
+  fee_max: emptyToNullNumber,
+  fee_us_value: emptyToNullNumber,
   fee_currency: z.string().trim().min(3, "Inserisci una valuta valida").max(8, "Valuta troppo lunga"),
   monthly_fee: z.coerce.number().min(0, "Canone non valido").default(0),
-  fee_tier_override: z.coerce.number().nullable().optional(),
+  fee_tier_override: emptyToNullTier,
   capital_gain_mode: z.enum(["immediate", "year_end"]),
   capital_gain_rate: z.coerce.number().min(0, "Inserisci una aliquota valida"),
   capital_gain_rate_gov: z.coerce.number().min(0, "Inserisci una aliquota valida"),
