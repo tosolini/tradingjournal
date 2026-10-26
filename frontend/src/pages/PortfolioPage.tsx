@@ -7,14 +7,19 @@ import {
   Asset,
   HoldingDetail,
   PortfolioSummary,
-  api,
+  createHolding,
+  deleteHolding,
   fetchAccounts,
+  fetchAssets,
   fetchPortfolioDetails,
   fetchPortfolioHistory,
   fetchPortfolioSummary,
+  updateHolding,
 } from "../lib/api";
 import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
+import { AssetFormModal } from "./AssetsPage";
+import { QuickAccountModal } from "../components/QuickAccountModal";
 
 function asNumber(value: string | number | undefined): number {
   if (value === undefined) return 0;
@@ -148,28 +153,39 @@ function HoldingFormModal({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const toast = useToast();
-  const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: fetchAccounts });
-  const { data: assets } = useQuery<Asset[]>({ queryKey: ["assets"], queryFn: () => api<Asset[]>("/api/assets") });
+  const { data: accounts = [] } = useQuery({ queryKey: ["accounts"], queryFn: fetchAccounts });
+  const { data: assets = [] } = useQuery<Asset[]>({ queryKey: ["assets"], queryFn: fetchAssets });
 
   const [accountId, setAccountId] = useState("");
   const [assetId, setAssetId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [avgCost, setAvgCost] = useState("");
-  const [entryDate, setEntryDate] = useState("");
+  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [exitDate, setExitDate] = useState("");
+
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [showAddAsset, setShowAddAsset] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setAccountId((prev) => prev || (accounts.length === 1 ? String(accounts[0].id) : ""));
+      setAssetId((prev) => prev || "");
+      setQuantity("");
+      setAvgCost("");
+      setEntryDate(new Date().toISOString().slice(0, 10));
+      setExitDate("");
+    }
+  }, [open, accounts]);
 
   const createMutation = useMutation({
     mutationFn: () =>
-      api("/api/holdings/", {
-        method: "POST",
-        body: JSON.stringify({
-          account_id: Number(accountId),
-          asset_id: Number(assetId),
-          quantity,
-          avg_cost: avgCost,
-          entry_date: entryDate,
-          exit_date: exitDate || null,
-        }),
+      createHolding({
+        account_id: Number(accountId),
+        asset_id: Number(assetId),
+        quantity,
+        avg_cost: avgCost,
+        entry_date: entryDate,
+        exit_date: exitDate || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
@@ -191,36 +207,82 @@ function HoldingFormModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-xl border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white p-6 shadow-2xl">
-        <h2 className="mb-4 text-lg font-semibold text-teal-200 dark:text-teal-900">{t("portfolio.add_holding")}</h2>
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("portfolio.account")}</label>
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
-            >
-              <option value="">{t("portfolio.select_account")}</option>
-              {accounts?.map((a: Account) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("portfolio.asset")}</label>
-            <select
-              value={assetId}
-              onChange={(e) => setAssetId(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
-            >
-              <option value="">{t("portfolio.select_asset")}</option>
-              {assets?.map((a: any) => (
-                <option key={a.id} value={a.id}>{a.symbol} — {a.name}</option>
-              ))}
-            </select>
-          </div>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="w-full max-w-md rounded-xl border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white p-6 shadow-2xl">
+          <h2 className="mb-4 text-lg font-semibold text-teal-200 dark:text-teal-900">{t("portfolio.add_holding")}</h2>
+
+          {accounts.length === 0 && (
+            <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 flex items-center justify-between">
+              <span>{t("portfolio.no_accounts_hint", "Non hai ancora nessun conto. Creane uno per registrare la posizione.")}</span>
+              <button
+                type="button"
+                onClick={() => setShowAddAccount(true)}
+                className="ml-2 rounded bg-amber-400 text-slate-950 px-2.5 py-1 text-xs font-semibold whitespace-nowrap hover:bg-amber-300"
+              >
+                + {t("portfolio.create_account", "Crea Conto")}
+              </button>
+            </div>
+          )}
+
+          {assets.length === 0 && (
+            <div className="mb-4 rounded-lg border border-teal-500/30 bg-teal-500/10 p-3 text-xs text-teal-200 flex items-center justify-between">
+              <span>{t("portfolio.no_assets_hint", "Nessun asset disponibile. Crea un ETF o titolo con ricerca ticker.")}</span>
+              <button
+                type="button"
+                onClick={() => setShowAddAsset(true)}
+                className="ml-2 rounded bg-teal-400 text-slate-950 px-2.5 py-1 text-xs font-semibold whitespace-nowrap hover:bg-teal-300"
+              >
+                + {t("portfolio.create_asset", "Crea Asset")}
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-slate-400 dark:text-slate-900">{t("portfolio.account")} *</label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAccount(true)}
+                  className="text-[11px] font-medium text-teal-400 hover:text-teal-300"
+                >
+                  + {t("portfolio.new_account", "Nuovo Conto")}
+                </button>
+              </div>
+              <select
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+              >
+                <option value="">{t("portfolio.select_account")}</option>
+                {accounts?.map((a: Account) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-slate-400 dark:text-slate-900">{t("portfolio.asset")} *</label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAsset(true)}
+                  className="text-[11px] font-medium text-teal-400 hover:text-teal-300"
+                >
+                  + {t("portfolio.new_asset", "Nuovo Asset")}
+                </button>
+              </div>
+              <select
+                value={assetId}
+                onChange={(e) => setAssetId(e.target.value)}
+                className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+              >
+                <option value="">{t("portfolio.select_asset")}</option>
+                {assets?.map((a: Asset) => (
+                  <option key={a.id} value={a.id}>{a.symbol} — {a.name}</option>
+                ))}
+              </select>
+            </div>
           <div>
             <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("portfolio.quantity")}</label>
             <input
@@ -267,6 +329,23 @@ function HoldingFormModal({
         </div>
       </div>
     </div>
+
+      <QuickAccountModal
+        open={showAddAccount}
+        onClose={() => setShowAddAccount(false)}
+        onCreated={(newAcc) => {
+          setAccountId(String(newAcc.id));
+        }}
+      />
+
+      <AssetFormModal
+        open={showAddAsset}
+        onClose={() => setShowAddAsset(false)}
+        onCreated={(newAst) => {
+          setAssetId(String(newAst.id));
+        }}
+      />
+    </>
   );
 }
 
@@ -314,14 +393,11 @@ function HoldingEditFormModal({
 
   const updateMutation = useMutation({
     mutationFn: () =>
-      api(`/api/holdings/${holding!.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          quantity,
-          avg_cost: avgCost,
-          entry_date: entryDate,
-          exit_date: exitDate || null,
-        }),
+      updateHolding(holding!.id, {
+        quantity,
+        avg_cost: avgCost,
+        entry_date: entryDate,
+        exit_date: exitDate || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
@@ -411,7 +487,7 @@ export function PortfolioPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api(`/api/holdings/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => deleteHolding(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       setDeleteId(null);

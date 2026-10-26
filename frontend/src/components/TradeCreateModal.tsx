@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Account, Broker, Ticker, Trade, api, tickersApi } from "../lib/api";
 import { INSTRUMENT_TYPES, detectIsGovernmentBond, estimateExecutionFee } from "../lib/fees";
 import { XIcon } from "./icons";
+import { QuickAccountModal } from "./QuickAccountModal";
 
 // ── Step definitions ─────────────────────────────────────────────────
 const STEPS = [
@@ -636,6 +637,7 @@ export function TradeCreateModal({ open, onClose }: Props) {
 
   // ── Quick mode toggle ──
   const [quickMode, setQuickMode] = useState(false);
+  const [showQuickAccount, setShowQuickAccount] = useState(false);
 
   // ── state ──
   const [st, setSt] = useState<WizardState>({
@@ -887,10 +889,19 @@ export function TradeCreateModal({ open, onClose }: Props) {
             <div className="grid grid-cols-2 gap-4">
               {/* Account */}
               <label className="text-sm text-slate-300 dark:text-slate-900">
-                <span className="inline-flex items-center mb-1">
-                  {t("trades.new_trade.labels.account")}
-                  <FieldHelp text={t("trades.new_trade.tooltips.account")} />
-                </span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="inline-flex items-center">
+                    {t("trades.new_trade.labels.account")}
+                    <FieldHelp text={t("trades.new_trade.tooltips.account")} />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickAccount(true)}
+                    className="text-[11px] font-medium text-teal-400 hover:text-teal-300"
+                  >
+                    + {t("trades.new_trade.add_account", "Nuovo Conto")}
+                  </button>
+                </div>
                 <select
                   value={st.accountId}
                   onChange={(e) => setSt((p) => ({ ...p, accountId: parseInt(e.target.value) }))}
@@ -1480,6 +1491,14 @@ export function TradeCreateModal({ open, onClose }: Props) {
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      <QuickAccountModal
+        open={showQuickAccount}
+        onClose={() => setShowQuickAccount(false)}
+        onCreated={(newAcc) => {
+          setSt((p) => ({ ...p, accountId: newAcc.id }));
+        }}
+      />
     </div>
   );
 }

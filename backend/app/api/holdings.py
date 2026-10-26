@@ -10,7 +10,8 @@ from app.schemas import HoldingCreate, HoldingResponse, HoldingUpdate
 router = APIRouter(prefix="/api/holdings", tags=["holdings"])
 
 
-@router.post("/", response_model=HoldingResponse)
+@router.post("", response_model=HoldingResponse)
+@router.post("/", response_model=HoldingResponse, include_in_schema=False)
 def create_holding(
     payload: HoldingCreate,
     db: Session = Depends(get_db),
@@ -41,7 +42,8 @@ def create_holding(
     return holding
 
 
-@router.get("/", response_model=list[HoldingResponse])
+@router.get("", response_model=list[HoldingResponse])
+@router.get("/", response_model=list[HoldingResponse], include_in_schema=False)
 def list_holdings(
     account_id: int | None = Query(None),
     db: Session = Depends(get_db),
@@ -55,6 +57,7 @@ def list_holdings(
 
 
 @router.patch("/{holding_id}", response_model=HoldingResponse)
+@router.patch("/{holding_id}/", response_model=HoldingResponse, include_in_schema=False)
 def update_holding(
     holding_id: int,
     payload: HoldingUpdate,
@@ -75,6 +78,7 @@ def update_holding(
 
 
 @router.delete("/{holding_id}")
+@router.delete("/{holding_id}/", include_in_schema=False)
 def delete_holding(
     holding_id: int,
     db: Session = Depends(get_db),

@@ -6,6 +6,7 @@ import { zodResolverTyped } from "../lib/zod-resolver";
 import { useTranslation } from "react-i18next";
 import { Account, ApiError, Broker, CashLedgerEntry, api, createLedgerEntry, deleteLedgerEntry, fetchLedgerEntries } from "../lib/api";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { QuickBrokerModal } from "../components/QuickBrokerModal";
 
 function asNumber(value: string | number | undefined): number {
   if (value === undefined) return 0;
@@ -312,6 +313,7 @@ export function AccountsPage() {
   const [editCash, setEditCash] = useState("0");
   const [editBrokerId, setEditBrokerId] = useState("");
   const [deletePendingId, setDeletePendingId] = useState<number | null>(null);
+  const [showQuickBroker, setShowQuickBroker] = useState(false);
 
 
   const { data, isLoading } = useQuery({
@@ -371,6 +373,7 @@ export function AccountsPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<AccountPayload>({
     resolver: zodResolverTyped(accountSchema),
@@ -462,25 +465,35 @@ export function AccountsPage() {
             placeholder="Portfolio name"
             className="rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2"
           />
-          <select
-            {...register("broker_id", {
-              setValueAs: (value) => {
-                if (value === "" || value === null || value === undefined) {
-                  return null;
-                }
-                const parsed = Number(value);
-                return Number.isNaN(parsed) ? null : parsed;
-              },
-            })}
-            className="rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2"
-          >
-            <option value="">Broker (opzionale)</option>
-            {brokers?.map((broker) => (
-              <option key={broker.id} value={broker.id}>
-                {broker.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-1.5 items-center">
+            <select
+              {...register("broker_id", {
+                setValueAs: (value) => {
+                  if (value === "" || value === null || value === undefined) {
+                    return null;
+                  }
+                  const parsed = Number(value);
+                  return Number.isNaN(parsed) ? null : parsed;
+                },
+              })}
+              className="flex-1 rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2 text-sm"
+            >
+              <option value="">Broker (opzionale)</option>
+              {brokers?.map((broker) => (
+                <option key={broker.id} value={broker.id}>
+                  {broker.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setShowQuickBroker(true)}
+              title={t("accounts.add_broker", "Crea nuovo broker")}
+              className="rounded border border-slate-700 dark:border-slate-300 px-2.5 py-2 text-xs font-semibold text-teal-400 hover:bg-slate-800 dark:hover:bg-slate-100"
+            >
+              +
+            </button>
+          </div>
           <input
             {...register("base_currency")}
             placeholder="Currency (EUR)"
@@ -645,6 +658,14 @@ export function AccountsPage() {
       </section>
 
       {data && data.length > 0 && <LedgerSection accounts={data} />}
+
+      <QuickBrokerModal
+        open={showQuickBroker}
+        onClose={() => setShowQuickBroker(false)}
+        onCreated={(b) => {
+          setValue("broker_id", b.id);
+        }}
+      />
       {deletePendingId !== null && (() => {
         const account = data?.find((a) => a.id === deletePendingId);
         return (
