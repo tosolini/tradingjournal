@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { Account, Broker, Trade, TradeDetail, api, fetchTradeImageBlobUrl } from "../lib/api";
+import { estimateExecutionFee, isGovernmentBond } from "../lib/fees";
 import { TradingViewChart } from "../components/TradingViewChart";
 import { TradingViewTechnicalAnalysis } from "../components/TradingViewTechnicalAnalysis";
 
@@ -97,18 +98,6 @@ function computeSlAbs(side: string, entry: number, stopLoss: number, qty: number
     return (stopLoss - entry) * qty;
   }
   return (entry - stopLoss) * qty;
-}
-
-function estimateExecutionFee(mode: string | undefined, feeValue: string | number | undefined, quantity: number, price: number): number {
-  const normalizedMode = (mode || "fixed").toLowerCase();
-  const parsedFee = Number(feeValue || 0);
-  if (!Number.isFinite(parsedFee) || quantity <= 0 || price <= 0) {
-    return 0;
-  }
-  if (normalizedMode === "percent") {
-    return (quantity * price * parsedFee) / 100;
-  }
-  return parsedFee;
 }
 
 function datetimeLocalNow(): string {
@@ -258,15 +247,36 @@ export function TradeDetailPage() {
   const slValue = asNumber(tradeData?.stop_loss);
   const account = accounts?.find((item) => item.id === tradeData?.account_id);
   const broker = account?.broker_id ? brokers?.find((item) => item.id === account.broker_id) : undefined;
-  const capitalGainRate = asNumber(broker?.capital_gain_rate ?? 26);
+  const isGovBond = isGovernmentBond(tradeData?.instrument_type);
+  const capitalGainRate = isGovBond
+    ? asNumber(broker?.capital_gain_rate_gov ?? 12.5)
+    : asNumber(broker?.capital_gain_rate ?? 26);
   const closeReasonLabel = {
     manual: t("trade_detail.close_reason.manual"),
     take_profit: t("trade_detail.close_reason.take_profit"),
     stop_loss: t("trade_detail.close_reason.stop_loss"),
   } as const;
 
-  const estimatedTpFee = useMemo(() => estimateExecutionFee(broker?.fee_mode, broker?.fee_value, openQty, tpValue), [broker?.fee_mode, broker?.fee_value, openQty, tpValue]);
-  const estimatedSlFee = useMemo(() => estimateExecutionFee(broker?.fee_mode, broker?.fee_value, openQty, slValue), [broker?.fee_mode, broker?.fee_value, openQty, slValue]);
+  const estimatedTpFee = useMemo(
+    () =>
+      estimateExecutionFee({
+        broker,
+        quantity: openQty,
+        price: tpValue,
+        currency: tradeData?.account_currency,
+      }).value,
+    [broker, openQty, tpValue, tradeData?.account_currency]
+  );
+  const estimatedSlFee = useMemo(
+    () =>
+      estimateExecutionFee({
+        broker,
+        quantity: openQty,
+        price: slValue,
+        currency: tradeData?.account_currency,
+      }).value,
+    [broker, openQty, slValue, tradeData?.account_currency]
+  );
   const tpAbs = tradeData ? computeTpAbs(tradeData.side, entryPrice, tpValue, openQty) : null;
   const slAbs = tradeData ? computeSlAbs(tradeData.side, entryPrice, slValue, openQty) : null;
   const estimatedCapitalGainTax = tpAbs === null || tpAbs <= 0 ? 0 : (tpAbs * capitalGainRate) / 100;
@@ -354,6 +364,17 @@ export function TradeDetailPage() {
         <div>
           <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.status")}</div>
           <div>{trade.status}</div>
+        </div>
+        <div>
+          <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.instrument_type", "Strumento")}</div>
+          <div className="flex items-center gap-1.5">
+            <span className="capitalize">{trade.instrument_type ? trade.instrument_type.replace('_', ' ') : "Stock"}</span>
+            {isGovBond && (
+              <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
+                12.5% Gov
+              </span>
+            )}
+          </div>
         </div>
         <div>
           <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.account")}</div>
@@ -473,7 +494,12 @@ export function TradeDetailPage() {
             </div>
             <div>
               <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.capital_gain")}</div>
-              <div>{closeSummary.capital_gain_mode} {Number(closeSummary.capital_gain_rate || 0).toFixed(2)}%</div>
+              <div>
+                {closeSummary.capital_gain_mode} {Number(closeSummary.capital_gain_rate || 0).toFixed(2)}%
+                {closeSummary.instrument_type === "government_bond" || closeSummary.instrument_type === "titolo_di_stato" ? (
+                  <span className="ml-1 text-xs text-emerald-400 font-medium">({t("trade_detail.gov_bond_tag", "Titolo di Stato")})</span>
+                ) : null}
+              </div>
             </div>
             <div>
               <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.tax_estimate")}</div>

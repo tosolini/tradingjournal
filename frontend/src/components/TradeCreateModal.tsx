@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Account, Broker, Ticker, Trade, api, tickersApi } from "../lib/api";
+import { INSTRUMENT_TYPES, detectIsGovernmentBond, estimateExecutionFee } from "../lib/fees";
 import { XIcon } from "./icons";
 
 // ── Step definitions ─────────────────────────────────────────────────
@@ -27,6 +28,7 @@ interface WizardState {
   selectedTicker: Ticker | null;
   symbolSuggestions: Ticker[];
   showSuggestions: boolean;
+  instrumentType: string;
   // Step 2 — Entry & Quantity
   entryPrice: string;
   quantityMode: "shares" | "value";
@@ -312,6 +314,7 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
   const [selectedTicker, setSelectedTicker] = useState<Ticker | null>(null);
   const [symbolSuggestions, setSymbolSuggestions] = useState<Ticker[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [instrumentType, setInstrumentType] = useState<string>("stock");
   const symbolDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const symbolContainerRef = useRef<HTMLDivElement>(null);
   const [quantity, setQuantity] = useState("1");
@@ -334,6 +337,9 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
   const handleSymbolInput = useCallback((value: string) => {
     setSymbolInput(value);
     setSelectedTicker(null);
+    if (detectIsGovernmentBond(value, undefined, undefined)) {
+      setInstrumentType("government_bond");
+    }
     clearTimeout(symbolDebounceRef.current);
     if (value.trim().length < 1) {
       setSymbolSuggestions([]);
@@ -351,6 +357,9 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
     setSymbolInput(ticker.symbol);
     setSelectedTicker(ticker);
     setShowSuggestions(false);
+    if (detectIsGovernmentBond(ticker.symbol, ticker.market, ticker.isin)) {
+      setInstrumentType("government_bond");
+    }
   }, []);
 
   const { data: accounts } = useQuery({
@@ -371,13 +380,14 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
     if (!account?.broker_id) return null;
     const broker = brokers.find((b) => b.id === account.broker_id);
     if (!broker) return null;
-    const feeValue = Number(broker.fee_value || 0);
-    if (!Number.isFinite(feeValue) || feeValue < 0) return null;
-    if (broker.fee_mode === "percent") {
-      return { value: (ep * qty * feeValue) / 100, currency: (broker.fee_currency || account.base_currency || "EUR").toUpperCase() };
-    }
-    return { value: feeValue, currency: (broker.fee_currency || account.base_currency || "EUR").toUpperCase() };
-  }, [accounts, brokers, accountId, ep, qty]);
+    return estimateExecutionFee({
+      broker,
+      quantity: qty,
+      price: ep,
+      market: selectedTicker?.market || "Euronext",
+      currency: broker.fee_currency || account.base_currency || "EUR",
+    });
+  }, [accounts, brokers, accountId, ep, qty, selectedTicker]);
 
   const tpNum = parseFloat(takeProfit) || 0;
   const slNum = parseFloat(stopLoss) || 0;
@@ -399,7 +409,7 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
           market: selectedTicker?.market || "Euronext",
           symbol,
           ...(selectedTicker && { ticker_id: selectedTicker.id }),
-          instrument_type: "stock",
+          instrument_type: instrumentType,
           side: direction,
           status: executionType === "open" ? "open" : executionType,
           target_price: tpNum > 0 ? tpNum : null,
@@ -477,6 +487,27 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Instrument Type selector */}
+      <div>
+        <label className="text-sm text-slate-300 dark:text-slate-900 block">
+          <span className="inline-flex items-center mb-1">
+            Tipo Strumento
+            <FieldHelp text="I Titoli di Stato sono tassati con aliquota agevolata al 12,5%, mentre azioni, ETF e obbligazioni societarie sono al 26%." />
+          </span>
+          <select
+            value={instrumentType}
+            onChange={(e) => setInstrumentType(e.target.value)}
+            className="w-full rounded border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-2 text-sm"
+          >
+            {INSTRUMENT_TYPES.map((it) => (
+              <option key={it.value} value={it.value}>
+                {i18n.resolvedLanguage === "it" ? it.labelIt : it.labelEn}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* Quantity + Entry Price */}
@@ -614,6 +645,7 @@ export function TradeCreateModal({ open, onClose }: Props) {
     selectedTicker: null,
     symbolSuggestions: [],
     showSuggestions: false,
+    instrumentType: "stock",
     entryPrice: "",
     quantityMode: "shares",
     quantity: "1",
@@ -654,6 +686,7 @@ export function TradeCreateModal({ open, onClose }: Props) {
         selectedTicker: null,
         symbolSuggestions: [],
         showSuggestions: false,
+        instrumentType: "stock",
         entryPrice: "",
         quantityMode: "shares",
         quantity: "1",
@@ -684,7 +717,13 @@ export function TradeCreateModal({ open, onClose }: Props) {
 
   // ── Symbol autocomplete ──
   const handleSymbolInput = useCallback((value: string) => {
-    setSt((p) => ({ ...p, symbolInput: value, selectedTicker: null }));
+    const isGov = detectIsGovernmentBond(value, undefined, undefined);
+    setSt((p) => ({
+      ...p,
+      symbolInput: value,
+      selectedTicker: null,
+      ...(isGov ? { instrumentType: "government_bond" } : {}),
+    }));
     clearTimeout(symbolDebounceRef.current);
     if (value.trim().length < 1) {
       setSt((p) => ({ ...p, symbolSuggestions: [], showSuggestions: false }));
@@ -701,11 +740,13 @@ export function TradeCreateModal({ open, onClose }: Props) {
   }, []);
 
   const selectSymbol = useCallback((ticker: Ticker) => {
+    const isGov = detectIsGovernmentBond(ticker.symbol, ticker.market, ticker.isin);
     setSt((p) => ({
       ...p,
       symbolInput: ticker.symbol,
       selectedTicker: ticker,
       showSuggestions: false,
+      ...(isGov ? { instrumentType: "government_bond" } : {}),
     }));
   }, []);
 
@@ -751,20 +792,14 @@ export function TradeCreateModal({ open, onClose }: Props) {
     if (!account?.broker_id) return null;
     const broker = brokers.find((item) => item.id === account.broker_id);
     if (!broker) return null;
-    const feeValue = Number(broker.fee_value || 0);
-    if (!Number.isFinite(feeValue) || feeValue < 0) return null;
-    if (broker.fee_mode === "percent") {
-      const notional = ep * displayQuantity;
-      return {
-        value: (notional * feeValue) / 100,
-        currency: (broker.fee_currency || account.base_currency || "EUR").toUpperCase(),
-      };
-    }
-    return {
-      value: feeValue,
-      currency: (broker.fee_currency || account.base_currency || "EUR").toUpperCase(),
-    };
-  }, [accounts, brokers, st.accountId, ep, displayQuantity]);
+    return estimateExecutionFee({
+      broker,
+      quantity: displayQuantity,
+      price: ep,
+      market: st.selectedTicker?.market || "Euronext",
+      currency: broker.fee_currency || account.base_currency || "EUR",
+    });
+  }, [accounts, brokers, st.accountId, ep, displayQuantity, st.selectedTicker]);
 
   // ── Validation per step ──
   const stepValid = useMemo((): boolean => {
@@ -797,7 +832,7 @@ export function TradeCreateModal({ open, onClose }: Props) {
           market: st.selectedTicker?.market || "Euronext",
           symbol,
           ...(st.selectedTicker && { ticker_id: st.selectedTicker.id }),
-          instrument_type: "stock",
+          instrument_type: st.instrumentType || "stock",
           side: st.direction,
           status: st.executionType === "open" ? "open" : st.executionType,
           target_price: computedTpPrice > 0 ? computedTpPrice : null,
@@ -918,6 +953,27 @@ export function TradeCreateModal({ open, onClose }: Props) {
                   <span className="mt-1 block text-xs text-amber-400">{t("trades.new_trade.validation.symbol_required")}</span>
                 )}
               </div>
+            </div>
+
+            {/* Instrument Type selector */}
+            <div className="mt-3">
+              <label className="text-sm text-slate-300 dark:text-slate-900 block mb-1">
+                <span className="inline-flex items-center">
+                  Tipo Strumento
+                  <FieldHelp text="I Titoli di Stato sono tassati al 12,5%, mentre azioni, ETF e corporate bond al 26%." />
+                </span>
+              </label>
+              <select
+                value={st.instrumentType || "stock"}
+                onChange={(e) => setSt((p) => ({ ...p, instrumentType: e.target.value }))}
+                className="w-full rounded border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-2 text-sm"
+              >
+                {INSTRUMENT_TYPES.map((it) => (
+                  <option key={it.value} value={it.value}>
+                    {i18n.resolvedLanguage === "it" ? it.labelIt : it.labelEn}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {st.selectedTicker && (

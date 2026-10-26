@@ -40,15 +40,31 @@ def ensure_runtime_schema_compatibility() -> None:
     broker_columns = {column["name"] for column in inspector.get_columns("brokers")}
     with engine.begin() as conn:
         if "fee_mode" not in broker_columns:
-            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_mode VARCHAR(16) NOT NULL DEFAULT 'fixed'"))
+            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_mode VARCHAR(32) NOT NULL DEFAULT 'fixed'"))
+        else:
+            conn.execute(text("ALTER TABLE brokers ALTER COLUMN fee_mode TYPE VARCHAR(32)"))
+        if "broker_profile" not in broker_columns:
+            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS broker_profile VARCHAR(32) NOT NULL DEFAULT 'custom'"))
         if "fee_value" not in broker_columns:
             conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_value NUMERIC(18, 6) NOT NULL DEFAULT 0"))
+        if "fee_min" not in broker_columns:
+            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_min NUMERIC(18, 6)"))
+        if "fee_max" not in broker_columns:
+            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_max NUMERIC(18, 6)"))
+        if "fee_us_value" not in broker_columns:
+            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_us_value NUMERIC(18, 6)"))
         if "fee_currency" not in broker_columns:
             conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_currency VARCHAR(8) NOT NULL DEFAULT 'EUR'"))
+        if "monthly_fee" not in broker_columns:
+            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS monthly_fee NUMERIC(18, 2) NOT NULL DEFAULT 0"))
+        if "fee_tier_override" not in broker_columns:
+            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_tier_override INTEGER"))
         if "capital_gain_mode" not in broker_columns:
             conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS capital_gain_mode VARCHAR(16) NOT NULL DEFAULT 'immediate'"))
         if "capital_gain_rate" not in broker_columns:
             conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS capital_gain_rate NUMERIC(5, 2) NOT NULL DEFAULT 26"))
+        if "capital_gain_rate_gov" not in broker_columns:
+            conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS capital_gain_rate_gov NUMERIC(5, 2) NOT NULL DEFAULT 12.50"))
 
     if "trades" not in table_names:
         return

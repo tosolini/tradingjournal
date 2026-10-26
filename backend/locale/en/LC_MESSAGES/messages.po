@@ -10,7 +10,10 @@ msgid "errors.invalid_credentials"
 msgstr "Invalid credentials"
 
 msgid "errors.fee_mode_invalid"
-msgstr "fee_mode must be 'fixed' or 'percent'"
+msgstr "Invalid fee_mode ('fixed', 'percent', 'percent_min_max', 'tiered_volume', 'under_30')"
+
+msgid "errors.fee_tier_invalid"
+msgstr "Tier must be between 1 and 4"
 
 msgid "errors.fee_currency_required"
 msgstr "fee_currency is required"

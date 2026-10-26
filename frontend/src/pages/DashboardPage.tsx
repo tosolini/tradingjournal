@@ -1099,16 +1099,30 @@ export function DashboardPage() {
     },
   ];
 
+  const hasGovTax = asNumber(data?.capital_gain_tax_gov) > 0;
+  const hasStdTax = asNumber(data?.capital_gain_tax_standard) > 0;
+  const taxCaption =
+    hasGovTax || hasStdTax
+      ? `${t("dashboard.cards.tax_std")}: ${formatMoney(data?.capital_gain_tax_standard, data?.capital_gain_currency, locale)} · ${t("dashboard.cards.tax_gov")}: ${formatMoney(data?.capital_gain_tax_gov, data?.capital_gain_currency, locale)}`
+      : t("dashboard.cards.tax_hint");
+
+  const hasGovLoss = asNumber(data?.capital_gain_loss_gov) > 0;
+  const minusCaption = hasGovLoss
+    ? `${t("dashboard.cards.nominal_loss")}: ${formatMoney(data?.capital_gain_loss_nominal, data?.capital_gain_currency, locale)} (${t("dashboard.cards.weighted_offset")})`
+    : undefined;
+
   const compactCards = [
     { label: t("dashboard.cards.trades"), value: String(data?.trade_count ?? 0) },
     { label: t("dashboard.cards.open"), value: String(data?.open_positions ?? 0) },
     {
       label: t("dashboard.cards.capital_gain_tax"),
       value: formatMoney(data?.capital_gain_tax_estimate, data?.capital_gain_currency, locale),
+      caption: taxCaption,
     },
     {
       label: t("dashboard.cards.minus_offsets"),
       value: formatMoney(data?.capital_gain_loss_offset, data?.capital_gain_currency, locale),
+      caption: minusCaption,
     },
   ];
 
@@ -1154,6 +1168,7 @@ export function DashboardPage() {
                 key={card.label}
                 label={card.label}
                 value={card.value}
+                caption={card.caption}
                 tone="text-slate-100 dark:text-slate-800"
                 delay={120 + i * 60}
               />

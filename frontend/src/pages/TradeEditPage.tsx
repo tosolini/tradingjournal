@@ -6,9 +6,11 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { Account, Broker, Ticker, TradeDetail, api, tickersApi } from "../lib/api";
+import { INSTRUMENT_TYPES, estimateExecutionFee } from "../lib/fees";
 
 const editSchema = z.object({
   symbol: z.string().trim().min(1),
+  instrument_type: z.string().default("stock"),
   executed_at: z.string().min(1),
   direction: z.enum(["long", "short"]),
   execution_type: z.enum(["open", "close", "partial"]),
@@ -144,6 +146,7 @@ export function TradeEditPage() {
     values: data
       ? {
           symbol: data.trade.symbol,
+          instrument_type: data.trade.instrument_type || "stock",
           executed_at: firstExecution
             ? isoToDatetimeLocal(firstExecution.executed_at)
             : isoToDatetimeLocal(data.trade.created_at),
@@ -165,6 +168,7 @@ export function TradeEditPage() {
         method: "PATCH",
         body: JSON.stringify({
           symbol: values.symbol,
+          instrument_type: values.instrument_type,
           ...(selectedTicker && { ticker_id: selectedTicker.id }),
           side: values.direction,
           status: values.execution_type === "open" ? "open" : values.execution_type,
@@ -211,20 +215,13 @@ export function TradeEditPage() {
     if (!broker) {
       return null;
     }
-    const feeValue = Number(broker.fee_value || 0);
-    if (!Number.isFinite(feeValue) || feeValue < 0) {
-      return null;
-    }
-    if (broker.fee_mode === "percent") {
-      return {
-        value: (Number(entry) * Number(quantity) * feeValue) / 100,
-        currency: (broker.fee_currency || account.base_currency || "EUR").toUpperCase(),
-      };
-    }
-    return {
-      value: feeValue,
-      currency: (broker.fee_currency || account.base_currency || "EUR").toUpperCase(),
-    };
+    return estimateExecutionFee({
+      broker,
+      quantity: Number(quantity),
+      price: Number(entry),
+      market: data.trade.market,
+      currency: broker.fee_currency || account.base_currency || "EUR",
+    });
   }, [accounts, brokers, data, entry, quantity]);
 
   const tpPct = useMemo(() => {
@@ -319,6 +316,19 @@ export function TradeEditPage() {
               )}
             </div>
           </div>
+          <label className="text-sm text-slate-300 dark:text-slate-900">
+            Tipo Strumento
+            <select
+              {...form.register("instrument_type")}
+              className="mt-1 w-full rounded border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-2 text-sm"
+            >
+              {INSTRUMENT_TYPES.map((it) => (
+                <option key={it.value} value={it.value}>
+                  {locale.startsWith("it") ? it.labelIt : it.labelEn}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="text-sm text-slate-300 dark:text-slate-900">
             {t("trade_edit.fields.executed_at")}
             <div className="relative mt-1">

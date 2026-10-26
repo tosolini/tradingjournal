@@ -62,9 +62,16 @@ def dashboard_kpis(
     current_year = date.today().year
     year_start = datetime(current_year, 1, 1, tzinfo=UTC)
     immediate_tax = Decimal("0")
-    year_end_buckets: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
-    year_end_rates: dict[int, Decimal] = {}
+    immediate_tax_std = Decimal("0")
+    immediate_tax_gov = Decimal("0")
     loss_offset = Decimal("0")
+    loss_offset_std = Decimal("0")
+    loss_offset_gov = Decimal("0")
+    nominal_loss = Decimal("0")
+    year_end_std_buckets: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+    year_end_gov_buckets: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+    year_end_std_rates: dict[int, Decimal] = {}
+    year_end_gov_rates: dict[int, Decimal] = {}
     monthly: dict[str, dict] = {}
     weekly: dict[str, dict] = {}
     trade_rows: list[dict] = []
@@ -99,17 +106,39 @@ def dashboard_kpis(
         broker = trade.account.broker if trade.account and trade.account.broker else None
         broker_id = broker.id if broker else trade.account_id
         mode = str(broker.capital_gain_mode if broker else "immediate").lower()
-        rate = Decimal(str(broker.capital_gain_rate if broker else Decimal("26")))
+        std_rate = Decimal(str(broker.capital_gain_rate if broker else Decimal("26.00")))
+        gov_rate = Decimal(str(broker.capital_gain_rate_gov if broker else Decimal("12.50")))
+        is_gov = str(trade.instrument_type or "stock").strip().lower() in {"government_bond", "titolo_di_stato"}
+        rate = gov_rate if is_gov else std_rate
         yearly_tax_currency.add((trade.account.base_currency if trade.account else "EUR").upper())
+
         if closed_at >= year_start:
             if mode == "year_end":
-                year_end_buckets[broker_id] += net
-                year_end_rates.setdefault(broker_id, rate)
+                if is_gov:
+                    year_end_gov_buckets[broker_id] += net
+                else:
+                    year_end_std_buckets[broker_id] += net
+                year_end_std_rates.setdefault(broker_id, std_rate)
+                year_end_gov_rates.setdefault(broker_id, gov_rate)
             else:
-                taxable = net if net > 0 else Decimal("0")
-                immediate_tax += taxable * rate / Decimal("100")
-                if net < 0:
-                    loss_offset += abs(net)
+                if net > 0:
+                    tax = net * rate / Decimal("100")
+                    immediate_tax += tax
+                    if is_gov:
+                        immediate_tax_gov += tax
+                    else:
+                        immediate_tax_std += tax
+                elif net < 0:
+                    loss = abs(net)
+                    nominal_loss += loss
+                    if is_gov:
+                        loss_offset_gov += loss
+                        # Italian tax rule: Gov bond loss weighted at (12.5 / 26) in standard basket
+                        weighted_factor = (gov_rate / std_rate) if std_rate > 0 else Decimal("0.480769")
+                        loss_offset += loss * weighted_factor
+                    else:
+                        loss_offset_std += loss
+                        loss_offset += loss
 
         month_key = closed_at.strftime("%Y-%m")
         bucket = monthly.setdefault(month_key, {"realized": Decimal("0"), "count": 0})
@@ -131,12 +160,32 @@ def dashboard_kpis(
             }
         )
 
-    for broker_id, net_pnl in year_end_buckets.items():
-        rate = year_end_rates.get(broker_id, Decimal("26"))
-        if net_pnl > 0:
-            immediate_tax += net_pnl * rate / Decimal("100")
+    all_year_end_broker_ids = set(list(year_end_std_buckets.keys()) + list(year_end_gov_buckets.keys()))
+    for broker_id in all_year_end_broker_ids:
+        s_rate = year_end_std_rates.get(broker_id, Decimal("26.00"))
+        g_rate = year_end_gov_rates.get(broker_id, Decimal("12.50"))
+        s_net = year_end_std_buckets.get(broker_id, Decimal("0"))
+        g_net = year_end_gov_buckets.get(broker_id, Decimal("0"))
+
+        weighted_factor = (g_rate / s_rate) if s_rate > 0 else Decimal("0.480769")
+        g_net_std_eq = g_net * weighted_factor
+        combined_net = s_net + g_net_std_eq
+
+        if combined_net > 0:
+            tax = combined_net * s_rate / Decimal("100")
+            immediate_tax += tax
+            if s_net > 0:
+                immediate_tax_std += s_net * s_rate / Decimal("100")
+            if g_net > 0:
+                immediate_tax_gov += g_net * g_rate / Decimal("100")
         else:
-            loss_offset += abs(net_pnl)
+            loss_offset += abs(combined_net)
+
+        if s_net < 0:
+            loss_offset_std += abs(s_net)
+        if g_net < 0:
+            loss_offset_gov += abs(g_net)
+        nominal_loss += abs(min(s_net, Decimal("0"))) + abs(min(g_net, Decimal("0")))
 
     snapshots = db.execute(select(PositionDailySnapshot)).scalars().all()
     equity_curve = [
@@ -392,8 +441,13 @@ def dashboard_kpis(
         "unrealized_pnl": str(unrealized),
         "total_pnl": str(realized + unrealized),
         "kpi_currency": kpi_currency,
-        "capital_gain_tax_estimate": str(immediate_tax),
-        "capital_gain_loss_offset": str(loss_offset),
+        "capital_gain_tax_estimate": str(immediate_tax.quantize(Decimal("0.01"))),
+        "capital_gain_tax_standard": str(immediate_tax_std.quantize(Decimal("0.01"))),
+        "capital_gain_tax_gov": str(immediate_tax_gov.quantize(Decimal("0.01"))),
+        "capital_gain_loss_offset": str(loss_offset.quantize(Decimal("0.01"))),
+        "capital_gain_loss_standard": str(loss_offset_std.quantize(Decimal("0.01"))),
+        "capital_gain_loss_gov": str(loss_offset_gov.quantize(Decimal("0.01"))),
+        "capital_gain_loss_nominal": str(nominal_loss.quantize(Decimal("0.01"))),
         "capital_gain_currency": tax_currency,
         "equity_curve": equity_curve,
         "portfolio_history": portfolio_history,
