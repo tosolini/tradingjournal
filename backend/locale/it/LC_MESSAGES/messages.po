@@ -10,7 +10,10 @@ msgid "errors.invalid_credentials"
 msgstr "Credenziali non valide"
 
 msgid "errors.fee_mode_invalid"
-msgstr "fee_mode deve essere 'fixed' o 'percent'"
+msgstr "Modalità commissione non valida ('fixed', 'percent', 'percent_min_max', 'tiered_volume', 'under_30')"
+
+msgid "errors.fee_tier_invalid"
+msgstr "La fascia deve essere compresa tra 1 e 4"
 
 msgid "errors.fee_currency_required"
 msgstr "fee_currency obbligatoria"

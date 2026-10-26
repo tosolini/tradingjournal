@@ -140,20 +140,34 @@ class CashLedgerResponse(BaseModel):
 
 class BrokerCreate(BaseModel):
     name: str
+    broker_profile: str = "custom"
     fee_mode: str = "fixed"
     fee_value: Decimal = Decimal("0")
+    fee_min: Decimal | None = None
+    fee_max: Decimal | None = None
+    fee_us_value: Decimal | None = None
     fee_currency: str = "EUR"
+    monthly_fee: Decimal = Decimal("0")
+    fee_tier_override: int | None = None
     capital_gain_mode: str = "immediate"
     capital_gain_rate: Decimal = Decimal("26")
+    capital_gain_rate_gov: Decimal = Decimal("12.50")
 
 
 class BrokerUpdate(BaseModel):
     name: str | None = None
+    broker_profile: str | None = None
     fee_mode: str | None = None
     fee_value: Decimal | None = None
+    fee_min: Decimal | None = None
+    fee_max: Decimal | None = None
+    fee_us_value: Decimal | None = None
     fee_currency: str | None = None
+    monthly_fee: Decimal | None = None
+    fee_tier_override: int | None = None
     capital_gain_mode: str | None = None
     capital_gain_rate: Decimal | None = None
+    capital_gain_rate_gov: Decimal | None = None
 
 
 class ExchangeCreate(BaseModel):
@@ -198,11 +212,18 @@ class ExchangeResponse(BaseModel):
 class BrokerResponse(BaseModel):
     id: int
     name: str
+    broker_profile: str = "custom"
     fee_mode: str
     fee_value: Decimal
+    fee_min: Decimal | None = None
+    fee_max: Decimal | None = None
+    fee_us_value: Decimal | None = None
     fee_currency: str
+    monthly_fee: Decimal = Decimal("0")
+    fee_tier_override: int | None = None
     capital_gain_mode: str
     capital_gain_rate: Decimal
+    capital_gain_rate_gov: Decimal = Decimal("12.50")
     exchanges: list["ExchangeResponse"] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -249,6 +270,7 @@ class TradeResponse(BaseModel):
     market: str
     symbol: str
     isin: Optional[str] = None
+    instrument_type: str = "stock"
     side: str
     status: str
     strategy_name: Optional[str]
@@ -318,6 +340,7 @@ class TradeCloseRequest(BaseModel):
 class TradeClosureSummary(BaseModel):
     closed_at: datetime
     close_reason: Optional[str]
+    instrument_type: str = "stock"
     exit_action: str
     exit_price: Decimal
     exit_fee: Decimal

@@ -1,8 +1,8 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -32,7 +32,56 @@ def _quantize(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.000001"))
 
 
-def _compute_execution_fee(trade: Trade, quantity: Decimal, price: Decimal) -> Decimal:
+def _determine_monthly_volume_tier(
+    trade: Trade,
+    executed_at: datetime | None,
+    db: Session | None,
+) -> int:
+    broker = trade.account.broker if trade.account else None
+    if not broker or db is None:
+        return 1
+
+    target_dt = executed_at or datetime.now(timezone.utc)
+    if target_dt.tzinfo is None:
+        target_dt = target_dt.replace(tzinfo=timezone.utc)
+
+    start_of_month = datetime(target_dt.year, target_dt.month, 1, 0, 0, 0, tzinfo=target_dt.tzinfo)
+    if target_dt.month == 12:
+        start_of_next_month = datetime(target_dt.year + 1, 1, 1, 0, 0, 0, tzinfo=target_dt.tzinfo)
+    else:
+        start_of_next_month = datetime(target_dt.year, target_dt.month + 1, 1, 0, 0, 0, tzinfo=target_dt.tzinfo)
+
+    account_ids = [acc.id for acc in broker.accounts]
+    if not account_ids:
+        account_ids = [trade.account_id]
+
+    monthly_comm_stmt = select(func.coalesce(func.sum(TradeExecution.fee), Decimal("0"))).join(
+        Trade, TradeExecution.trade_id == Trade.id
+    ).where(
+        Trade.account_id.in_(account_ids),
+        TradeExecution.executed_at >= start_of_month,
+        TradeExecution.executed_at < start_of_next_month,
+    )
+    total_monthly_fees = db.execute(monthly_comm_stmt).scalar() or Decimal("0")
+
+    if total_monthly_fees < Decimal("99.00"):
+        return 1
+    elif total_monthly_fees < Decimal("1500.00"):
+        return 2
+    elif total_monthly_fees < Decimal("2500.00"):
+        return 3
+    else:
+        return 4
+
+
+def _compute_execution_fee(
+    trade: Trade,
+    quantity: Decimal,
+    price: Decimal,
+    currency: str | None = None,
+    executed_at: datetime | None = None,
+    db: Session | None = None,
+) -> Decimal:
     broker = trade.account.broker if trade.account else None
     if not broker:
         return Decimal("0")
@@ -42,9 +91,56 @@ def _compute_execution_fee(trade: Trade, quantity: Decimal, price: Decimal) -> D
     if fee_value < 0:
         fee_value = Decimal("0")
 
-    if fee_mode == "percent":
+    market_str = str(trade.market or "").upper()
+    trade_curr = str(currency or (trade.account.base_currency if trade.account else "EUR") or "EUR").upper()
+    is_usd = trade_curr == "USD" or any(us in market_str for us in ["US", "NYSE", "NASDAQ", "AMEX"])
+
+    if fee_mode == "fixed":
+        return _quantize(fee_value)
+
+    elif fee_mode == "percent":
         notional = Decimal(str(quantity)) * Decimal(str(price))
         return _quantize((notional * fee_value) / Decimal("100"))
+
+    elif fee_mode == "percent_min_max":
+        notional = Decimal(str(quantity)) * Decimal(str(price))
+        calculated = (notional * fee_value) / Decimal("100")
+        if broker.fee_min is not None and calculated < broker.fee_min:
+            calculated = broker.fee_min
+        if broker.fee_max is not None and calculated > broker.fee_max:
+            calculated = broker.fee_max
+        return _quantize(calculated)
+
+    elif fee_mode == "under_30":
+        if is_usd:
+            usd_fee = broker.fee_us_value if broker.fee_us_value is not None else Decimal("3.95")
+            return _quantize(usd_fee)
+        eur_fee = broker.fee_value if broker.fee_value > Decimal("0") else Decimal("2.95")
+        return _quantize(eur_fee)
+
+    elif fee_mode == "tiered_volume":
+        tier = broker.fee_tier_override
+        if tier not in {1, 2, 3, 4} and db is not None:
+            tier = _determine_monthly_volume_tier(trade, executed_at, db)
+        elif tier not in {1, 2, 3, 4}:
+            tier = 1
+
+        tier_rates_eur = {
+            1: Decimal("19.00"),
+            2: Decimal("9.95"),
+            3: Decimal("6.95"),
+            4: Decimal("2.95"),
+        }
+        tier_rates_usd = {
+            1: Decimal("12.95"),
+            2: Decimal("9.95"),
+            3: Decimal("8.95"),
+            4: Decimal("3.95"),
+        }
+        if is_usd:
+            return _quantize(tier_rates_usd.get(tier, Decimal("12.95")))
+        return _quantize(tier_rates_eur.get(tier, Decimal("19.00")))
+
     return _quantize(fee_value)
 
 
@@ -59,10 +155,16 @@ def _close_action(side: str) -> str:
 def _capital_gain_tax(
     net_pnl: Decimal,
     broker: Broker | None,
+    instrument_type: str = "stock",
     request: Request | None = None,
 ) -> tuple[str, Decimal, Decimal | None, str | None]:
     mode = str(broker.capital_gain_mode or "immediate").lower() if broker else "immediate"
-    rate = Decimal(str(broker.capital_gain_rate or Decimal("26"))) if broker else Decimal("26")
+    is_gov = str(instrument_type or "stock").strip().lower() in {"government_bond", "titolo_di_stato"}
+    if is_gov:
+        rate = Decimal(str(broker.capital_gain_rate_gov if broker else Decimal("12.50")))
+    else:
+        rate = Decimal(str(broker.capital_gain_rate if broker else Decimal("26.00")))
+
     if mode == "year_end":
         return mode, rate, None, translate("notes.tax_deferred_dashboard", request=request)
     taxable = net_pnl if net_pnl > 0 else Decimal("0")
@@ -82,13 +184,14 @@ def _trade_closure_summary(
     exit_execution = sorted(executions, key=lambda item: item.executed_at)[-1]
     broker = trade.account.broker if trade.account and trade.account.broker else None
     capital_gain_mode, capital_gain_rate, capital_gain_tax_estimate, tax_note = _capital_gain_tax(
-        pnl.net_realized_pnl, broker, request=request
+        pnl.net_realized_pnl, broker, instrument_type=trade.instrument_type, request=request
     )
     gross_pnl = _quantize(pnl.net_realized_pnl + pnl.total_fees)
 
     return TradeClosureSummary(
         closed_at=trade.closed_at or exit_execution.executed_at,
         close_reason=trade.close_reason,
+        instrument_type=trade.instrument_type or "stock",
         exit_action=exit_execution.action,
         exit_price=_quantize(Decimal(str(exit_execution.price))),
         exit_fee=_quantize(Decimal(str(exit_execution.fee))),
@@ -114,6 +217,7 @@ def _trade_response_with_metrics(
         payload["closed_at"] = trade.closed_at
         payload["ticker_id"] = trade.ticker_id
         payload["isin"] = trade.ticker.isin if trade.ticker else trade.isin
+        payload["instrument_type"] = trade.instrument_type or "stock"
         return TradeResponse.model_validate(payload)
 
     buys = [ex for ex in executions if ex.action.upper() == "BUY"]
@@ -148,6 +252,7 @@ def _trade_response_with_metrics(
         "market": trade.market,
         "symbol": trade.symbol,
         "isin": trade.ticker.isin if trade.ticker else trade.isin,
+        "instrument_type": trade.instrument_type or "stock",
         "side": trade.side,
         "status": trade.status,
         "strategy_name": trade.strategy_name,
@@ -281,7 +386,12 @@ def add_execution(
     data = payload.model_dump()
     quantity = Decimal(str(data["quantity"]))
     price = Decimal(str(data["price"]))
-    data["fee"] = _compute_execution_fee(trade, quantity, price)
+    if payload.fee is not None and payload.fee > Decimal("0"):
+        data["fee"] = payload.fee
+    else:
+        data["fee"] = _compute_execution_fee(
+            trade, quantity, price, currency=payload.currency, executed_at=payload.executed_at, db=db
+        )
 
     execution = TradeExecution(trade_id=trade.id, **data)
     db.add(execution)
@@ -313,7 +423,9 @@ def close_trade(
 
     closing_quantity = pnl.position_qty
     closing_action = _close_action(trade.side)
-    closing_fee = _compute_execution_fee(trade, closing_quantity, payload.price)
+    closing_fee = _compute_execution_fee(
+        trade, closing_quantity, payload.price, currency=_trade_currency(trade), executed_at=payload.executed_at, db=db
+    )
     closing_execution = TradeExecution(
         trade_id=trade.id,
         action=closing_action,
@@ -391,9 +503,14 @@ def update_execution(
 
     updates = payload.model_dump(exclude_unset=True)
 
-    next_quantity = Decimal(str(updates.get("quantity", execution.quantity)))
-    next_price = Decimal(str(updates.get("price", execution.price)))
-    updates["fee"] = _compute_execution_fee(trade, next_quantity, next_price)
+    if "fee" not in updates:
+        next_quantity = Decimal(str(updates.get("quantity", execution.quantity)))
+        next_price = Decimal(str(updates.get("price", execution.price)))
+        next_executed_at = updates.get("executed_at", execution.executed_at)
+        next_currency = updates.get("currency", execution.currency)
+        updates["fee"] = _compute_execution_fee(
+            trade, next_quantity, next_price, currency=next_currency, executed_at=next_executed_at, db=db
+        )
 
     for field, value in updates.items():
         setattr(execution, field, value)

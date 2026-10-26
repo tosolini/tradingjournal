@@ -46,6 +46,7 @@ export type Trade = {
   ticker_id?: number | null;
   symbol: string;
   isin?: string | null;
+  instrument_type?: string;
   market: string;
   side: string;
   status: string;
@@ -103,6 +104,7 @@ export type TradeDetail = {
     capital_gain_tax_estimate?: string | null;
     tax_note?: string | null;
     total_fees: string;
+    instrument_type?: string | null;
   } | null;
 };
 
@@ -140,14 +142,33 @@ export type Exchange = {
   closed_on_weekends: boolean;
 };
 
+export type FeeMode = "fixed" | "percent" | "percent_min_max" | "tiered_volume" | "under_30";
+
+export type BrokerProfile =
+  | "custom"
+  | "directa_semplice"
+  | "directa_variabile"
+  | "fineco_trading"
+  | "fineco_trading_under30"
+  | "fineco_one"
+  | "fineco_classic"
+  | "fineco_max";
+
 export type Broker = {
   id: number;
   name: string;
-  fee_mode: "fixed" | "percent";
+  broker_profile?: BrokerProfile | string;
+  fee_mode: FeeMode;
   fee_value: string;
+  fee_min?: string | null;
+  fee_max?: string | null;
+  fee_us_value?: string | null;
   fee_currency: string;
+  monthly_fee: string;
+  fee_tier_override?: number | null;
   capital_gain_mode: "immediate" | "year_end";
   capital_gain_rate: string;
+  capital_gain_rate_gov: string;
   exchanges: Exchange[];
 };
 
@@ -319,11 +340,18 @@ export function listBrokers() {
 
 export function createBroker(payload: {
   name: string;
-  fee_mode?: "fixed" | "percent";
+  broker_profile?: BrokerProfile | string;
+  fee_mode?: FeeMode;
   fee_value?: number;
+  fee_min?: number | null;
+  fee_max?: number | null;
+  fee_us_value?: number | null;
   fee_currency?: string;
+  monthly_fee?: number;
+  fee_tier_override?: number | null;
   capital_gain_mode?: "immediate" | "year_end";
   capital_gain_rate?: number;
+  capital_gain_rate_gov?: number;
 }) {
   return api<Broker>("/api/brokers", { method: "POST", body: JSON.stringify(payload) });
 }
@@ -582,7 +610,12 @@ export type DashboardKpis = {
   total_pnl: string;
   kpi_currency: string;
   capital_gain_tax_estimate: string;
+  capital_gain_tax_standard?: string;
+  capital_gain_tax_gov?: string;
   capital_gain_loss_offset: string;
+  capital_gain_loss_standard?: string;
+  capital_gain_loss_gov?: string;
+  capital_gain_loss_nominal?: string;
   capital_gain_currency: string;
   equity_curve: { date: string; value: number }[];
   portfolio_history: PortfolioHistoryPoint[];
