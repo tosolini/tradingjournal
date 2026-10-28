@@ -49,6 +49,7 @@ class User(TimestampMixin, Base):
     assets: Mapped[list["Asset"]] = relationship(back_populates="owner")
     holdings: Mapped[list["Holding"]] = relationship(back_populates="owner")
     exchanges: Mapped[list["Exchange"]] = relationship(back_populates="owner")
+    trade_ideas: Mapped[list["TradeIdea"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class AppSetting(TimestampMixin, Base):
@@ -324,3 +325,32 @@ class Ticker(Base):
     symbol: Mapped[str] = mapped_column(String(32), index=True)
     market: Mapped[str] = mapped_column(String(128), index=True)
     currency: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+
+
+class TradeIdea(TimestampMixin, Base):
+    __tablename__ = "trade_ideas"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    market: Mapped[str] = mapped_column(String(80), default="Euronext")
+    direction: Mapped[str] = mapped_column(String(8), default="long")  # "long" | "short"
+    initial_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    trigger_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    trigger_condition: Mapped[str] = mapped_column(String(8), default="<=")  # "<=" | ">="
+    stop_loss: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 6), nullable=True)
+    target_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 6), nullable=True)
+    thesis_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    tags: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    status: Mapped[str] = mapped_column(String(20), default="watching", index=True)
+    stale_days: Mapped[int] = mapped_column(Integer, default=7)
+    expire_days: Mapped[int] = mapped_column(Integer, default=10)
+    stale_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    triggered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    triggered_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 6), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    trade_id: Mapped[Optional[int]] = mapped_column(ForeignKey("trades.id", ondelete="SET NULL"), nullable=True)
+
+    user: Mapped["User"] = relationship(back_populates="trade_ideas")
+    trade: Mapped[Optional["Trade"]] = relationship()

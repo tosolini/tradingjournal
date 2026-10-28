@@ -21,6 +21,14 @@
       "new_trade": "Nuovo Trade",
       "new_note": "Nuova Nota"
     },
+    "alerts": {
+      "title": "Notifiche e Alert Scouting",
+      "header": "Alert Scouting",
+      "ready": "pronti",
+      "empty": "Nessun alert attivo. Le idee in osservazione appariranno qui quando raggiungeranno il prezzo trigger.",
+      "create_trade": "⚡ Trade",
+      "view_all_scouting": "Vedi tutte le Idee di Scouting ➔"
+    },
     "search_placeholder": "Cerca azioni, pagine o premi ⌘K...",
     "search_short": "Cerca (⌘K)",
     "account_pill": "Conto",
@@ -691,7 +699,22 @@
     }
   },
   "notes": {
-    "title": "Calendar Notes",
+    "title": "Diario & Scouting",
+    "tab_scouting": "Scouting & Idee di Trading",
+    "tab_daily": "Diario Giornaliero & Psicologia",
+    "subtitle": "Registra le condizioni generali di mercato, il tuo stato emotivo (mood) e la checklist di disciplina pre/post trading.",
+    "edit_note_title": "Modifica Nota Giornaliera",
+    "create_note_title": "Nuova Nota Giornaliera",
+    "date_label": "Data *",
+    "symbol_label": "Simbolo / Ticker (Opzionale)",
+    "mood_label": "Mood / Stato Emotivo",
+    "volatility_label": "Volatilità di Mercato",
+    "summary_label": "Sintesi Giornaliera",
+    "content_label": "Contenuto & Riflessioni",
+    "discipline_tags_label": "Tag Disciplina & Condizioni",
+    "create_submit": "Salva Nota",
+    "no_notes_title": "Nessuna nota trovata",
+    "no_notes_desc": "Inizia a scrivere la tua prima riflessione di mercato o checklist emotiva.",
     "discipline_heading": "Checklist & Tag Disciplina",
     "tag_plan_followed": "Piano Rispettato",
     "tag_stop_loss_respected": "Stop Loss Rispettato",
@@ -743,6 +766,84 @@
     "rename_tag_confirm": "Rinomina",
     "symbol": "Simbolo Ticker",
     "symbol_placeholder": "Cerca ticker..."
+  },
+  "scouting": {
+    "title": "Idee di Trading & Scouting",
+    "subtitle": "Traccia titoli e setup tecnici individuati durante lo screening; ricevi alert quando toccano il prezzo trigger.",
+    "new_idea": "+ Nuova Idea",
+    "refresh_prices": "Aggiorna Prezzi",
+    "kpi": {
+      "triggered": "Trigger Raggiunto",
+      "ready_for_entry": "Pronti all'ingresso",
+      "watching": "In Osservazione",
+      "active_setups": "Monitorati attivamente",
+      "stale": "Stale / Da Valutare",
+      "stale_desc": "Nessun trigger da 7+ gg",
+      "converted": "Convertiti / Storico",
+      "converted_desc": "Diventati posizioni",
+      "closed_small": "chiusi"
+    },
+    "filters": {
+      "all": "Tutti",
+      "triggered": "Triggerati",
+      "watching": "In Osservazione",
+      "stale": "Stale",
+      "converted": "Convertiti",
+      "closed": "Chiusi"
+    },
+    "search_placeholder": "Cerca ticker o note...",
+    "sort": {
+      "distance": "Distanza trigger (%)",
+      "date": "Più recenti",
+      "expiry": "Scadenza più vicina"
+    },
+    "empty_title": "Nessuna idea di scouting trovata",
+    "empty_filter": "Nessuna idea corrisponde al filtro selezionato.",
+    "empty_cta": "Inizia a catalogare i setup interessanti durante il tuo scouting per ricevere notifiche automatiche.",
+    "create_first": "+ Aggiungi la prima Idea",
+    "status": {
+      "triggered": "TRIGGER SCATTATO",
+      "stale": "STALE",
+      "converted": "CONVERTITO",
+      "closed": "CHIUSO",
+      "watching": "IN OSSERVAZIONE"
+    },
+    "view_chart": "Vedi Grafico",
+    "initial_price": "Prezzo Scouting",
+    "current_price": "Prezzo Attuale",
+    "trigger_target": "Target Trigger",
+    "reached_notice": "Prezzo trigger raggiunto!",
+    "distance_label": "Distanza dal trigger:",
+    "converted_label": "Convertito in Trade",
+    "closed_label": "Idea archiviata",
+    "expires_in_days": "Chiusura tra {{count}} gg",
+    "expires_today": "In scadenza oggi",
+    "stale_in_days": "Stale tra {{count}} gg",
+    "stale_soon": "In stale presto",
+    "confirm_delete": "Sei sicuro di voler eliminare l'idea di scouting per {{symbol}}?",
+    "actions": {
+      "convert": "Converti in Trade",
+      "renew_7d": "Rinnova (+7gg)",
+      "close": "Archivia"
+    },
+    "modal": {
+      "new_title": "Nuova Idea di Scouting",
+      "edit_title": "Modifica Idea di Scouting",
+      "symbol": "Simbolo / Ticker *",
+      "market": "Mercato",
+      "direction": "Direzione Setup",
+      "condition": "Condizione Trigger",
+      "trigger_price": "Prezzo Trigger (€) *",
+      "initial_price": "Prezzo Attuale (€)",
+      "stop_loss": "Stop Loss stimato (€)",
+      "target_price": "Target Take Profit (€)",
+      "thesis": "Tesi di Scouting & Setup Tecnico",
+      "tags": "Tag Setup",
+      "advanced_timing": "Impostazioni Scadenza e Stale (Opzionali)",
+      "stale_days": "Passa a Stale dopo (giorni)",
+      "expire_days": "Chiusura automatica dopo (giorni)",
+      "submit": "Crea Idea di Scouting"
+    }
   },
   "portfolio": {
     "title": "Portafoglio",

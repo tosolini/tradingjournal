@@ -54,12 +54,28 @@ def run_daily_snapshot_job() -> None:
             recompute_portfolio_snapshot(db, today, user.id)
 
 
+
+def run_trade_ideas_evaluator_job() -> None:
+    try:
+        from app.services.trade_ideas import evaluate_active_trade_ideas
+        with SessionLocal() as db:
+            evaluate_active_trade_ideas(db)
+    except Exception:
+        pass
+
 def start_scheduler() -> None:
     scheduler.add_job(
         run_daily_snapshot_job,
         trigger="interval",
         minutes=1,
         id="daily_mtm_snapshots",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        run_trade_ideas_evaluator_job,
+        trigger="interval",
+        minutes=15,
+        id="trade_ideas_evaluator",
         replace_existing=True,
     )
     scheduler.start()

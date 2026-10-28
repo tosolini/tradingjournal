@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
-from app.api import accounts, assets, auth, admin, bonds, brokers, calendar, dashboard, data, exchanges, holdings, ledger, notes, portfolio, snapshots, tickers, trades, uploads
+from app.api import accounts, assets, auth, admin, bonds, brokers, calendar, dashboard, data, exchanges, holdings, ledger, notes, portfolio, snapshots, tickers, trades, trade_ideas, uploads
 from app.bootstrap import ensure_seed_admin, ensure_seed_exchanges
 from app.config import settings
 from app.database import Base, engine
@@ -188,6 +188,7 @@ app.include_router(ledger.router)
 app.include_router(portfolio.router)
 app.include_router(trades.router)
 app.include_router(notes.router)
+app.include_router(trade_ideas.router)
 app.include_router(uploads.router)
 app.include_router(dashboard.router)
 app.include_router(calendar.router)

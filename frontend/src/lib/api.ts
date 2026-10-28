@@ -882,3 +882,108 @@ export function updateLedgerEntry(
 export function deleteLedgerEntry(id: number): Promise<{ ok: boolean }> {
   return api(`/api/ledger/${id}`, { method: "DELETE" });
 }
+
+export type TradeIdeaStatus = "watching" | "triggered" | "stale" | "closed" | "converted";
+
+export interface TradeIdea {
+  id: number;
+  user_id: number;
+  symbol: string;
+  market: string;
+  direction: "long" | "short";
+  initial_price: string;
+  trigger_price: string;
+  trigger_condition: "<=" | ">=";
+  stop_loss?: string | null;
+  target_price?: string | null;
+  thesis_notes?: string | null;
+  tags: string[];
+  status: TradeIdeaStatus;
+  stale_days: number;
+  expire_days: number;
+  stale_at: string;
+  expires_at: string;
+  triggered_at?: string | null;
+  triggered_price?: string | null;
+  closed_at?: string | null;
+  trade_id?: number | null;
+  created_at: string;
+  updated_at: string;
+  current_price?: string | null;
+  distance_pct?: string | null;
+}
+
+export interface TradeIdeaCounts {
+  all: number;
+  watching: number;
+  triggered: number;
+  stale: number;
+  closed: number;
+  converted: number;
+}
+
+export interface TradeIdeaListResult {
+  items: TradeIdea[];
+  counts: TradeIdeaCounts;
+}
+
+export interface TradeIdeaCreatePayload {
+  symbol: string;
+  market?: string;
+  direction?: "long" | "short";
+  initial_price?: string | number;
+  trigger_price: string | number;
+  trigger_condition?: "<=" | ">=";
+  stop_loss?: string | number;
+  target_price?: string | number;
+  thesis_notes?: string;
+  tags?: string[];
+  stale_days?: number;
+  expire_days?: number;
+}
+
+export interface TradeIdeaUpdatePayload {
+  symbol?: string;
+  market?: string;
+  direction?: "long" | "short";
+  trigger_price?: string | number;
+  trigger_condition?: "<=" | ">=";
+  stop_loss?: string | number | null;
+  target_price?: string | number | null;
+  thesis_notes?: string | null;
+  tags?: string[];
+  stale_days?: number;
+  expire_days?: number;
+}
+
+export interface TradeIdeaAlertsResult {
+  unread_count: number;
+  items: TradeIdea[];
+}
+
+export const tradeIdeasApi = {
+  list: (params?: { status?: string; search?: string; tag?: string }): Promise<TradeIdeaListResult> => {
+    const q = new URLSearchParams();
+    if (params?.status && params.status !== "all") q.set("status", params.status);
+    if (params?.search) q.set("search", params.search);
+    if (params?.tag) q.set("tag", params.tag);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return api(`/api/trade-ideas${query}`);
+  },
+  get: (id: number): Promise<TradeIdea> => api(`/api/trade-ideas/${id}`),
+  create: (payload: TradeIdeaCreatePayload): Promise<TradeIdea> =>
+    api("/api/trade-ideas", { method: "POST", body: JSON.stringify(payload) }),
+  update: (id: number, payload: TradeIdeaUpdatePayload): Promise<TradeIdea> =>
+    api(`/api/trade-ideas/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  delete: (id: number): Promise<{ ok: boolean }> => api(`/api/trade-ideas/${id}`, { method: "DELETE" }),
+  renew: (id: number, days?: number): Promise<TradeIdea> => {
+    const query = days ? `?days=${days}` : "";
+    return api(`/api/trade-ideas/${id}/renew${query}`, { method: "POST" });
+  },
+  close: (id: number): Promise<TradeIdea> => api(`/api/trade-ideas/${id}/close`, { method: "POST" }),
+  convert: (id: number, trade_id: number): Promise<TradeIdea> =>
+    api(`/api/trade-ideas/${id}/convert`, { method: "POST", body: JSON.stringify({ trade_id }) }),
+  refreshPrices: (): Promise<{ ok: boolean; stats: Record<string, number> }> =>
+    api("/api/trade-ideas/refresh-prices", { method: "POST" }),
+  getAlerts: (): Promise<TradeIdeaAlertsResult> => api("/api/trade-ideas/alerts"),
+};

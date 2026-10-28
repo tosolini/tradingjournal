@@ -728,3 +728,85 @@ class TickerImportResult(BaseModel):
     updated: int
     skipped: int
     total: int
+
+
+class TradeIdeaCreate(BaseModel):
+    symbol: str = Field(min_length=1, max_length=32)
+    market: str = Field(default="Euronext", max_length=80)
+    direction: str = Field(default="long", pattern="^(long|short)$")
+    initial_price: Optional[Decimal] = None
+    trigger_price: Decimal
+    trigger_condition: str = Field(default="<=", pattern="^(<=|>=)$")
+    stop_loss: Optional[Decimal] = None
+    target_price: Optional[Decimal] = None
+    thesis_notes: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+    stale_days: Optional[int] = Field(default=None, ge=1, le=365)
+    expire_days: Optional[int] = Field(default=None, ge=1, le=365)
+
+
+class TradeIdeaUpdate(BaseModel):
+    symbol: Optional[str] = Field(default=None, min_length=1, max_length=32)
+    market: Optional[str] = Field(default=None, max_length=80)
+    direction: Optional[str] = Field(default=None, pattern="^(long|short)$")
+    trigger_price: Optional[Decimal] = None
+    trigger_condition: Optional[str] = Field(default=None, pattern="^(<=|>=)$")
+    stop_loss: Optional[Decimal] = None
+    target_price: Optional[Decimal] = None
+    thesis_notes: Optional[str] = None
+    tags: Optional[list[str]] = None
+    stale_days: Optional[int] = Field(default=None, ge=1, le=365)
+    expire_days: Optional[int] = Field(default=None, ge=1, le=365)
+
+
+class TradeIdeaConvertRequest(BaseModel):
+    trade_id: int
+
+
+class TradeIdeaResponse(BaseModel):
+    id: int
+    user_id: int
+    symbol: str
+    market: str
+    direction: str
+    initial_price: Decimal
+    trigger_price: Decimal
+    trigger_condition: str
+    stop_loss: Optional[Decimal] = None
+    target_price: Optional[Decimal] = None
+    thesis_notes: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+    status: str
+    stale_days: int
+    expire_days: int
+    stale_at: datetime
+    expires_at: datetime
+    triggered_at: Optional[datetime] = None
+    triggered_price: Optional[Decimal] = None
+    closed_at: Optional[datetime] = None
+    trade_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    current_price: Optional[Decimal] = None
+    distance_pct: Optional[Decimal] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TradeIdeaCountsResponse(BaseModel):
+    all: int = 0
+    watching: int = 0
+    triggered: int = 0
+    stale: int = 0
+    closed: int = 0
+    converted: int = 0
+
+
+class TradeIdeaListResponse(BaseModel):
+    items: list[TradeIdeaResponse]
+    counts: TradeIdeaCountsResponse
+
+
+class TradeIdeaAlertsResponse(BaseModel):
+    unread_count: int
+    items: list[TradeIdeaResponse]
