@@ -13,9 +13,9 @@ This project is a personal trading journal application designed to help traders 
 - **Unified Trading Calendar** with color-coded daily PnL badges, **Weekly Summary column** (Weekly PnL, W/L days ratio, trade count), monthly KPI summary banner, day-detail drawer, and markets Gantt chart
 - **Trades management** with client-side pagination, quick date presets (`All`, `Today`, `7d`, `This Month`, `YTD`), outcome filters (`Win`, `Loss`), column visibility toggles, and instant quick-close
 - **Performance** page with portfolio value evolution, daily PnL and a color-coded monthly calendar
-- **Portfolio** tracking for ETFs and bonds (holdings, mark-to-market via Yahoo Finance)
-- Daily notes with a rich-text editor, mood presets, market condition tags, and **trading discipline checklist** (Pre/Post-trade psychology)
-- Responsive layout with mobile sliding drawer, sticky desktop sidebar, global topbar with breadcrumb navigation and account indicator, plus centralized non-blocking toast notifications
+- **Fixed Income & Bond Accounting Engine** with dedicated bond parameters (`bond_type`, `maturity_date`, coupon schedules, step-up, bonus CUM), accrued interest (rateo passivo), net/gross YTM solver, Euronext live bond quote imports, and coupon cash flow calendar
+- **Stock Scouting & Trade Ideas Engine** with automated price triggers, proximity percentage delta, lifecycle state machine (`watching` → `triggered` → `stale` → `closed` / `converted`), in-app topbar notification bell, and one-click conversion into executed trades
+- **Daily Notes & Psychology Journal** with an integrated, zero-dependency WYSIWYG editor (forced word-wrapping and line break safety), emotional mood tracker, and **trading discipline checklist** (pre/post-trade psychology)
 - Image uploads for trade annotations (PNG/JPEG/GIF/WebP) with a dedicated serving endpoint
 - Broker-level commission and capital-gain tax configuration
 - Cash ledger (deposits/withdrawals) per account
@@ -35,8 +35,8 @@ The entire project is meant to be used on localhost or private networks. **Do no
 
 ## Current version
 
-- Backend: `0.1.8` (`backend/pyproject.toml`)
-- Frontend: `0.1.8` (`frontend/package.json`)
+- Backend: `0.1.9` (`backend/pyproject.toml`)
+- Frontend: `0.1.9` (`frontend/package.json`)
 
 More details on change log and versioning strategy in the [changelog.md](changelog.md) file.
 
@@ -212,15 +212,26 @@ Always change these values outside local development. In `production` mode the b
   - Interactive Day Detail drawer showing notes, executions, and daily breakdown
   - Markets Gantt chart of exchange opening hours
 - Performance page: portfolio value, equity curve, daily PnL bars, color-coded monthly calendar with day detail
-- Assets registry CRUD with instrument types including ETF, stock, bond, and fund
-- Portfolio: holdings CRUD, summary, details (current price via Yahoo Finance) and history endpoints
-- Daily notes with:
-  - rich-text editor (sanitized on render)
-  - mood presets (`up`, `down`, `stale`)
-  - market condition tags with suggestions, rename/delete utilities
+- **Assets & Fixed Income Engine**:
+  - Assets registry CRUD with instrument types including ETF, stock, bond, and fund
+  - Dedicated **Fixed Income / Bond Details** (`bond_type`, `maturity_date`, coupon schedules, step-up, bonus CUM)
+  - Accrued interest calculations (rateo passivo on base 100) and Newton-Raphson YTM solver
+  - Live Euronext bond factsheet import by ISIN or URL
+- **Portfolio**: holdings CRUD, summary, details (current price via Yahoo Finance / MOT live quote), bond cash flow calendar, and history endpoints
+- **Stock Scouting & Trade Ideas**:
+  - Technical setup cataloging directly from market screening (symbol, market, Long/Short, trigger price, stop loss, take profit)
+  - Live proximity distance delta (% from trigger)
+  - Automated background price evaluation (APScheduler 15-minute worker)
+  - Configurable lifecycle state machine: `watching` → `triggered` → `stale` (default 7 days) → `closed` (default 10 days) or `converted`
+  - Topbar in-app notification bell with live counter badge and quick action drawer
+  - One-click trade conversion: pre-fills the New Trade wizard and automatically transitions the idea to `converted`
+- **Daily Notes & Psychology Journal**:
+  - Native WYSIWYG rich-text editor with comprehensive toolbar (bold, italic, underline, strikethrough, headings, lists, quotes, code, links)
+  - Forced word-wrap and line-break safety preventing horizontal card blowout
+  - Mood presets (`up`, `down`, `stale`) and market volatility ratings
   - **Trading discipline checklist tags** (Pre/Post-trade psychology: *Plan Followed*, *Stop Loss Respected*, *FOMO*, *Overtrading*)
-  - persisted notes filters (search/tags) in user DB preferences
-- Market calendar endpoints (today + monthly journal aggregation)
+  - Persisted notes filters (search/tags) in user DB preferences
+- **In-App Interactive Manual (`/help`)**: comprehensive, illustrated guides with live screenshots covering Getting Started, Dashboard, Trades, Notes & Scouting, Accounts, Tickers, Calendar & Markets, and Settings in Italian and English
 - Daily snapshots (positions + portfolio) via scheduled job (APScheduler) at a configurable time, plus manual recompute endpoints
 - Full JSON data export/import (`/api/data/export`, `/api/data/import`)
 - Credits & Developer modal with author bio, previous Tosolini logo, and social links (GitHub, LinkedIn, Website)
