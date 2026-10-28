@@ -1,7 +1,19 @@
 # Changelog
 
-## [0.1.9] - 2026-10-26
+## [0.1.9] - 2026-10-28
 
+- Stock Scouting & Trade Ideas Engine
+  - New `trade_ideas` model and Alembic migration (`20261028_0013_trade_ideas.py`) with support for setup direction (Long/Short), numeric trigger prices (`<=`, `>=`), initial price, stop loss, take profit, thesis notes, setup tags, and lifecycle states (`watching`, `triggered`, `stale`, `closed`, `converted`)
+  - Configurable temporal lifecycle with customizable `stale_days` (default 7 days) and `expire_days` (default 10 days) per idea and in user preferences
+  - Background evaluator job via APScheduler running every 15 minutes to poll live prices, check trigger conditions, and manage stale/closed transitions
+  - New backend endpoints under `/api/trade-ideas`: CRUD, `renew`, `close`, `convert`, `refresh-prices`, and `alerts`
+  - Frontend Scouting UI: KPI overview cards, status filters, interactive setup cards with live percentage distance delta, and autocomplete creation modal
+  - Topbar in-app notification bell with live counter badge and quick action drawer
+  - One-click trade conversion: pre-fills the New Trade wizard and automatically transitions the idea to `converted`
+- Daily Notes & Psychology Journal Refactoring
+  - Integrated lightweight, zero-dependency, zero-CVE native WYSIWYG editor for session reflections with comprehensive formatting toolbar
+  - Enforced forced word-wrapping and line break safety (`overflow-wrap: anywhere; word-break: break-word`) to prevent horizontal card blowout
+  - Dual-tab navigation on Notes page: `Scouting & Idee di Trading` and `Diario Giornaliero & Psicologia`
 - Fixed Income & Bond Accounting Engine
   - New `bond_details` table with full fixed income parameters: `bond_type` (fixed, step_up, zero_coupon, inflation_linked), `maturity_date`, `issue_date`, `coupon_frequency`, `annual_coupon_rate`, `step_up_schedule` (JSONB), `final_bonus_rate`, `tax_rate`, `day_count_convention`
   - Extended `holdings` with `accrued_interest_in` (rateo passivo pagato all'acquisto) and `eligible_for_bonus` (CUM flag per collocamento primario)
@@ -17,46 +29,21 @@
     - Asset creation modal with automated Euronext/ISIN import bar, bond structure selector, coupon frequencies, tax rates, step-up progression table, and final loyalty bonus rate
     - Holding modals with nominal quantity (€), base 100 clean price, accrued interest on purchase, and CUM bonus eligibility
     - New "Obbligazioni & Rendite" tab in Portfolio with Bond KPI cards, bond holdings table with live dirty price / accrued / YTM, and interactive cash flow calendar
-    - Complete Italian and English i18n support
-  - Backend 0.1.9 / frontend 0.1.9
-
-## [Unreleased]
-
-- Stock Scouting & Trade Ideas Engine
-  - New `trade_ideas` model and Alembic migration (`20261028_0013_trade_ideas.py`) with support for setup direction (Long/Short), numeric trigger prices (`<=`, `>=`), initial price, stop loss, take profit, thesis notes, setup tags, and lifecycle states (`watching`, `triggered`, `stale`, `closed`, `converted`)
-  - Configurable temporal lifecycle with customizable `stale_days` (default 7 days) and `expire_days` (default 10 days) per idea and in user preferences
-  - Background evaluator job via APScheduler running every 15 minutes to poll live prices, check trigger conditions, and manage stale/closed transitions
-  - New backend endpoints under `/api/trade-ideas`: CRUD, `renew`, `close`, `convert`, `refresh-prices`, and `alerts`
-  - Frontend Scouting UI: KPI overview cards, status filters, interactive setup cards with live percentage distance delta, and autocomplete creation modal
-  - Topbar in-app notification bell with live counter badge and quick action drawer
-  - One-click trade conversion: pre-fills the New Trade wizard and automatically transitions the idea to `converted`
-- Daily Notes & Psychology Journal Refactoring
-  - Integrated lightweight, zero-dependency, zero-CVE native WYSIWYG editor for session reflections with comprehensive formatting toolbar
-  - Enforced forced word-wrapping and line break safety (`overflow-wrap: anywhere; word-break: break-word`) to prevent horizontal card blowout
-  - Dual-tab navigation on Notes page: `Scouting & Idee di Trading` and `Diario Giornaliero & Psicologia`
-- Illustrated In-App Manual & Guides
-  - Added new comprehensive guide for `Note & Scouting` in Italian and English with live screenshots
-  - Added high-resolution visual guides with screenshots for `Calendario e Mercati` and `Dashboard, Performance e Portfolio`
 - Euronext Equities One-Click Sync
   - Added live one-click synchronization of equity tickers from Euronext markets (Milan/Borsa Italiana, Paris, Amsterdam, Brussels, Lisbon, Dublin, Oslo, or all markets)
   - New `sync_euronext_equities` service streaming official Euronext CSVs in memory with batched PostgreSQL upsert (`ON CONFLICT (symbol, market) DO UPDATE`) and exact insert/update statistics
   - New backend endpoints: `POST /api/tickers/sync-euronext`, `GET /api/tickers/euronext-markets`, and `POST /api/exchanges/{id}/sync-tickers`
   - Exposed `euronext_code` on `Exchange` models and API responses with automatic detection for supported markets
-  - UI integration:
-    - Added direct sync button in Brokers page (Mercati tab) for all Euronext-compatible exchanges with spinner and toast feedback
-    - Added one-click sync buttons in Tickers page ("Sincronizza Milano" and "Sincronizza Tutti i mercati Euronext")
-  - Full i18n support in Italian and English
-- Notes / discipline tags hardening
-  - Preset discipline tags are now persisted as canonical stable keys (`tag_*`)
-    and localized only at render time
-  - Added normalization for legacy Italian/English preset labels to prevent
-    cross-language duplicates in filters/suggestions
-- i18n cleanup
-  - Removed unused command palette translation keys:
-    `category_navigation`, `category_action`, `category_ticker`
-- Package naming alignment
-  - Renamed package identifiers from `tradejournal-*` to `tradingjournal-*`
-    in frontend/backend manifests and lock files
+  - UI integration with direct sync button in Brokers page and Tickers page
+- Illustrated In-App Manual & Guides (`/help`)
+  - Added new comprehensive guide for `Note & Scouting` in Italian and English with live screenshots
+  - Added high-resolution visual guides with screenshots for `Calendario e Mercati` and `Dashboard, Performance e Portfolio`
+- Security & Dependency Hardening
+  - Upgraded `dnspython` to 2.9.0 to resolve CVE-2026-114605 (GHSA-45c3-73f7-pv4m)
+  - Extracted shared DOMPurify sanitization in `frontend/src/lib/sanitize.ts`
+  - Restored missing `assets.title` translation in Italian locale
+- Complete Italian and English i18n support
+- Backend 0.1.9 / frontend 0.1.9
 ## [0.1.8] - 2026-10-09
 
 - DB-backed user accounting (no more `.env` juggling)
