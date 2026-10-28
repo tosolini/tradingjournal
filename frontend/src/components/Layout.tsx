@@ -433,7 +433,7 @@ export function Layout({ children }: PropsWithChildren) {
           </aside>
 
           {/* Desktop Content Area with Top Header */}
-          <div className="flex flex-col min-h-screen">
+          <div className="flex flex-col min-h-screen min-w-0">
             <header className="hidden md:flex h-14 items-center justify-between border-b border-slate-800/60 bg-slate-950/40 px-6 backdrop-blur dark:border-slate-200/50 dark:bg-white/40">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-200 dark:text-slate-800 min-w-44">
                 <span className="text-slate-500 dark:text-slate-400 font-normal">TradingJournal</span>
@@ -506,7 +506,7 @@ export function Layout({ children }: PropsWithChildren) {
               </div>
             </header>
 
-            <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+            <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden min-w-0">
               {children}
             </main>
           </div>

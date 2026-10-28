@@ -149,12 +149,24 @@ a {
 }
 
 .notes-rich-content {
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.notes-rich-content * {
+  overflow-wrap: anywhere;
   word-break: break-word;
   max-width: 100%;
 }
 
-.notes-rich-content p {
+.notes-rich-content p,
+.notes-rich-content div,
+.notes-rich-content span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
   margin: 0.35rem 0;
 }
 
@@ -162,11 +174,23 @@ a {
 .notes-rich-content ol {
   margin: 0.35rem 0;
   padding-left: 1.2rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.notes-rich-content pre,
+.notes-rich-content code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .notes-rich-content a {
   color: #5eead4;
   text-decoration: underline;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 [data-theme="light"] .notes-quill .ql-toolbar.ql-snow {

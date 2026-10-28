@@ -556,7 +556,7 @@ export function DailyNotesTab() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0 max-w-full">
           {filteredNotes.map((note) => {
             const isSelected = selectedNoteId === note.id;
             const tags = parseMarketConditionTags(note.market_condition);
@@ -564,7 +564,7 @@ export function DailyNotesTab() {
             return (
               <div
                 key={note.id}
-                className={`rounded-xl border p-4.5 transition shadow-sm ${
+                className={`rounded-xl border p-4.5 transition shadow-sm min-w-0 max-w-full overflow-hidden break-words [overflow-wrap:anywhere] ${
                   isSelected
                     ? "border-teal-500 bg-teal-500/10 ring-1 ring-teal-500/30"
                     : "border-slate-800/80 bg-slate-900/60 hover:border-slate-700 dark:border-slate-200 dark:bg-white"
@@ -629,7 +629,7 @@ export function DailyNotesTab() {
 
                 {/* Short Summary */}
                 {note.short_summary && (
-                  <h4 className="text-sm font-semibold text-slate-200 dark:text-slate-800 mb-2">
+                  <h4 className="text-sm font-semibold text-slate-200 dark:text-slate-800 mb-2 break-words [overflow-wrap:anywhere] max-w-full">
                     {note.short_summary}
                   </h4>
                 )}
@@ -637,11 +637,10 @@ export function DailyNotesTab() {
                 {/* Rich text / Body */}
                 {note.rich_text && (
                   <div
-                    className="prose prose-invert prose-xs text-xs text-slate-300 dark:text-slate-700 leading-relaxed mb-3"
+                    className="notes-rich-content text-xs text-slate-300 dark:text-slate-700 leading-relaxed mb-3 break-words [overflow-wrap:anywhere] whitespace-pre-wrap max-w-full overflow-hidden"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(note.rich_text) }}
                   />
                 )}
-
                 {/* Tags */}
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-800/60 dark:border-slate-100">

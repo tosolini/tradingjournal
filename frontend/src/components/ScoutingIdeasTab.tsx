@@ -413,7 +413,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
             return (
               <div
                 key={idea.id}
-                className={`relative flex flex-col justify-between rounded-xl border p-4.5 transition-all shadow-sm ${
+                className={`relative flex flex-col justify-between rounded-xl border p-4.5 transition-all shadow-sm min-w-0 max-w-full overflow-hidden break-words [overflow-wrap:anywhere] ${
                   isTriggered
                     ? "border-emerald-500/70 bg-gradient-to-br from-emerald-950/20 to-slate-900/80 dark:from-emerald-50 dark:to-white shadow-emerald-500/5 ring-1 ring-emerald-500/30"
                     : isStale
@@ -564,8 +564,8 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
 
                   {/* Thesis Notes */}
                   {idea.thesis_notes && (
-                    <div className="rounded border border-slate-800/60 bg-slate-900/40 p-2.5 text-xs text-slate-300 dark:border-slate-200 dark:bg-slate-50 dark:text-slate-700 mb-3 leading-relaxed">
-                      <p className="line-clamp-3 italic">"{idea.thesis_notes}"</p>
+                    <div className="rounded border border-slate-800/60 bg-slate-900/40 p-2.5 text-xs text-slate-300 dark:border-slate-200 dark:bg-slate-50 dark:text-slate-700 mb-3 leading-relaxed break-words [overflow-wrap:anywhere] max-w-full overflow-hidden">
+                      <p className="line-clamp-3 italic break-words [overflow-wrap:anywhere] whitespace-pre-wrap">"{idea.thesis_notes}"</p>
                     </div>
                   )}
 
