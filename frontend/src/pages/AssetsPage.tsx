@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Asset, Ticker, createAsset, deleteAsset, fetchAssets, tickersApi, updateAsset } from "../lib/api";
+import { Asset, Ticker, createAsset, deleteAsset, fetchAssets, lookupBond, tickersApi, updateAsset } from "../lib/api";
 import { useToast } from "../contexts/ToastContext";
 
 const INSTRUMENT_TYPES = ["etf", "stock", "bond", "fund"];
@@ -30,6 +30,21 @@ export function AssetFormModal({
   const [exchange, setExchange] = useState("");
   const [currency, setCurrency] = useState("EUR");
 
+  // Bond-specific state
+  const [bondType, setBondType] = useState("fixed");
+  const [maturityDate, setMaturityDate] = useState("");
+  const [issueDate, setIssueDate] = useState("");
+  const [couponFrequency, setCouponFrequency] = useState(2);
+  const [annualCouponRate, setAnnualCouponRate] = useState("3.50");
+  const [finalBonusRate, setFinalBonusRate] = useState("0.00");
+  const [taxRate, setTaxRate] = useState("12.50");
+  const [stepUpSchedule, setStepUpSchedule] = useState<{ from_year: number; to_year: number; rate: number }[]>([
+    { from_year: 1, to_year: 3, rate: 3.25 },
+    { from_year: 4, to_year: 5, rate: 4.00 },
+  ]);
+  const [euronextQuery, setEuronextQuery] = useState("");
+  const [loadingEuronext, setLoadingEuronext] = useState(false);
+
   // Autocomplete state
   const [tickerSuggestions, setTickerSuggestions] = useState<Ticker[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -48,6 +63,28 @@ export function AssetFormModal({
         setInstrumentType(editAsset.instrument_type ?? "etf");
         setExchange(editAsset.exchange ?? "");
         setCurrency(editAsset.currency ?? "EUR");
+        if (editAsset.bond_detail) {
+          setBondType(editAsset.bond_detail.bond_type || "fixed");
+          setMaturityDate(editAsset.bond_detail.maturity_date || "");
+          setIssueDate(editAsset.bond_detail.issue_date || "");
+          setCouponFrequency(editAsset.bond_detail.coupon_frequency ?? 2);
+          setAnnualCouponRate(String(editAsset.bond_detail.annual_coupon_rate ?? "0"));
+          setFinalBonusRate(String(editAsset.bond_detail.final_bonus_rate ?? "0"));
+          setTaxRate(String(editAsset.bond_detail.tax_rate ?? "12.50"));
+          setStepUpSchedule(editAsset.bond_detail.step_up_schedule || []);
+        } else {
+          setBondType("fixed");
+          setMaturityDate("");
+          setIssueDate("");
+          setCouponFrequency(2);
+          setAnnualCouponRate("3.50");
+          setFinalBonusRate("0.00");
+          setTaxRate("12.50");
+          setStepUpSchedule([
+            { from_year: 1, to_year: 3, rate: 3.25 },
+            { from_year: 4, to_year: 5, rate: 4.00 },
+          ]);
+        }
       } else {
         setSymbol("");
         setName("");
@@ -55,7 +92,20 @@ export function AssetFormModal({
         setInstrumentType("etf");
         setExchange("");
         setCurrency("EUR");
+        setBondType("fixed");
+        setMaturityDate("");
+        setIssueDate("");
+        setCouponFrequency(2);
+        setAnnualCouponRate("3.50");
+        setFinalBonusRate("0.00");
+        setTaxRate("12.50");
+        setStepUpSchedule([
+          { from_year: 1, to_year: 3, rate: 3.25 },
+          { from_year: 4, to_year: 5, rate: 4.00 },
+        ]);
       }
+      setEuronextQuery("");
+      setLoadingEuronext(false);
       setAutofilled(false);
       setTickerSuggestions([]);
       setShowSuggestions(false);
@@ -118,9 +168,43 @@ export function AssetFormModal({
     setShowSuggestions(false);
   };
 
+  const handleEuronextLookup = async () => {
+    if (!euronextQuery.trim()) return;
+    setLoadingEuronext(true);
+    try {
+      const data = await lookupBond(euronextQuery.trim());
+      setSymbol(data.symbol);
+      setName(data.name);
+      if (data.isin) setIsin(data.isin);
+      if (data.exchange) setExchange(data.exchange);
+      if (data.currency) setCurrency(data.currency);
+      setInstrumentType("bond");
+      if (data.bond_detail) {
+        setBondType(data.bond_detail.bond_type || "fixed");
+        setMaturityDate(data.bond_detail.maturity_date || "");
+        setIssueDate(data.bond_detail.issue_date || "");
+        setCouponFrequency(data.bond_detail.coupon_frequency ?? 2);
+        setAnnualCouponRate(String(data.bond_detail.annual_coupon_rate ?? "0"));
+        setFinalBonusRate(String(data.bond_detail.final_bonus_rate ?? "0"));
+        setTaxRate(String(data.bond_detail.tax_rate ?? "12.50"));
+        if (data.bond_detail.step_up_schedule) {
+          setStepUpSchedule(data.bond_detail.step_up_schedule);
+        }
+      }
+      toast.success(
+        `${t("assets.euronext_import_success", "Dati obbligazione importati con successo!")} Prezzo live: ${data.live_price ?? "N/A"}%`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Errore importazione Euronext: ${msg}`);
+    } finally {
+      setLoadingEuronext(false);
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: async () => {
-      const payload = {
+      const payload: Partial<Asset> = {
         symbol: symbol.trim(),
         name: name.trim(),
         isin: isin.trim() ? isin.trim().toUpperCase() : null,
@@ -128,6 +212,24 @@ export function AssetFormModal({
         exchange: exchange.trim() ? exchange.trim() : null,
         currency: currency.trim() ? currency.trim().toUpperCase() : "EUR",
       };
+
+      if (instrumentType === "bond") {
+        if (!maturityDate.trim()) {
+          throw new Error(t("assets.maturity_date_required", "Data di scadenza obbligatoria"));
+        }
+        payload.bond_detail = {
+          bond_type: bondType,
+          issue_date: issueDate.trim() ? issueDate.trim() : null,
+          maturity_date: maturityDate.trim(),
+          coupon_frequency: Number(couponFrequency),
+          annual_coupon_rate: Number(annualCouponRate) || 0,
+          final_bonus_rate: Number(finalBonusRate) || 0,
+          tax_rate: Number(taxRate) || 12.5,
+          step_up_schedule: bondType === "step_up" ? stepUpSchedule : null,
+          day_count_convention: "ACT/ACT ICMA",
+        };
+      }
+
       if (isEditing && editAsset) {
         return updateAsset(editAsset.id, payload);
       }
@@ -153,7 +255,7 @@ export function AssetFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-xl border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white p-6 shadow-2xl">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white p-6 shadow-2xl">
         <h2 className="mb-4 text-lg font-semibold text-teal-200 dark:text-teal-900">
           {isEditing ? t("assets.edit_title") : t("assets.add_title")}
         </h2>
@@ -171,6 +273,53 @@ export function AssetFormModal({
           </div>
         )}
 
+
+        {!isEditing && (
+          <div className="mb-4 rounded-lg border border-teal-500/30 bg-teal-500/10 dark:bg-teal-50 p-3 space-y-2">
+            <div className="text-xs font-semibold text-teal-300 dark:text-teal-900 flex items-center justify-between">
+              <span>
+                {t("assets.euronext_import_prefix", "Importa automaticamente da")}{" "}
+                <a
+                  href="https://live.euronext.com/en/products/bonds/mot/list"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-teal-200 dark:hover:text-teal-700 transition-colors inline-flex items-center gap-1"
+                  title="Apri Euronext MOT"
+                >
+                  Euronext / MOT
+                  <svg viewBox="0 0 24 24" className="h-3 w-3 inline" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </a>
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={euronextQuery}
+                onChange={(e) => setEuronextQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleEuronextLookup();
+                  }
+                }}
+                placeholder={t("assets.euronext_import_placeholder", "Incolla URL Euronext o codice ISIN (es. IT0005611741)")}
+                className="flex-1 rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-xs text-slate-200 dark:text-slate-900 font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleEuronextLookup}
+                disabled={!euronextQuery.trim() || loadingEuronext}
+                className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-50 whitespace-nowrap"
+              >
+                {loadingEuronext ? t("assets.euronext_import_loading", "Caricamento...") : t("assets.euronext_import_btn", "Importa Live")}
+              </button>
+            </div>
+          </div>
+        )}
         <div className="space-y-3">
           <div ref={symbolContainerRef} className="relative">
             <div className="flex items-center justify-between mb-1">
@@ -280,6 +429,180 @@ export function AssetFormModal({
               />
             </div>
           </div>
+
+          {instrumentType === "bond" && (
+            <div className="rounded-lg border border-teal-500/30 bg-teal-500/5 dark:bg-teal-50 p-3 space-y-3">
+              <div className="text-xs font-semibold text-teal-300 dark:text-teal-900 uppercase tracking-wider">
+                {t("assets.bond_section", "Parametri Obbligazionari")}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("assets.bond_type")}</label>
+                <select
+                  value={bondType}
+                  onChange={(e) => setBondType(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+                >
+                  <option value="fixed">{t("assets.bond_type_fixed")}</option>
+                  <option value="step_up">{t("assets.bond_type_step_up")}</option>
+                  <option value="zero_coupon">{t("assets.bond_type_zcb")}</option>
+                  <option value="inflation_linked">{t("assets.bond_type_inflation")}</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("assets.issue_date")}</label>
+                  <input
+                    type="date"
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                    className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("assets.maturity_date")} *</label>
+                  <input
+                    type="date"
+                    value={maturityDate}
+                    onChange={(e) => setMaturityDate(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("assets.coupon_frequency")}</label>
+                  <select
+                    value={couponFrequency}
+                    onChange={(e) => setCouponFrequency(Number(e.target.value))}
+                    className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+                  >
+                    <option value={2}>{t("assets.freq_semiannual")}</option>
+                    <option value={4}>{t("assets.freq_quarterly")}</option>
+                    <option value={1}>{t("assets.freq_annual")}</option>
+                    <option value={0}>{t("assets.freq_none")}</option>
+                  </select>
+                </div>
+                {bondType !== "zero_coupon" && (
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
+                      {bondType === "step_up" ? t("assets.rate_pct", "Tasso Base %") : t("assets.coupon_rate")}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={annualCouponRate}
+                      onChange={(e) => setAnnualCouponRate(e.target.value)}
+                      placeholder="es. 3.50"
+                      className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("assets.tax_rate")}</label>
+                  <select
+                    value={taxRate}
+                    onChange={(e) => setTaxRate(e.target.value)}
+                    className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+                  >
+                    <option value="12.50">{t("assets.tax_gov")}</option>
+                    <option value="26.00">{t("assets.tax_corp")}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900" title={t("assets.final_bonus_hint")}>
+                    {t("assets.final_bonus_rate")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={finalBonusRate}
+                    onChange={(e) => setFinalBonusRate(e.target.value)}
+                    placeholder="es. 0.80"
+                    className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+                  />
+                </div>
+              </div>
+
+              {bondType === "step_up" && (
+                <div className="pt-2 border-t border-slate-700/40 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-300 dark:text-slate-800">
+                    <span>{t("assets.step_up_schedule")}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setStepUpSchedule((prev) => [
+                          ...prev,
+                          { from_year: prev.length + 1, to_year: prev.length + 2, rate: 3.5 },
+                        ])
+                      }
+                      className="text-teal-400 hover:text-teal-300 text-xs"
+                    >
+                      {t("assets.add_step")}
+                    </button>
+                  </div>
+                  {stepUpSchedule.map((step, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs">
+                      <span className="text-slate-400 w-12">{t("assets.from_year")}</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={step.from_year}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setStepUpSchedule((prev) =>
+                            prev.map((s, i) => (i === idx ? { ...s, from_year: val } : s))
+                          );
+                        }}
+                        className="w-14 rounded border border-slate-700 bg-slate-800 p-1 text-center text-slate-200"
+                      />
+                      <span className="text-slate-400 w-10">{t("assets.to_year")}</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={step.to_year}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setStepUpSchedule((prev) =>
+                            prev.map((s, i) => (i === idx ? { ...s, to_year: val } : s))
+                          );
+                        }}
+                        className="w-14 rounded border border-slate-700 bg-slate-800 p-1 text-center text-slate-200"
+                      />
+                      <span className="text-slate-400">{t("assets.rate_pct")}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={step.rate}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setStepUpSchedule((prev) =>
+                            prev.map((s, i) => (i === idx ? { ...s, rate: val } : s))
+                          );
+                        }}
+                        className="w-16 rounded border border-slate-700 bg-slate-800 p-1 text-center text-slate-200"
+                      />
+                      {stepUpSchedule.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setStepUpSchedule((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-red-400 hover:text-red-300 ml-auto"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mt-5 flex justify-end gap-3">
@@ -310,6 +633,7 @@ export function AssetsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editAsset, setEditAsset] = useState<Asset | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const toast = useToast();
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["assets"],
@@ -320,10 +644,17 @@ export function AssetsPage() {
     mutationFn: (id: number) => deleteAsset(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["bonds"] });
+      toast.success(t("assets.deleted_success", "Asset eliminato con successo"));
+      setDeleteId(null);
+    },
+    onError: (err: Error) => {
+      console.error("Asset delete error:", err);
+      toast.error(err.message || "Errore durante l'eliminazione dell'asset");
       setDeleteId(null);
     },
   });
-
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -452,10 +783,12 @@ export function AssetsPage() {
                 {t("assets.cancel")}
               </button>
               <button
+                type="button"
                 onClick={() => deleteMutation.mutate(deleteId)}
-                className="rounded-lg bg-red-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-400"
+                disabled={deleteMutation.isPending}
+                className="rounded-lg bg-red-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-50"
               >
-                {t("assets.delete")}
+                {deleteMutation.isPending ? t("assets.saving", "Eliminazione...") : t("assets.delete")}
               </button>
             </div>
           </div>

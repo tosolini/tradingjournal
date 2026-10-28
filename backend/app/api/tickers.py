@@ -142,3 +142,32 @@ def clear_tickers(
     """Delete all tickers (for re-import)."""
     db.query(Ticker).delete()
     db.commit()
+
+
+@router.get("/euronext-markets")
+def list_euronext_markets(
+    _current_user: User = Depends(get_current_user),
+):
+    """Return available Euronext equity markets for synchronization."""
+    from app.services.euronext import EURONEXT_MARKETS
+    return [
+        {"code": code, "name": info["name"]}
+        for code, info in EURONEXT_MARKETS.items()
+    ]
+
+
+@router.post("/sync-euronext", response_model=TickerImportResult)
+def sync_euronext(
+    market: str = Query("milan", description="Euronext market code (e.g. milan, paris, amsterdam, all)"),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    """Download and synchronize equity tickers directly from Euronext."""
+    try:
+        from app.services.euronext import sync_euronext_equities
+        result = sync_euronext_equities(market_code=market, db=db)
+        return TickerImportResult(**result)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc

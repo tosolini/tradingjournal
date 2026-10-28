@@ -6,7 +6,7 @@ from app.database import get_db
 from app.deps import get_current_user
 from app.i18n import localized_error
 from app.models import Broker, Exchange, User
-from app.schemas import ExchangeCreate, ExchangeResponse, ExchangeUpdate
+from app.schemas import ExchangeCreate, ExchangeResponse, ExchangeUpdate, TickerImportResult
 
 router = APIRouter(prefix="/api/exchanges", tags=["exchanges"])
 
@@ -93,6 +93,40 @@ def delete_exchange(
     db.delete(exchange)
     db.commit()
     return {"deleted": True, "exchange_id": exchange_id}
+
+
+@router.post("/{exchange_id}/sync-tickers", response_model=TickerImportResult)
+def sync_exchange_tickers(
+    exchange_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Download and synchronize equity tickers from Euronext for this exchange."""
+    exchange = db.get(Exchange, exchange_id)
+    if not exchange or exchange.user_id != current_user.id:
+        raise localized_error(status_code=404, code="errors.exchange_not_found", request=request)
+
+    market_code = exchange.euronext_code
+    if not market_code:
+        raise localized_error(
+            status_code=400,
+            code="errors.exchange_not_euronext",
+            request=request,
+            default=f"Il mercato '{exchange.name}' non è un mercato azionario Euronext supportato.",
+        )
+
+    try:
+        from app.services.euronext import sync_euronext_equities
+        result = sync_euronext_equities(market_code=market_code, db=db)
+        return TickerImportResult(**result)
+    except Exception as exc:
+        raise localized_error(
+            status_code=502,
+            code="errors.euronext_sync_failed",
+            request=request,
+            default=f"Errore durante la sincronizzazione con Euronext: {exc}",
+        )
 
 
 @router.post("/seed/directa", response_model=list[ExchangeResponse])

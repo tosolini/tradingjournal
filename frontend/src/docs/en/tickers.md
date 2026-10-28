@@ -2,18 +2,20 @@
 
 The ticker database lets you search and automatically select the correct symbol when creating a new trade, avoiding typing errors.
 
-## Importing Tickers
+## Downloading or Importing Tickers
 
-### Source: Euronext
+### 1. One-Click Automatic Sync (Recommended)
 
-Euronext publishes a daily updated CSV file with all securities traded on its markets. The file covers **Amsterdam, Brussels, Dublin, Lisbon, London, Milan, Oslo, and Paris**.
+You can download and sync equity tickers directly from Euronext servers in real time without manually downloading files:
 
-**How to download the file:**
+- **From Brokers $\rightarrow$ Markets**: in the markets table, for each supported Euronext market (e.g. *MTA Euronext Milan*, *Euronext Paris*, *Euronext Amsterdam*, *EuroTLX*), click the download icon in the **Actions** column.
+- **From Tickers page**: in the **Download from Euronext** card, click **Sync Milan (Euronext)** or **Sync All Euronext Markets**.
 
-1. Go to [euronext.com](https://live.euronext.com/en/products/equities/list)
-2. Scroll to the bottom of the page and find the link to download the full list as CSV
-3. The file is typically named `Euronext_Equities_YYYY-MM-DD.csv`
+The download and upsert happen in-memory in a few seconds, keeping all existing trades intact.
 
+### 2. Manual CSV Import
+
+Alternatively, you can manually upload a CSV file downloaded from [euronext.com](https://live.euronext.com/en/products/equities/list):
 ### Import Procedure
 
 1. Go to **Tickers** in the sidebar (Settings section)

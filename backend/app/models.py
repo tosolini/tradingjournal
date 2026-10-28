@@ -78,6 +78,11 @@ class Exchange(TimestampMixin, Base):
     owner: Mapped["User"] = relationship(back_populates="exchanges")
     brokers: Mapped[list["Broker"]] = relationship(secondary="broker_exchanges", back_populates="exchanges")
 
+    @property
+    def euronext_code(self) -> Optional[str]:
+        from app.services.euronext import get_euronext_market_code
+        return get_euronext_market_code(self.mic, self.name, self.country)
+
 
 broker_exchanges = Table(
     "broker_exchanges",
@@ -246,7 +251,29 @@ class Asset(TimestampMixin, Base):
     currency: Mapped[str] = mapped_column(String(8), default="EUR")
 
     owner: Mapped[User] = relationship(back_populates="assets")
+    bond_detail: Mapped[Optional["BondDetail"]] = relationship(
+        "BondDetail", back_populates="asset", uselist=False, cascade="all, delete-orphan"
+    )
 
+
+class BondDetail(TimestampMixin, Base):
+    __tablename__ = "bond_details"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    asset_id: Mapped[int] = mapped_column(
+        ForeignKey("assets.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    bond_type: Mapped[str] = mapped_column(String(32), default="fixed")
+    issue_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    maturity_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    coupon_frequency: Mapped[int] = mapped_column(Integer, default=2)
+    annual_coupon_rate: Mapped[Decimal] = mapped_column(Numeric(8, 4), default=Decimal("0.0000"))
+    step_up_schedule: Mapped[Optional[list[dict[str, object]]]] = mapped_column(JSONB, nullable=True)
+    final_bonus_rate: Mapped[Decimal] = mapped_column(Numeric(8, 4), default=Decimal("0.0000"))
+    tax_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("12.50"))
+    day_count_convention: Mapped[str] = mapped_column(String(32), default="ACT/ACT ICMA")
+
+    asset: Mapped["Asset"] = relationship("Asset", back_populates="bond_detail")
 
 class Holding(TimestampMixin, Base):
     __tablename__ = "holdings"
@@ -262,7 +289,8 @@ class Holding(TimestampMixin, Base):
     avg_cost: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
     entry_date: Mapped[date] = mapped_column(Date, nullable=False)
     exit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-
+    accrued_interest_in: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
+    eligible_for_bonus: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     owner: Mapped[User] = relationship(back_populates="holdings")
     account: Mapped[Account] = relationship(back_populates="holdings")
     asset: Mapped[Asset] = relationship()

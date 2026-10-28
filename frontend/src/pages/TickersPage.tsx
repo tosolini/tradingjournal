@@ -13,6 +13,7 @@ export default function TickersPage() {
   const [searchQ, setSearchQ] = useState("");
   const [previewResults, setPreviewResults] = useState<Ticker[]>([]);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [activeSyncMarket, setActiveSyncMarket] = useState<string | null>(null);
 
   const { data: countData } = useQuery({
     queryKey: ["tickers-count"],
@@ -49,6 +50,35 @@ export default function TickersPage() {
       setClearConfirm(false);
     },
   });
+
+  const syncMutation = useMutation({
+    mutationFn: (market: string) => tickersApi.syncEuronext(market),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["tickers-count"] });
+      setActiveSyncMarket(null);
+      setImportError(null);
+      setImportMsg(
+        t("tickers.sync_success", {
+          imported: result.imported,
+          updated: result.updated,
+          skipped: result.skipped,
+          total: result.total,
+        })
+      );
+    },
+    onError: () => {
+      setActiveSyncMarket(null);
+      setImportMsg(null);
+      setImportError(t("tickers.sync_error"));
+    },
+  });
+
+  function handleSyncEuronext(market: string) {
+    setImportMsg(null);
+    setImportError(null);
+    setActiveSyncMarket(market);
+    syncMutation.mutate(market);
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -92,6 +122,38 @@ export default function TickersPage() {
             {total.toLocaleString()}
           </p>
           <p className="text-xs text-slate-400 dark:text-slate-500">ticker nel DB</p>
+        </div>
+      </div>
+
+      {/* Euronext Live Sync */}
+      <div className="rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-900/30 dark:bg-white/40 p-5 space-y-4">
+        <div>
+          <h2 className="font-semibold text-slate-200 dark:text-slate-800">
+            {t("tickers.sync_euronext_title")}
+          </h2>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            {t("tickers.sync_euronext_hint")}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => handleSyncEuronext("milan")}
+            disabled={syncMutation.isPending || importMutation.isPending}
+            className="rounded bg-teal-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-50 transition-colors"
+          >
+            {activeSyncMarket === "milan" ? t("tickers.syncing") : t("tickers.sync_btn_milan")}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSyncEuronext("all")}
+            disabled={syncMutation.isPending || importMutation.isPending}
+            className="rounded border border-teal-500/60 bg-teal-500/10 px-4 py-2 text-sm font-semibold text-teal-300 dark:text-teal-700 hover:bg-teal-500/20 disabled:opacity-50 transition-colors"
+          >
+            {activeSyncMarket === "all" ? t("tickers.syncing") : t("tickers.sync_btn_all")}
+          </button>
         </div>
       </div>
 

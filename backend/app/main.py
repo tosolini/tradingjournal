@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
-from app.api import accounts, assets, auth, admin, brokers, calendar, dashboard, data, exchanges, holdings, ledger, notes, portfolio, snapshots, tickers, trades, uploads
+from app.api import accounts, assets, auth, admin, bonds, brokers, calendar, dashboard, data, exchanges, holdings, ledger, notes, portfolio, snapshots, tickers, trades, uploads
 from app.bootstrap import ensure_seed_admin, ensure_seed_exchanges
 from app.config import settings
 from app.database import Base, engine
@@ -118,6 +118,12 @@ def ensure_runtime_schema_compatibility() -> None:
                 conn.execute(
                     text("CREATE INDEX IF NOT EXISTS ix_cash_ledger_entries_entry_date ON cash_ledger_entries (entry_date)")
                 )
+    if "holdings" in table_names:
+        holding_columns = {column["name"] for column in inspector.get_columns("holdings")}
+        if "accrued_interest_in" not in holding_columns or "eligible_for_bonus" not in holding_columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS accrued_interest_in NUMERIC(18, 6) NOT NULL DEFAULT 0"))
+                conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS eligible_for_bonus BOOLEAN NOT NULL DEFAULT FALSE"))
 
     # The table is created by Base.metadata.create_all, no ALTER needed
 
@@ -177,6 +183,7 @@ app.include_router(exchanges.router)
 app.include_router(exchanges.broker_router)
 app.include_router(assets.router)
 app.include_router(holdings.router)
+app.include_router(bonds.router)
 app.include_router(ledger.router)
 app.include_router(portfolio.router)
 app.include_router(trades.router)

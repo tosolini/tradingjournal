@@ -53,7 +53,7 @@ function OnboardingBanner({ user, onDismiss }: { user: User; onDismiss: () => vo
           <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-500 text-xs font-bold text-slate-400 dark:text-slate-900">3</span>
           <span className="text-slate-300 dark:text-slate-900">
             {t("settings.onboarding.step_broker")}{" "}
-            <Link to="/settings/brokers" className="text-teal-400 underline">{t("settings.registry.brokers_button")}</Link>
+            <Link to="/brokers" className="text-teal-400 underline">{t("layout.nav.brokers")}</Link>
           </span>
         </li>
         <li className="flex items-center gap-2">
@@ -805,16 +805,6 @@ export function SettingsPage() {
         </select>
       </section>
 
-      <section className="card p-4">
-        <h2 className="mb-2 text-lg font-semibold">{t("settings.registry.title")}</h2>
-        <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">{t("settings.registry.description")}</p>
-        <Link
-          to="/settings/brokers"
-          className="inline-flex rounded bg-sky-500 px-3 py-2 text-sm font-semibold text-slate-950"
-        >
-          {t("settings.registry.brokers_button")}
-        </Link>
-      </section>
 
       <DataSection />
 

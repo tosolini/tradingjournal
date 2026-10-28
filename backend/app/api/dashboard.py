@@ -386,6 +386,32 @@ def dashboard_kpis(
         )
         entry["market_value"] += holding.market_value
 
+
+    # Include open trade positions (stocks/shares in possession not yet sold)
+    for trade in trades:
+        if trade.status == "open":
+            t_execs = executions_by_trade.get(trade.id, [])
+            if t_execs:
+                quote_key = (trade.symbol, trade.market)
+                market_price = live_quotes.get(quote_key)
+                t_pnl = compute_weighted_average_pnl(t_execs, market_price=market_price)
+                if t_pnl.position_qty > Decimal("0") and t_pnl.market_value > Decimal("0"):
+                    trade_name = (
+                        trade.ticker.name
+                        if trade.ticker and trade.ticker.name
+                        else trade.symbol
+                    )
+                    inst_type = (trade.instrument_type or "stock").lower()
+                    entry = by_symbol.setdefault(
+                        trade.symbol,
+                        {
+                            "name": trade_name,
+                            "instrument_type": inst_type,
+                            "market_value": Decimal("0"),
+                        },
+                    )
+                    entry["market_value"] += t_pnl.market_value
+                    total_market_value += t_pnl.market_value
     sorted_symbols = sorted(
         by_symbol.items(), key=lambda item: item[1]["market_value"], reverse=True
     )

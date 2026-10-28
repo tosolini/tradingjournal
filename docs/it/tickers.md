@@ -2,18 +2,20 @@
 
 Il database ticker permette di cercare e selezionare automaticamente il simbolo corretto quando crei un nuovo trade, evitando errori di digitazione.
 
-## Importare i ticker
+## Scaricare o importare i ticker
 
-### Fonte: Euronext
+### 1. Sincronizzazione automatica con un click (Consigliata)
 
-Euronext pubblica giornalmente un file CSV aggiornato con tutti i titoli negoziati sui propri mercati. Il file include i mercati di **Amsterdam, Bruxelles, Dublino, Lisbona, Londra, Milano, Oslo e Parigi**.
+È possibile scaricare e aggiornare i ticker azionari direttamente dai server Euronext in tempo reale senza dover scaricare file manualmente:
 
-**Come scaricare il file:**
+- **Dalla pagina Broker $\rightarrow$ Mercati**: nella tabella dei mercati, per ogni mercato Euronext supportato (es. *MTA Euronext Milan*, *Euronext Paris*, *Euronext Amsterdam*, *EuroTLX*), clicca sull'icona di download nella colonna **Azioni**.
+- **Dalla pagina Ticker**: nella sezione **Scarica da Euronext**, clicca su **Sincronizza Milano (Euronext)** o su **Sincronizza Tutti i mercati Euronext**.
 
-1. Vai su [euronext.com](https://live.euronext.com/en/products/equities/list)
-2. Scorri in fondo alla pagina e cerca il link per scaricare la lista completa in formato CSV
-3. Il file si chiama tipicamente `Euronext_Equities_YYYY-MM-DD.csv`
+Il download e l'aggiornamento avvengono in memoria in pochi secondi, mantenendo intatti i trade esistenti.
 
+### 2. Importazione manuale da CSV
+
+In alternativa, puoi continuare a caricare manualmente un file CSV scaricato da [euronext.com](https://live.euronext.com/en/products/equities/list):
 ### Procedura di importazione
 
 1. Vai su **Ticker** nel menu laterale (sezione Impostazioni)
