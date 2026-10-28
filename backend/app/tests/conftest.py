@@ -38,6 +38,8 @@ def db():
         conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS monthly_fee NUMERIC(18, 2) NOT NULL DEFAULT 0;"))
         conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS fee_tier_override INTEGER;"))
         conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS capital_gain_rate_gov NUMERIC(5, 2) NOT NULL DEFAULT 12.50;"))
+        conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS accrued_interest_in NUMERIC(18, 6) NOT NULL DEFAULT 0;"))
+        conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS eligible_for_bonus BOOLEAN NOT NULL DEFAULT FALSE;"))
     session = TestingSession()
     yield session
     session.close()

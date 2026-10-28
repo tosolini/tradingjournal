@@ -35,6 +35,8 @@ def create_holding(
         avg_cost=payload.avg_cost,
         entry_date=payload.entry_date,
         exit_date=payload.exit_date,
+        accrued_interest_in=payload.accrued_interest_in,
+        eligible_for_bonus=payload.eligible_for_bonus,
     )
     db.add(holding)
     db.commit()

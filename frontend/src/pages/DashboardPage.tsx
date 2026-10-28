@@ -697,6 +697,26 @@ function AllocationPanel({ allocation, classes }: { allocation: DashboardAllocat
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
 
+  const formatInstrumentType = (type: string): string => {
+    const norm = (type || "").toLowerCase();
+    switch (norm) {
+      case "stock":
+      case "shares":
+      case "equity":
+        return t("dashboard.class_stock", "Azioni");
+      case "bond":
+      case "government_bond":
+        return t("dashboard.class_bond", "Obbligazioni");
+      case "etf":
+        return t("dashboard.class_etf", "ETF");
+      case "fund":
+        return t("dashboard.class_fund", "Fondi");
+      case "crypto":
+        return t("dashboard.class_crypto", "Crypto");
+      default:
+        return norm.toUpperCase();
+    }
+  };
   return (
     <Panel title={t("dashboard.allocation")} className="xl:col-span-2">
       {allocation.length === 0 ? (
@@ -711,6 +731,9 @@ function AllocationPanel({ allocation, classes }: { allocation: DashboardAllocat
                 <div className="flex min-w-0 items-baseline gap-2">
                   <span className="font-semibold text-teal-300 dark:text-teal-800">{a.symbol}</span>
                   <span className="truncate text-xs text-slate-400 dark:text-slate-500">{a.name}</span>
+                  <span className="rounded bg-slate-800/80 px-1.5 py-0.5 text-[10px] uppercase text-slate-400 dark:bg-slate-200 dark:text-slate-700">
+                    {formatInstrumentType(a.instrument_type)}
+                  </span>
                 </div>
                 <div className="flex shrink-0 items-baseline gap-3 tabular-nums">
                   <span className="text-slate-200 dark:text-slate-700">{formatMoney(a.market_value, undefined, locale)}</span>
@@ -735,7 +758,7 @@ function AllocationPanel({ allocation, classes }: { allocation: DashboardAllocat
                   key={c.instrument_type}
                   className="rounded-full border border-slate-600/60 px-2.5 py-0.5 text-xs text-slate-300 dark:border-slate-300/60 dark:text-slate-700"
                 >
-                  {c.instrument_type} · {c.weight_pct.toFixed(0)}%
+                  {formatInstrumentType(c.instrument_type)} · {c.weight_pct.toFixed(0)}%
                 </span>
               ))}
             </div>

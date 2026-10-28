@@ -8,6 +8,8 @@ Questa sezione copre le tre viste di analisi: **Dashboard**, **Performance** e *
 
 La pagina principale offre una sintesi operativa completa e avanzata dell'intero diario di trading, combinando le metriche statistiche dei trade chiusi, le posizioni aperte e il portafoglio investimenti.
 
+![Panoramica Dashboard](/docs/images/dashboard/dashboard-overview.webp)
+*Cruscotto analitico principale con Hero KPI di redditività, posizioni aperte, regime fiscale e curva del valore di portafoglio.*
 ### Dati principali (Hero KPI)
 
 - **P&L Totale** — somma di P&L realizzato e mark-to-market delle posizioni aperte
@@ -53,6 +55,8 @@ Analisi approfondita dell'evoluzione del capitale nel tempo, basata sugli snapsh
 
 Monitora le posizioni in **ETF, obbligazioni e fondi** separatamente dai trade speculativi, con valutazione mark-to-market automatica.
 
+![Gestione Portafoglio e Obbligazioni](/docs/images/dashboard/portfolio-holdings.webp)
+*Modulo Portfolio con sezione Obbligazioni & Rendite, indicatori di YTM netto, stima cedole annue e scadenziario flussi futuri.*
 - **KPI:** Valore totale, Costo totale, Rendimento totale, Rendimento %
 - **Storico portafoglio** — grafico dell'evoluzione del valore nel tempo
 - **Tabella posizioni:** simbolo, nome, tipo strumento, quantità, costo medio, date di ingresso/uscita, durata di detenzione, **prezzo corrente** (aggiornato via Yahoo Finance), valore di mercato, rendimento monetario e rendimento percentuale; opzioni di **modifica** ed **eliminazione** per ciascuna riga

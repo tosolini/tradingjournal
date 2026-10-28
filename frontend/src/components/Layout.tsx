@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { TradeCreateModal } from "./TradeCreateModal";
 import { CommandPalette } from "./CommandPalette";
 import { CreditsModal } from "./CreditsModal";
+import { AlertsBellMenu } from "./AlertsBellMenu";
+import { TradeModalPrefill } from "../lib/trade-modal-event";
 import { fetchAccounts, getMe } from "../lib/api";
 import packageJson from "../../package.json";
 import bullVectLogo from "../assets/bull_vect.svg";
@@ -38,6 +40,7 @@ export function Layout({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+  const [tradeModalPrefill, setTradeModalPrefill] = useState<TradeModalPrefill | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
@@ -64,6 +67,17 @@ export function Layout({ children }: PropsWithChildren) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+  // Listen for open-trade-create-modal event
+  useEffect(() => {
+    const handleOpenModal = (e: Event) => {
+      const customEvent = e as CustomEvent<TradeModalPrefill | undefined>;
+      setTradeModalPrefill(customEvent.detail || null);
+      setIsTradeModalOpen(true);
+    };
+    window.addEventListener("open-trade-create-modal", handleOpenModal);
+    return () => window.removeEventListener("open-trade-create-modal", handleOpenModal);
+  }, []);
+
 
   type NavItem = {
     to: string;
@@ -205,6 +219,7 @@ export function Layout({ children }: PropsWithChildren) {
             >
               <SearchIcon className="h-4 w-4" />
             </button>
+            <AlertsBellMenu />
             <button
               type="button"
               onClick={() => setIsTradeModalOpen(true)}
@@ -418,7 +433,7 @@ export function Layout({ children }: PropsWithChildren) {
           </aside>
 
           {/* Desktop Content Area with Top Header */}
-          <div className="flex flex-col min-h-screen">
+          <div className="flex flex-col min-h-screen min-w-0">
             <header className="hidden md:flex h-14 items-center justify-between border-b border-slate-800/60 bg-slate-950/40 px-6 backdrop-blur dark:border-slate-200/50 dark:bg-white/40">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-200 dark:text-slate-800 min-w-44">
                 <span className="text-slate-500 dark:text-slate-400 font-normal">TradingJournal</span>
@@ -477,6 +492,7 @@ export function Layout({ children }: PropsWithChildren) {
                     <span className="font-medium hidden sm:inline max-w-[90px] truncate">{me.username}</span>
                   </button>
                 )}
+                <AlertsBellMenu />
 
                 {/* New Trade Primary Button */}
                 <button
@@ -490,14 +506,21 @@ export function Layout({ children }: PropsWithChildren) {
               </div>
             </header>
 
-            <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+            <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden min-w-0">
               {children}
             </main>
           </div>
         </div>
       </div>
 
-      <TradeCreateModal open={isTradeModalOpen} onClose={() => setIsTradeModalOpen(false)} />
+      <TradeCreateModal
+        open={isTradeModalOpen}
+        onClose={() => {
+          setIsTradeModalOpen(false);
+          setTradeModalPrefill(null);
+        }}
+        initialValues={tradeModalPrefill}
+      />
       <CommandPalette
         open={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}

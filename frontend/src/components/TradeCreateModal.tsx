@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Account, Broker, Ticker, Trade, api, tickersApi } from "../lib/api";
+import { Account, Broker, Ticker, Trade, api, tickersApi, tradeIdeasApi } from "../lib/api";
 import { INSTRUMENT_TYPES, detectIsGovernmentBond, estimateExecutionFee } from "../lib/fees";
+import { TradeModalPrefill } from "../lib/trade-modal-event";
 import { XIcon } from "./icons";
 import { QuickAccountModal } from "./QuickAccountModal";
 
@@ -52,6 +53,7 @@ interface WizardState {
 type Props = {
   open: boolean;
   onClose: () => void;
+  initialValues?: TradeModalPrefill | null;
 };
 
 function inferAction(direction: Direction, executionType: ExecutionType) {
@@ -304,14 +306,14 @@ function RiskRewardPreview({
 
 // ── Main Wizard Modal ─────────────────────────────────────────────────
 // ── Quick Trade Form (single-step legacy) ──────────────────────────────
-function QuickTradeForm({ onClose }: { onClose: () => void }) {
+function QuickTradeForm({ onClose, initialValues }: { onClose: () => void; initialValues?: TradeModalPrefill | null }) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const numberLocale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
 
   // State
   const [accountId, setAccountId] = useState(0);
-  const [symbolInput, setSymbolInput] = useState("");
+  const [symbolInput, setSymbolInput] = useState(initialValues?.symbol || "");
   const [selectedTicker, setSelectedTicker] = useState<Ticker | null>(null);
   const [symbolSuggestions, setSymbolSuggestions] = useState<Ticker[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -319,11 +321,11 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
   const symbolDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const symbolContainerRef = useRef<HTMLDivElement>(null);
   const [quantity, setQuantity] = useState("1");
-  const [entryPrice, setEntryPrice] = useState("");
-  const [direction, setDirection] = useState<Direction>("long");
+  const [entryPrice, setEntryPrice] = useState(initialValues?.entryPrice || "");
+  const [direction, setDirection] = useState<Direction>(initialValues?.direction || "long");
   const [executionType, setExecutionType] = useState<ExecutionType>("open");
-  const [takeProfit, setTakeProfit] = useState("");
-  const [stopLoss, setStopLoss] = useState("");
+  const [takeProfit, setTakeProfit] = useState(initialValues?.targetPrice || "");
+  const [stopLoss, setStopLoss] = useState(initialValues?.stopLossPrice || "");
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -428,10 +430,20 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
           currency: "EUR",
         }),
       });
+      return created;
     },
-    onSuccess: () => {
+    onSuccess: async (created: Trade) => {
       qc.invalidateQueries({ queryKey: ["trades"] });
       qc.invalidateQueries({ queryKey: ["recent-executions"] });
+      if (initialValues?.tradeIdeaId && created?.id) {
+        try {
+          await tradeIdeasApi.convert(initialValues.tradeIdeaId, created.id);
+          qc.invalidateQueries({ queryKey: ["trade-ideas"] });
+          qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+        } catch (e) {
+          console.error("Failed to mark trade idea as converted", e);
+        }
+      }
       onClose();
     },
   });
@@ -631,7 +643,7 @@ function QuickTradeForm({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function TradeCreateModal({ open, onClose }: Props) {
+export function TradeCreateModal({ open, onClose, initialValues }: Props) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
 
@@ -684,27 +696,26 @@ export function TradeCreateModal({ open, onClose }: Props) {
       setSt({
         step: 0,
         accountId: 0,
-        symbolInput: "",
+        symbolInput: initialValues?.symbol || "",
         selectedTicker: null,
         symbolSuggestions: [],
         showSuggestions: false,
         instrumentType: "stock",
-        entryPrice: "",
+        entryPrice: initialValues?.entryPrice || "",
         quantityMode: "shares",
         quantity: "1",
         entryValue: "",
-        direction: "long",
-        tpMode: "percent",
-        tpPrice: "",
+        direction: initialValues?.direction || "long",
+        tpMode: initialValues?.targetPrice ? "price" : "percent",
+        tpPrice: initialValues?.targetPrice || "",
         tpPercent: "",
-        slMode: "percent",
-        slPrice: "",
+        slMode: initialValues?.stopLossPrice ? "price" : "percent",
+        slPrice: initialValues?.stopLossPrice || "",
         slPercent: "",
         executionType: "open",
       });
     }
-  }, [open]);
-
+  }, [open, initialValues]);
   // ── Data queries ──
   const { data: accounts } = useQuery({
     queryKey: ["accounts"],
@@ -858,9 +869,18 @@ export function TradeCreateModal({ open, onClose }: Props) {
 
       return createdTrade;
     },
-    onSuccess: () => {
+    onSuccess: async (createdTrade) => {
       qc.invalidateQueries({ queryKey: ["trades"] });
       qc.invalidateQueries({ queryKey: ["recent-executions"] });
+      if (initialValues?.tradeIdeaId && createdTrade?.id) {
+        try {
+          await tradeIdeasApi.convert(initialValues.tradeIdeaId, createdTrade.id);
+          qc.invalidateQueries({ queryKey: ["trade-ideas"] });
+          qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+        } catch (e) {
+          console.error("Failed to mark trade idea as converted", e);
+        }
+      }
       onClose();
     },
   });
@@ -1415,7 +1435,7 @@ export function TradeCreateModal({ open, onClose }: Props) {
         </div>
 
         {quickMode ? (
-          <QuickTradeForm onClose={onClose} />
+          <QuickTradeForm onClose={onClose} initialValues={initialValues} />
         ) : (
           <>
             {/* Stepper */}

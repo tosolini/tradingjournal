@@ -7,11 +7,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy import select, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import (
-    Account, Asset, Broker, CashLedgerEntry, DailyNote, Exchange,
+    Account, Asset, BondDetail, Broker, CashLedgerEntry, DailyNote, Exchange,
     Holding, PortfolioSnapshot, PositionDailySnapshot, Ticker, Trade,
     TradeExecution, TradeImage, User, broker_exchanges,
 )
@@ -27,6 +27,21 @@ def _default_json(obj: Any) -> str:
     if isinstance(obj, (Decimal, date, datetime)):
         return str(obj)
     raise TypeError(f"Object of type {type(obj)} is not JSON serialisable")
+
+def _parse_date(val: Any) -> date | None:
+    if not val:
+        return None
+    if isinstance(val, date):
+        return val
+    return date.fromisoformat(str(val).split("T")[0])
+
+
+def _parse_datetime(val: Any) -> datetime | None:
+    if not val:
+        return None
+    if isinstance(val, datetime):
+        return val
+    return datetime.fromisoformat(str(val))
 
 
 def _entity_dict(instance: Any, skip_fields: set[str] | None = None) -> dict[str, Any]:
@@ -145,9 +160,14 @@ def export_data(
 
     # 10. Assets (owned by user)
     assets = db.execute(
-        select(Asset).where(Asset.user_id == user_id)
+        select(Asset).options(joinedload(Asset.bond_detail)).where(Asset.user_id == user_id)
     ).scalars().all()
-    assets_data = [_entity_dict(a) for a in assets]
+    assets_data = []
+    for a in assets:
+        ad = _entity_dict(a)
+        if a.bond_detail:
+            ad["bond_detail"] = _entity_dict(a.bond_detail, skip_fields={"asset_id"})
+        assets_data.append(ad)
     asset_map = {a.id: a for a in assets}
 
     # 11. Holdings (owned by user)
@@ -456,6 +476,8 @@ def import_data(
             ticker_symbol = item.get("symbol")
             ticker_market = item.get("market")
             item["user_id"] = user_id
+            if "closed_at" in item:
+                item["closed_at"] = _parse_datetime(item["closed_at"])
             if account_name:
                 acc_id = _resolve_account(db, user_id, account_name)
                 if acc_id is None:
@@ -467,17 +489,19 @@ def import_data(
             else:
                 item["ticker_id"] = None
 
-            # Try to match existing trade for upsert — use (user_id, symbol, isin) as heuristic
-            existing = db.execute(
-                select(Trade).where(
-                    Trade.user_id == user_id,
-                    Trade.symbol == item["symbol"],
-                    Trade.account_id == item["account_id"],
-                )
-            ).scalar_one_or_none()
+            # Try to match existing trade for upsert by (user_id, symbol, account_id, created_at)
+            created_at_dt = _parse_datetime(item.get("created_at"))
+            stmt = select(Trade).where(
+                Trade.user_id == user_id,
+                Trade.symbol == item["symbol"],
+                Trade.account_id == item["account_id"],
+            )
+            if created_at_dt:
+                stmt = stmt.where(Trade.created_at == created_at_dt)
+            existing = db.execute(stmt).scalars().first()
             if existing:
                 for k, v in item.items():
-                    if k != "user_id":
+                    if k not in ("user_id", "account_id"):
                         setattr(existing, k, v)
                 new_id = existing.id
             else:
@@ -494,6 +518,8 @@ def import_data(
             old_trade_id = item.get("trade_id")
             new_trade_id = id_map["trade"].get(old_trade_id, old_trade_id)
             item["trade_id"] = new_trade_id
+            if "executed_at" in item:
+                item["executed_at"] = _parse_datetime(item["executed_at"])
             # No natural key; always create
             obj = TradeExecution(**item)
             db.add(obj)
@@ -509,19 +535,25 @@ def import_data(
             db.add(obj)
             db.flush()
 
-        # 9. DailyNote — natural key (note_date, user_id)
+        # 9. DailyNote — natural key (note_date, user_id, symbol)
         for item in data.get("daily_notes", []):
             old_id = item.pop("id", None)
             item["user_id"] = user_id
-            existing = db.execute(
-                select(DailyNote).where(
-                    DailyNote.user_id == user_id,
-                    DailyNote.note_date == item["note_date"],
-                )
-            ).scalar_one_or_none()
+            note_date = _parse_date(item["note_date"])
+            item["note_date"] = note_date
+            stmt = select(DailyNote).where(
+                DailyNote.user_id == user_id,
+                DailyNote.note_date == note_date,
+            )
+            if item.get("symbol"):
+                stmt = stmt.where(DailyNote.symbol == item["symbol"])
+            else:
+                stmt = stmt.where(DailyNote.symbol.is_(None) | (DailyNote.symbol == ""))
+            existing = db.execute(stmt).scalars().first()
             if existing:
                 for k, v in item.items():
-                    setattr(existing, k, v)
+                    if k != "user_id":
+                        setattr(existing, k, v)
             else:
                 obj = DailyNote(**item)
                 db.add(obj)
@@ -529,22 +561,42 @@ def import_data(
         # 10. Asset — natural key (symbol, user_id)
         for item in data.get("assets", []):
             old_id = item.pop("id", None)
+            bond_detail_data = item.pop("bond_detail", None)
             item["user_id"] = user_id
             existing = db.execute(
                 select(Asset).where(
                     Asset.user_id == user_id,
                     Asset.symbol == item["symbol"],
                 )
-            ).scalar_one_or_none()
+            ).scalars().first()
             if existing:
                 for k, v in item.items():
-                    setattr(existing, k, v)
+                    if k != "user_id":
+                        setattr(existing, k, v)
                 new_id = existing.id
             else:
                 obj = Asset(**item)
                 db.add(obj)
                 db.flush()
                 new_id = obj.id
+
+            if bond_detail_data:
+                bond_detail_data.pop("id", None)
+                bond_detail_data["asset_id"] = new_id
+                if "issue_date" in bond_detail_data:
+                    bond_detail_data["issue_date"] = _parse_date(bond_detail_data["issue_date"])
+                if "maturity_date" in bond_detail_data:
+                    bond_detail_data["maturity_date"] = _parse_date(bond_detail_data["maturity_date"])
+                existing_bd = db.execute(
+                    select(BondDetail).where(BondDetail.asset_id == new_id)
+                ).scalars().first()
+                if existing_bd:
+                    for k, v in bond_detail_data.items():
+                        if k != "asset_id":
+                            setattr(existing_bd, k, v)
+                else:
+                    db.add(BondDetail(**bond_detail_data))
+
             if old_id is not None:
                 id_map["asset"][old_id] = new_id
 
@@ -554,6 +606,10 @@ def import_data(
             account_name = item.pop("account_name", None)
             asset_symbol = item.pop("asset_symbol", None)
             item["user_id"] = user_id
+            if "entry_date" in item:
+                item["entry_date"] = _parse_date(item["entry_date"])
+            if "exit_date" in item:
+                item["exit_date"] = _parse_date(item["exit_date"])
             if account_name:
                 acc_id = _resolve_account(db, user_id, account_name)
                 if acc_id is None:
@@ -571,7 +627,7 @@ def import_data(
                     Holding.account_id == item["account_id"],
                     Holding.asset_id == item["asset_id"],
                 )
-            ).scalar_one_or_none()
+            ).scalars().first()
             if existing:
                 for k, v in item.items():
                     if k not in ("user_id", "account_id", "asset_id"):
@@ -590,13 +646,15 @@ def import_data(
                     raise ValueError(f"Account '{account_name}' not found for snapshot")
                 item["account_id"] = acc_id
 
+            snap_date = _parse_date(item["snapshot_date"])
+            item["snapshot_date"] = snap_date
             existing = db.execute(
                 select(PositionDailySnapshot).where(
                     PositionDailySnapshot.account_id == item["account_id"],
                     PositionDailySnapshot.symbol == item["symbol"],
-                    PositionDailySnapshot.snapshot_date == item["snapshot_date"],
+                    PositionDailySnapshot.snapshot_date == snap_date,
                 )
-            ).scalar_one_or_none()
+            ).scalars().first()
             if existing:
                 for k, v in item.items():
                     if k not in ("account_id", "symbol", "snapshot_date"):
@@ -614,6 +672,8 @@ def import_data(
                 if acc_id is None:
                     raise ValueError(f"Account '{account_name}' not found for cash ledger entry")
                 item["account_id"] = acc_id
+            if "entry_date" in item:
+                item["entry_date"] = _parse_date(item["entry_date"])
             obj = CashLedgerEntry(**item)
             db.add(obj)
 
@@ -627,12 +687,14 @@ def import_data(
                     raise ValueError(f"Account '{account_name}' not found for portfolio snapshot")
                 item["account_id"] = acc_id
 
+            snap_date = _parse_date(item["snapshot_date"])
+            item["snapshot_date"] = snap_date
             existing = db.execute(
                 select(PortfolioSnapshot).where(
                     PortfolioSnapshot.account_id == item["account_id"],
-                    PortfolioSnapshot.snapshot_date == item["snapshot_date"],
+                    PortfolioSnapshot.snapshot_date == snap_date,
                 )
-            ).scalar_one_or_none()
+            ).scalars().first()
             if existing:
                 for k, v in item.items():
                     if k not in ("account_id", "snapshot_date"):
@@ -640,7 +702,6 @@ def import_data(
             else:
                 obj = PortfolioSnapshot(**item)
                 db.add(obj)
-
         db.commit()
     except Exception:
         db.rollback()

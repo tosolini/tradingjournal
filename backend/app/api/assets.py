@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import Asset, User
+from app.models import Asset, BondDetail, Holding, User
 from app.schemas import AssetCreate, AssetResponse, AssetUpdate
 
 router = APIRouter(prefix="/api/assets", tags=["assets"])
@@ -27,6 +27,7 @@ def create_asset(
         raise HTTPException(status_code=409, detail="Asset with this symbol already exists")
 
     data = payload.model_dump()
+    bond_detail_data = data.pop("bond_detail", None)
     data["symbol"] = symbol
     if isinstance(data.get("name"), str):
         data["name"] = data["name"].strip()
@@ -39,6 +40,12 @@ def create_asset(
 
     asset = Asset(user_id=current_user.id, **data)
     db.add(asset)
+    db.flush()
+
+    if bond_detail_data and payload.instrument_type == "bond":
+        bond_detail = BondDetail(asset_id=asset.id, **bond_detail_data)
+        db.add(bond_detail)
+
     db.commit()
     db.refresh(asset)
     return asset
@@ -51,7 +58,10 @@ def list_assets(
     current_user: User = Depends(get_current_user),
 ):
     assets = db.execute(
-        select(Asset).where(Asset.user_id == current_user.id).order_by(Asset.symbol)
+        select(Asset)
+        .options(joinedload(Asset.bond_detail))
+        .where(Asset.user_id == current_user.id)
+        .order_by(Asset.symbol)
     ).scalars().all()
     return assets
 
@@ -65,7 +75,9 @@ def update_asset(
     current_user: User = Depends(get_current_user),
 ):
     asset = db.execute(
-        select(Asset).where(Asset.id == asset_id, Asset.user_id == current_user.id)
+        select(Asset)
+        .options(joinedload(Asset.bond_detail))
+        .where(Asset.id == asset_id, Asset.user_id == current_user.id)
     ).scalar_one_or_none()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -83,7 +95,10 @@ def update_asset(
             if existing:
                 raise HTTPException(status_code=409, detail="Asset with this symbol already exists")
 
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    bond_detail_data = updates.pop("bond_detail", None)
+
+    for key, value in updates.items():
         if key == "symbol" and isinstance(value, str):
             value = value.strip().upper()
         elif key == "isin" and isinstance(value, str):
@@ -93,6 +108,14 @@ def update_asset(
         elif isinstance(value, str):
             value = value.strip()
         setattr(asset, key, value)
+
+    if bond_detail_data is not None:
+        if asset.bond_detail:
+            for k, v in bond_detail_data.items():
+                setattr(asset.bond_detail, k, v)
+        else:
+            db.add(BondDetail(asset_id=asset.id, **bond_detail_data))
+
     db.commit()
     db.refresh(asset)
     return asset
@@ -111,13 +134,9 @@ def delete_asset(
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    from app.models import Holding
-    holding_count = db.execute(
-        select(Holding).where(Holding.asset_id == asset_id)
-    ).scalar()
-    if holding_count:
-        raise HTTPException(status_code=409, detail="Cannot delete asset with active holdings")
-
+    db.execute(
+        delete(Holding).where(Holding.asset_id == asset_id, Holding.user_id == current_user.id)
+    )
     db.delete(asset)
     db.commit()
     return {"ok": True}

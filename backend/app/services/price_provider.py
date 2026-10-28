@@ -57,6 +57,20 @@ def get_current_price(
     if cached and (now - cached[0]) < CACHE_TTL:
         return cached[1]
 
+    # 1. Euronext MOT live price lookup for bonds / Italian ISINs
+    sym_upper = symbol.strip().upper()
+    is_mot = bool(market and "mot" in market.lower())
+    is_italian_isin = bool(sym_upper.startswith("IT") and len(sym_upper) == 12 and sym_upper[2:].isalnum())
+    if is_mot or is_italian_isin:
+        try:
+            from app.services.euronext import fetch_euronext_live_price
+            mic = "MOTX"
+            euronext_price = fetch_euronext_live_price(sym_upper, mic=mic)
+            if euronext_price is not None and euronext_price > Decimal("0"):
+                _price_cache[yf_symbol] = (now, euronext_price)
+                return euronext_price
+        except Exception:
+            pass
     def _fetch_quote(sym: str) -> Optional[Decimal]:
         try:
             ticker = yf.Ticker(sym)

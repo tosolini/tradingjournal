@@ -114,7 +114,7 @@ class AccountResponse(BaseModel):
 
 class CashLedgerCreate(BaseModel):
     account_id: int
-    entry_type: str  # "deposit" | "withdrawal"
+    entry_type: str  # "deposit" | "withdrawal" | "coupon" | "bond_bonus" | "bond_redemption" | "dividend"
     amount: Decimal
     description: Optional[str] = None
     entry_date: Optional[date] = None
@@ -205,6 +205,7 @@ class ExchangeResponse(BaseModel):
     open_time: str | None
     close_time: str | None
     closed_on_weekends: bool
+    euronext_code: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -441,6 +442,45 @@ class SnapshotResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class BondDetailCreate(BaseModel):
+    bond_type: str = "fixed"
+    issue_date: date | None = None
+    maturity_date: date
+    coupon_frequency: int = 2
+    annual_coupon_rate: Decimal = Decimal("0")
+    step_up_schedule: list[dict[str, Any]] | None = None
+    final_bonus_rate: Decimal = Decimal("0")
+    tax_rate: Decimal = Decimal("12.50")
+    day_count_convention: str = "ACT/ACT ICMA"
+
+
+class BondDetailUpdate(BaseModel):
+    bond_type: str | None = None
+    issue_date: date | None = None
+    maturity_date: date | None = None
+    coupon_frequency: int | None = None
+    annual_coupon_rate: Decimal | None = None
+    step_up_schedule: list[dict[str, Any]] | None = None
+    final_bonus_rate: Decimal | None = None
+    tax_rate: Decimal | None = None
+    day_count_convention: str | None = None
+
+
+class BondDetailResponse(BaseModel):
+    id: int
+    bond_type: str
+    issue_date: date | None = None
+    maturity_date: date
+    coupon_frequency: int
+    annual_coupon_rate: Decimal
+    step_up_schedule: list[dict[str, Any]] | None = None
+    final_bonus_rate: Decimal
+    tax_rate: Decimal
+    day_count_convention: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AssetCreate(BaseModel):
     symbol: str
     name: str
@@ -448,6 +488,7 @@ class AssetCreate(BaseModel):
     instrument_type: str = "etf"
     exchange: str | None = None
     currency: str = "EUR"
+    bond_detail: BondDetailCreate | None = None
 
 
 class AssetUpdate(BaseModel):
@@ -457,6 +498,7 @@ class AssetUpdate(BaseModel):
     instrument_type: str | None = None
     exchange: str | None = None
     currency: str | None = None
+    bond_detail: BondDetailUpdate | None = None
 
 
 class AssetResponse(BaseModel):
@@ -467,6 +509,7 @@ class AssetResponse(BaseModel):
     instrument_type: str
     exchange: str | None
     currency: str
+    bond_detail: BondDetailResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -478,6 +521,8 @@ class HoldingCreate(BaseModel):
     avg_cost: Decimal = Decimal("0")
     entry_date: date
     exit_date: date | None = None
+    accrued_interest_in: Decimal = Decimal("0")
+    eligible_for_bonus: bool = False
 
 
 class HoldingUpdate(BaseModel):
@@ -485,6 +530,8 @@ class HoldingUpdate(BaseModel):
     avg_cost: Decimal | None = None
     entry_date: date | None = None
     exit_date: date | None = None
+    accrued_interest_in: Decimal | None = None
+    eligible_for_bonus: bool | None = None
 
 
 class HoldingResponse(BaseModel):
@@ -495,6 +542,8 @@ class HoldingResponse(BaseModel):
     avg_cost: Decimal
     entry_date: date
     exit_date: date | None = None
+    accrued_interest_in: Decimal = Decimal("0")
+    eligible_for_bonus: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -516,8 +565,102 @@ class HoldingDetailResponse(BaseModel):
     market_value: Decimal = Decimal("0")
     return_value: Decimal = Decimal("0")
     return_pct: Decimal = Decimal("0")
+    accrued_interest_in: Decimal = Decimal("0")
+    eligible_for_bonus: bool = False
+    accrued_interest: Decimal | None = None
+    dirty_price: Decimal | None = None
+    ytm_gross: Decimal | None = None
+    ytm_net: Decimal | None = None
 
 
+class HoldingSingleDetailResponse(BaseModel):
+    id: int
+    account_id: int
+    account_name: str
+    asset_id: int
+    asset_symbol: str
+    asset_name: str
+    isin: str | None = None
+    instrument_type: str
+    exchange: str | None = None
+    asset_currency: str = "EUR"
+    quantity: Decimal
+    avg_cost: Decimal
+    entry_date: date
+    exit_date: date | None = None
+    hold_duration_days: int | None = None
+    remaining_days: int | None = None
+    accrued_interest_in: Decimal = Decimal("0")
+    eligible_for_bonus: bool = False
+    current_price: Decimal = Decimal("0")
+    cost_basis: Decimal = Decimal("0")
+    market_value: Decimal = Decimal("0")
+    return_value: Decimal = Decimal("0")
+    return_pct: Decimal = Decimal("0")
+    accrued_interest: Decimal | None = None
+    dirty_price: Decimal | None = None
+    ytm_gross: Decimal | None = None
+    ytm_net: Decimal | None = None
+    nominal_yield: Decimal | None = None
+    current_yield: Decimal | None = None
+    yield_spread: Decimal | None = None
+    price_spread: Decimal | None = None
+    bond_detail: BondDetailResponse | None = None
+
+
+class HoldingPriceHistoryPoint(BaseModel):
+    date: str
+    market_price: Decimal
+    nominal_price: Decimal = Decimal("100.00")
+    avg_cost: Decimal
+    is_projection: bool = False
+
+
+class HoldingPriceHistoryResponse(BaseModel):
+    symbol: str
+    name: str
+    instrument_type: str
+    nominal_price: Decimal = Decimal("100.00")
+    avg_cost: Decimal
+    current_price: Decimal
+    points: list[HoldingPriceHistoryPoint]
+
+class BondCalendarItem(BaseModel):
+    holding_id: int
+    asset_symbol: str
+    asset_name: str
+    account_name: str
+    date: date
+    flow_type: str
+    rate: Decimal
+    gross_amount: Decimal
+    tax_amount: Decimal
+    net_amount: Decimal
+
+
+class BondPortfolioMetrics(BaseModel):
+    total_nominal: Decimal
+    total_market_value: Decimal
+    weighted_ytm_gross: Decimal
+    weighted_ytm_net: Decimal
+    estimated_annual_income_net: Decimal
+    bonds_count: int
+
+
+class BondLookupRequest(BaseModel):
+    query: str
+
+
+class BondLookupResponse(BaseModel):
+    symbol: str
+    name: str
+    isin: str | None = None
+    exchange: str = "MOT"
+    currency: str = "EUR"
+    instrument_type: str = "bond"
+    live_price: Decimal | None = None
+    issue_price: Decimal | None = None
+    bond_detail: BondDetailCreate
 class PortfolioSummaryResponse(BaseModel):
     account_id: int
     account_name: str
@@ -585,3 +728,85 @@ class TickerImportResult(BaseModel):
     updated: int
     skipped: int
     total: int
+
+
+class TradeIdeaCreate(BaseModel):
+    symbol: str = Field(min_length=1, max_length=32)
+    market: str = Field(default="Euronext", max_length=80)
+    direction: str = Field(default="long", pattern="^(long|short)$")
+    initial_price: Optional[Decimal] = None
+    trigger_price: Decimal
+    trigger_condition: str = Field(default="<=", pattern="^(<=|>=)$")
+    stop_loss: Optional[Decimal] = None
+    target_price: Optional[Decimal] = None
+    thesis_notes: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+    stale_days: Optional[int] = Field(default=None, ge=1, le=365)
+    expire_days: Optional[int] = Field(default=None, ge=1, le=365)
+
+
+class TradeIdeaUpdate(BaseModel):
+    symbol: Optional[str] = Field(default=None, min_length=1, max_length=32)
+    market: Optional[str] = Field(default=None, max_length=80)
+    direction: Optional[str] = Field(default=None, pattern="^(long|short)$")
+    trigger_price: Optional[Decimal] = None
+    trigger_condition: Optional[str] = Field(default=None, pattern="^(<=|>=)$")
+    stop_loss: Optional[Decimal] = None
+    target_price: Optional[Decimal] = None
+    thesis_notes: Optional[str] = None
+    tags: Optional[list[str]] = None
+    stale_days: Optional[int] = Field(default=None, ge=1, le=365)
+    expire_days: Optional[int] = Field(default=None, ge=1, le=365)
+
+
+class TradeIdeaConvertRequest(BaseModel):
+    trade_id: int
+
+
+class TradeIdeaResponse(BaseModel):
+    id: int
+    user_id: int
+    symbol: str
+    market: str
+    direction: str
+    initial_price: Decimal
+    trigger_price: Decimal
+    trigger_condition: str
+    stop_loss: Optional[Decimal] = None
+    target_price: Optional[Decimal] = None
+    thesis_notes: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+    status: str
+    stale_days: int
+    expire_days: int
+    stale_at: datetime
+    expires_at: datetime
+    triggered_at: Optional[datetime] = None
+    triggered_price: Optional[Decimal] = None
+    closed_at: Optional[datetime] = None
+    trade_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    current_price: Optional[Decimal] = None
+    distance_pct: Optional[Decimal] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TradeIdeaCountsResponse(BaseModel):
+    all: int = 0
+    watching: int = 0
+    triggered: int = 0
+    stale: int = 0
+    closed: int = 0
+    converted: int = 0
+
+
+class TradeIdeaListResponse(BaseModel):
+    items: list[TradeIdeaResponse]
+    counts: TradeIdeaCountsResponse
+
+
+class TradeIdeaAlertsResponse(BaseModel):
+    unread_count: int
+    items: list[TradeIdeaResponse]

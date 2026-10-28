@@ -140,6 +140,7 @@ export type Exchange = {
   open_time: string | null;
   close_time: string | null;
   closed_on_weekends: boolean;
+  euronext_code?: string | null;
 };
 
 export type FeeMode = "fixed" | "percent" | "percent_min_max" | "tiered_volume" | "under_30";
@@ -371,6 +372,25 @@ export function createAccount(payload: {
   });
 }
 
+export type StepUpPoint = {
+  from_year: number;
+  to_year: number;
+  rate: number;
+};
+
+export type BondDetail = {
+  id?: number;
+  bond_type: string;
+  issue_date?: string | null;
+  maturity_date: string;
+  coupon_frequency: number;
+  annual_coupon_rate: number | string;
+  step_up_schedule?: StepUpPoint[] | null;
+  final_bonus_rate: number | string;
+  tax_rate: number | string;
+  day_count_convention: string;
+};
+
 export type Asset = {
   id: number;
   symbol: string;
@@ -379,6 +399,7 @@ export type Asset = {
   instrument_type: string;
   exchange?: string | null;
   currency: string;
+  bond_detail?: BondDetail | null;
 };
 
 export type Holding = {
@@ -389,6 +410,8 @@ export type Holding = {
   avg_cost: string;
   entry_date: string;
   exit_date: string | null;
+  accrued_interest_in: string;
+  eligible_for_bonus: boolean;
 };
 
 export type HoldingDetail = {
@@ -408,6 +431,99 @@ export type HoldingDetail = {
   market_value: string;
   return_value: string;
   return_pct: string;
+  accrued_interest_in: string;
+  eligible_for_bonus: boolean;
+  accrued_interest?: string | null;
+  dirty_price?: string | null;
+  ytm_gross?: string | null;
+  ytm_net?: string | null;
+};
+
+export type HoldingSingleDetail = {
+  id: number;
+  account_id: number;
+  account_name: string;
+  asset_id: number;
+  asset_symbol: string;
+  asset_name: string;
+  isin?: string | null;
+  instrument_type: string;
+  exchange?: string | null;
+  asset_currency: string;
+  quantity: string;
+  avg_cost: string;
+  entry_date: string;
+  exit_date?: string | null;
+  hold_duration_days?: number | null;
+  remaining_days?: number | null;
+  accrued_interest_in: string;
+  eligible_for_bonus: boolean;
+  current_price: string;
+  cost_basis: string;
+  market_value: string;
+  return_value: string;
+  return_pct: string;
+  accrued_interest?: string | null;
+  dirty_price?: string | null;
+  ytm_gross?: string | null;
+  ytm_net?: string | null;
+  nominal_yield?: string | null;
+  current_yield?: string | null;
+  yield_spread?: string | null;
+  price_spread?: string | null;
+  bond_detail?: BondDetail | null;
+};
+
+export type HoldingPriceHistoryPoint = {
+  date: string;
+  market_price: string | number;
+  nominal_price: string | number;
+  avg_cost: string | number;
+  is_projection: boolean;
+};
+
+export type HoldingPriceHistory = {
+  symbol: string;
+  name: string;
+  instrument_type: string;
+  nominal_price: string | number;
+  avg_cost: string | number;
+  current_price: string | number;
+  points: HoldingPriceHistoryPoint[];
+};
+
+export type BondCalendarItem = {
+  holding_id: number;
+  asset_symbol: string;
+  asset_name: string;
+  account_name: string;
+  date: string;
+  flow_type: string;
+  rate: string;
+  gross_amount: string;
+  tax_amount: string;
+  net_amount: string;
+};
+
+export type BondPortfolioMetrics = {
+  total_nominal: string;
+  total_market_value: string;
+  weighted_ytm_gross: string;
+  weighted_ytm_net: string;
+  estimated_annual_income_net: string;
+  bonds_count: number;
+};
+
+export type BondLookupResponse = {
+  symbol: string;
+  name: string;
+  isin?: string | null;
+  exchange: string;
+  currency: string;
+  instrument_type: string;
+  live_price?: string | number | null;
+  issue_price?: string | number | null;
+  bond_detail: BondDetail;
 };
 
 export type PortfolioSummary = {
@@ -480,6 +596,8 @@ export function createHolding(payload: {
   avg_cost: string;
   entry_date: string;
   exit_date?: string | null;
+  accrued_interest_in?: string;
+  eligible_for_bonus?: boolean;
 }): Promise<Holding> {
   return api("/api/holdings", {
     method: "POST",
@@ -487,6 +605,28 @@ export function createHolding(payload: {
   });
 }
 
+export function fetchBondCalendar(accountId?: number, fromDate?: string, toDate?: string): Promise<BondCalendarItem[]> {
+  const params = new URLSearchParams();
+  if (accountId) params.set("account_id", String(accountId));
+  if (fromDate) params.set("from_date", fromDate);
+  if (toDate) params.set("to_date", toDate);
+  const q = params.toString();
+  return api(`/api/bonds/calendar${q ? `?${q}` : ""}`);
+}
+
+export function fetchBondMetrics(accountId?: number): Promise<BondPortfolioMetrics> {
+  const params = new URLSearchParams();
+  if (accountId) params.set("account_id", String(accountId));
+  const q = params.toString();
+  return api(`/api/bonds/metrics${q ? `?${q}` : ""}`);
+}
+
+export function lookupBond(query: string): Promise<BondLookupResponse> {
+  return api("/api/bonds/lookup", {
+    method: "POST",
+    body: JSON.stringify({ query }),
+  });
+}
 export function updateHolding(id: number, payload: Partial<Holding>): Promise<Holding> {
   return api(`/api/holdings/${id}`, {
     method: "PATCH",
@@ -513,6 +653,8 @@ export const exchangesApi = {
     api<{ unlinked: boolean }>(`/api/brokers/${brokerId}/exchanges/${exchangeId}`, { method: "DELETE" }),
   seedDirecta: () =>
     api<Exchange[]>("/api/exchanges/seed/directa", { method: "POST" }),
+  syncTickers: (exchangeId: number) =>
+    api<TickerImportResult>(`/api/exchanges/${exchangeId}/sync-tickers`, { method: "POST" }),
 };
 
 // ── Portfolio ───────────────────────────────────────
@@ -529,6 +671,18 @@ export function fetchPortfolioSummary(accountId?: number): Promise<PortfolioSumm
 export function fetchPortfolioHistory(accountId?: number): Promise<PortfolioHistoryPoint[]> {
   const params = accountId ? `?account_id=${accountId}` : "";
   return api(`/api/portfolio/history${params}`);
+}
+
+export function fetchHoldingDetail(holdingId: number | string): Promise<HoldingSingleDetail> {
+  return api(`/api/portfolio/holdings/${holdingId}`);
+}
+
+export function fetchHoldingPriceHistory(holdingId: number | string): Promise<HoldingPriceHistory> {
+  return api(`/api/portfolio/holdings/${holdingId}/price-history`);
+}
+
+export function fetchHoldingCalendar(holdingId: number | string): Promise<BondCalendarItem[]> {
+  return api(`/api/portfolio/holdings/${holdingId}/calendar`);
 }
 
 // ── Tickers ─────────────────────────────────────────
@@ -563,6 +717,11 @@ export const tickersApi = {
 
   clear: (): Promise<void> =>
     api("/api/tickers", { method: "DELETE" }),
+  syncEuronext: (market = "milan"): Promise<TickerImportResult> =>
+    api(`/api/tickers/sync-euronext?market=${encodeURIComponent(market)}`, { method: "POST" }),
+
+  listEuronextMarkets: (): Promise<Array<{ code: string; name: string }>> =>
+    api("/api/tickers/euronext-markets"),
 };
 
 // ── Dashboard ───────────────────────────────────────
@@ -723,3 +882,108 @@ export function updateLedgerEntry(
 export function deleteLedgerEntry(id: number): Promise<{ ok: boolean }> {
   return api(`/api/ledger/${id}`, { method: "DELETE" });
 }
+
+export type TradeIdeaStatus = "watching" | "triggered" | "stale" | "closed" | "converted";
+
+export interface TradeIdea {
+  id: number;
+  user_id: number;
+  symbol: string;
+  market: string;
+  direction: "long" | "short";
+  initial_price: string;
+  trigger_price: string;
+  trigger_condition: "<=" | ">=";
+  stop_loss?: string | null;
+  target_price?: string | null;
+  thesis_notes?: string | null;
+  tags: string[];
+  status: TradeIdeaStatus;
+  stale_days: number;
+  expire_days: number;
+  stale_at: string;
+  expires_at: string;
+  triggered_at?: string | null;
+  triggered_price?: string | null;
+  closed_at?: string | null;
+  trade_id?: number | null;
+  created_at: string;
+  updated_at: string;
+  current_price?: string | null;
+  distance_pct?: string | null;
+}
+
+export interface TradeIdeaCounts {
+  all: number;
+  watching: number;
+  triggered: number;
+  stale: number;
+  closed: number;
+  converted: number;
+}
+
+export interface TradeIdeaListResult {
+  items: TradeIdea[];
+  counts: TradeIdeaCounts;
+}
+
+export interface TradeIdeaCreatePayload {
+  symbol: string;
+  market?: string;
+  direction?: "long" | "short";
+  initial_price?: string | number;
+  trigger_price: string | number;
+  trigger_condition?: "<=" | ">=";
+  stop_loss?: string | number;
+  target_price?: string | number;
+  thesis_notes?: string;
+  tags?: string[];
+  stale_days?: number;
+  expire_days?: number;
+}
+
+export interface TradeIdeaUpdatePayload {
+  symbol?: string;
+  market?: string;
+  direction?: "long" | "short";
+  trigger_price?: string | number;
+  trigger_condition?: "<=" | ">=";
+  stop_loss?: string | number | null;
+  target_price?: string | number | null;
+  thesis_notes?: string | null;
+  tags?: string[];
+  stale_days?: number;
+  expire_days?: number;
+}
+
+export interface TradeIdeaAlertsResult {
+  unread_count: number;
+  items: TradeIdea[];
+}
+
+export const tradeIdeasApi = {
+  list: (params?: { status?: string; search?: string; tag?: string }): Promise<TradeIdeaListResult> => {
+    const q = new URLSearchParams();
+    if (params?.status && params.status !== "all") q.set("status", params.status);
+    if (params?.search) q.set("search", params.search);
+    if (params?.tag) q.set("tag", params.tag);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return api(`/api/trade-ideas${query}`);
+  },
+  get: (id: number): Promise<TradeIdea> => api(`/api/trade-ideas/${id}`),
+  create: (payload: TradeIdeaCreatePayload): Promise<TradeIdea> =>
+    api("/api/trade-ideas", { method: "POST", body: JSON.stringify(payload) }),
+  update: (id: number, payload: TradeIdeaUpdatePayload): Promise<TradeIdea> =>
+    api(`/api/trade-ideas/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  delete: (id: number): Promise<{ ok: boolean }> => api(`/api/trade-ideas/${id}`, { method: "DELETE" }),
+  renew: (id: number, days?: number): Promise<TradeIdea> => {
+    const query = days ? `?days=${days}` : "";
+    return api(`/api/trade-ideas/${id}/renew${query}`, { method: "POST" });
+  },
+  close: (id: number): Promise<TradeIdea> => api(`/api/trade-ideas/${id}/close`, { method: "POST" }),
+  convert: (id: number, trade_id: number): Promise<TradeIdea> =>
+    api(`/api/trade-ideas/${id}/convert`, { method: "POST", body: JSON.stringify({ trade_id }) }),
+  refreshPrices: (): Promise<{ ok: boolean; stats: Record<string, number> }> =>
+    api("/api/trade-ideas/refresh-prices", { method: "POST" }),
+  getAlerts: (): Promise<TradeIdeaAlertsResult> => api("/api/trade-ideas/alerts"),
+};

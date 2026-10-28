@@ -89,6 +89,16 @@ function CancelIcon() {
   );
 }
 
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
 export function BrokersPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -130,6 +140,7 @@ export function BrokersPage() {
   const [editExchOpen, setEditExchOpen] = useState("");
   const [editExchClose, setEditExchClose] = useState("");
   const [deleteExchPendingId, setDeleteExchPendingId] = useState<number | null>(null);
+  const [syncingExchId, setSyncingExchId] = useState<number | null>(null);
 
   // Broker-exchange linking state
   const [addingExchangeForBroker, setAddingExchangeForBroker] = useState<number | null>(null);
@@ -326,6 +337,28 @@ export function BrokersPage() {
       setExchSuccess(t("brokers.exchange_success_deleted"));
     },
     onError: (err) => { setExchSuccess(null); setExchError(parseApiError(err)); },
+  });
+
+  const syncExchangeTickers = useMutation({
+    mutationFn: (exchangeId: number) => exchangesApi.syncTickers(exchangeId),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["tickers-count"] });
+      setSyncingExchId(null);
+      setExchError(null);
+      setExchSuccess(
+        t("brokers.exchange_sync_tickers_success", {
+          imported: result.imported,
+          updated: result.updated,
+          skipped: result.skipped,
+          total: result.total,
+        })
+      );
+    },
+    onError: (err) => {
+      setSyncingExchId(null);
+      setExchSuccess(null);
+      setExchError(parseApiError(err) || t("brokers.exchange_sync_tickers_error"));
+    },
   });
 
   const linkExchange = useMutation({
@@ -1070,6 +1103,24 @@ export function BrokersPage() {
                             </>
                           ) : (
                             <>
+                              {exchange.euronext_code && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSyncingExchId(exchange.id);
+                                    syncExchangeTickers.mutate(exchange.id);
+                                  }}
+                                  disabled={syncingExchId === exchange.id}
+                                  title={t("brokers.exchange_sync_tickers")}
+                                  className="rounded p-1 text-teal-400 hover:bg-slate-700/60 hover:text-teal-300 disabled:opacity-50 transition-colors"
+                                >
+                                  {syncingExchId === exchange.id ? (
+                                    <span className="inline-block animate-spin text-xs">⟳</span>
+                                  ) : (
+                                    <DownloadIcon />
+                                  )}
+                                </button>
+                              )}
                               <button type="button" onClick={() => startEditingExchange(exchange)} className="rounded p-1 text-slate-400 hover:bg-slate-700/60 hover:text-slate-200"><EditIcon /></button>
                               <button type="button" onClick={() => setDeleteExchPendingId(exchange.id)} className="rounded p-1 text-red-400 hover:bg-slate-700/60 hover:text-red-300"><DeleteIcon /></button>
                             </>

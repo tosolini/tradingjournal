@@ -49,6 +49,7 @@ class User(TimestampMixin, Base):
     assets: Mapped[list["Asset"]] = relationship(back_populates="owner")
     holdings: Mapped[list["Holding"]] = relationship(back_populates="owner")
     exchanges: Mapped[list["Exchange"]] = relationship(back_populates="owner")
+    trade_ideas: Mapped[list["TradeIdea"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class AppSetting(TimestampMixin, Base):
@@ -77,6 +78,11 @@ class Exchange(TimestampMixin, Base):
 
     owner: Mapped["User"] = relationship(back_populates="exchanges")
     brokers: Mapped[list["Broker"]] = relationship(secondary="broker_exchanges", back_populates="exchanges")
+
+    @property
+    def euronext_code(self) -> Optional[str]:
+        from app.services.euronext import get_euronext_market_code
+        return get_euronext_market_code(self.mic, self.name, self.country)
 
 
 broker_exchanges = Table(
@@ -246,7 +252,29 @@ class Asset(TimestampMixin, Base):
     currency: Mapped[str] = mapped_column(String(8), default="EUR")
 
     owner: Mapped[User] = relationship(back_populates="assets")
+    bond_detail: Mapped[Optional["BondDetail"]] = relationship(
+        "BondDetail", back_populates="asset", uselist=False, cascade="all, delete-orphan"
+    )
 
+
+class BondDetail(TimestampMixin, Base):
+    __tablename__ = "bond_details"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    asset_id: Mapped[int] = mapped_column(
+        ForeignKey("assets.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    bond_type: Mapped[str] = mapped_column(String(32), default="fixed")
+    issue_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    maturity_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    coupon_frequency: Mapped[int] = mapped_column(Integer, default=2)
+    annual_coupon_rate: Mapped[Decimal] = mapped_column(Numeric(8, 4), default=Decimal("0.0000"))
+    step_up_schedule: Mapped[Optional[list[dict[str, object]]]] = mapped_column(JSONB, nullable=True)
+    final_bonus_rate: Mapped[Decimal] = mapped_column(Numeric(8, 4), default=Decimal("0.0000"))
+    tax_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("12.50"))
+    day_count_convention: Mapped[str] = mapped_column(String(32), default="ACT/ACT ICMA")
+
+    asset: Mapped["Asset"] = relationship("Asset", back_populates="bond_detail")
 
 class Holding(TimestampMixin, Base):
     __tablename__ = "holdings"
@@ -262,7 +290,8 @@ class Holding(TimestampMixin, Base):
     avg_cost: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
     entry_date: Mapped[date] = mapped_column(Date, nullable=False)
     exit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-
+    accrued_interest_in: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
+    eligible_for_bonus: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     owner: Mapped[User] = relationship(back_populates="holdings")
     account: Mapped[Account] = relationship(back_populates="holdings")
     asset: Mapped[Asset] = relationship()
@@ -296,3 +325,32 @@ class Ticker(Base):
     symbol: Mapped[str] = mapped_column(String(32), index=True)
     market: Mapped[str] = mapped_column(String(128), index=True)
     currency: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+
+
+class TradeIdea(TimestampMixin, Base):
+    __tablename__ = "trade_ideas"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    market: Mapped[str] = mapped_column(String(80), default="Euronext")
+    direction: Mapped[str] = mapped_column(String(8), default="long")  # "long" | "short"
+    initial_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    trigger_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    trigger_condition: Mapped[str] = mapped_column(String(8), default="<=")  # "<=" | ">="
+    stop_loss: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 6), nullable=True)
+    target_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 6), nullable=True)
+    thesis_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    tags: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    status: Mapped[str] = mapped_column(String(20), default="watching", index=True)
+    stale_days: Mapped[int] = mapped_column(Integer, default=7)
+    expire_days: Mapped[int] = mapped_column(Integer, default=10)
+    stale_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    triggered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    triggered_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 6), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    trade_id: Mapped[Optional[int]] = mapped_column(ForeignKey("trades.id", ondelete="SET NULL"), nullable=True)
+
+    user: Mapped["User"] = relationship(back_populates="trade_ideas")
+    trade: Mapped[Optional["Trade"]] = relationship()

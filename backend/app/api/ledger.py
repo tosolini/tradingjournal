@@ -12,7 +12,7 @@ from app.schemas import CashLedgerCreate, CashLedgerResponse, CashLedgerUpdate
 
 router = APIRouter(prefix="/api/ledger", tags=["ledger"])
 
-VALID_ENTRY_TYPES = {"deposit", "withdrawal"}
+VALID_ENTRY_TYPES = {"deposit", "withdrawal", "coupon", "bond_bonus", "bond_redemption", "dividend"}
 
 
 def _get_owned_entry(

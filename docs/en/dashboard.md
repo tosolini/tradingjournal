@@ -8,6 +8,8 @@ This section covers the three analysis views: **Dashboard**, **Performance** and
 
 The home page provides a comprehensive, advanced operational summary of your whole trading journal, combining statistical metrics from closed trades, open positions, and investment portfolios.
 
+![Dashboard Overview](/docs/images/dashboard/dashboard-overview.webp)
+*Main analytical dashboard featuring profitability Hero KPIs, open positions, tax estimates, and portfolio equity curve.*
 ### Key figures (Hero KPIs)
 
 - **Total PnL** — sum of realized profit/loss and mark-to-market of open positions
@@ -53,6 +55,8 @@ In-depth analysis of portfolio capital evolution over time, powered by automated
 
 Track **ETF, bond, and fund** investments separately from active trades, with automated mark-to-market valuations.
 
+![Portfolio and Fixed Income Management](/docs/images/dashboard/portfolio-holdings.webp)
+*Portfolio module with Bonds & Fixed Income tab, net YTM calculations, estimated annual coupon income, and future cash flow calendar.*
 - **KPIs:** Total Value, Total Cost, Total Return, Return %
 - **Portfolio history** — valuation evolution chart over time
 - **Holdings table:** symbol, name, instrument type, quantity, average cost, entry/exit dates, hold duration, **current price** (fetched via Yahoo Finance), market value, return ($) and return %; per-row **edit** and **delete** actions

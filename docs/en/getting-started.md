@@ -85,10 +85,9 @@ On smartphones and tablets, the interface dynamically adjusts:
 - The sidebar collapses into a **slide-out drawer** accessible via the top-left menu icon.
 - Charts, calendar grids, and tables support fluid horizontal scrolling with touch-optimized controls.
 
-### Trading Discipline Checklist (Notes)
+### Stock Scouting and Trading Discipline Checklist (Notes)
 
-Within the **Notes** journal, a **Psychological Checklist** allows you to audit your pre-session preparation and post-session execution (Plan followed, Stop Loss placed properly, No overtrading, No revenge trading).
-
+Within the **Notes** module, you can manage both **Scouting & Trade Ideas** (tracking watchlist stocks with automated price triggers and in-app alerts) and the **Daily Journal** with rich-text editor and **Psychological Checklist** to ensure you follow your trading plan and avoid FOMO or revenge trading.
 ---
 
 ## Application Structure
@@ -98,7 +97,7 @@ Within the **Notes** journal, a **Psychological Checklist** allows you to audit 
 | **Dashboard** | Advanced analytics cockpit: Today/Week/Month/Total Net PnL, Win Rate, Expectancy, Payoff Ratio, Max Drawdown, Periodic PnL Bar Chart, Equity Curve, and Best vs Worst Trade comparison card |
 | **Calendar** | Unified monthly journal calendar with daily color-coded PnL badges, consolidated weekly summary column, day-detail drawer, and real-time global market Gantt timeline |
 | **Trades** | Comprehensive trade ledger featuring live Risk/Reward gauge, 6-step guided wizard, quick entry mode, table pagination, and date presets |
-| **Notes** | Daily trading journal with rich-text editor, market sentiment tags, emotional mood rating, and psychological discipline checklist |
+| **Notes** | Stock Scouting & Trade Ideas with automated price triggers, one-click trade conversion, and Daily Journal with rich-text editor and discipline checklist |
 | **Portfolio** | Stock, ETF, and bond position tracking with live mark-to-market valuations and percentage allocation |
 | **Performance** | In-depth portfolio NAV growth, drawdown analysis, and cumulative equity curves |
 | **Assets** | Financial instruments master registry (stocks, ETFs, bonds, crypto, commodities) |
