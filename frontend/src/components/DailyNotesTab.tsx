@@ -3,11 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import DOMPurify from "dompurify";
 import { TagInput } from "./TagInput";
 import { ConfirmModal } from "./ConfirmModal";
 import { RichTextEditor } from "./RichTextEditor";
 import { Ticker, api, tickersApi } from "../lib/api";
+import { sanitizeRichText } from "../lib/sanitize";
 import {
   CalendarIcon,
   CheckIcon,
@@ -21,38 +21,6 @@ import {
   XIcon,
 } from "./icons";
 
-function sanitizeRichText(value?: string | null): string {
-  if (!value) {
-    return "";
-  }
-  return DOMPurify.sanitize(value, {
-    ALLOWED_TAGS: [
-      "p",
-      "br",
-      "strong",
-      "b",
-      "em",
-      "i",
-      "u",
-      "s",
-      "ul",
-      "ol",
-      "li",
-      "a",
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "blockquote",
-      "code",
-      "pre",
-      "span",
-      "div",
-      "hr",
-    ],
-    ALLOWED_ATTR: ["href", "target", "rel", "class"],
-  });
-}
 
 const DISCIPLINE_PRESET_TAGS = [
   {
