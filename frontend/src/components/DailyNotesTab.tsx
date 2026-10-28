@@ -6,6 +6,7 @@ import { useSearchParams } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { TagInput } from "./TagInput";
 import { ConfirmModal } from "./ConfirmModal";
+import { RichTextEditor } from "./RichTextEditor";
 import { Ticker, api, tickersApi } from "../lib/api";
 import {
   CalendarIcon,
@@ -778,16 +779,25 @@ export function DailyNotesTab() {
                 />
               </div>
 
-              {/* Rich Text / Notes */}
+              {/* Rich Text / Notes WYSIWYG */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
                   {t("notes.content_label", "Contenuto & Riflessioni")}
                 </label>
-                <textarea
-                  rows={4}
-                  {...register("rich_text")}
-                  placeholder="Note dettagliate sulla sessione, errori psicologici, osservazioni..."
-                  className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-2 text-xs text-slate-100 dark:border-slate-300 dark:bg-white dark:text-slate-900 leading-relaxed"
+                <Controller
+                  control={control}
+                  name="rich_text"
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder={t(
+                        "notes.rich_editor_placeholder",
+                        "Scrivi i dettagli della tua nota, riflessioni psicologiche, lezioni apprese...",
+                      )}
+                      minHeight="150px"
+                    />
+                  )}
                 />
               </div>
 
