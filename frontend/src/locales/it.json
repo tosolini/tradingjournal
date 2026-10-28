@@ -925,6 +925,7 @@
     "holding_updated": "Posizione aggiornata con successo"
   },
   "assets": {
+    "title": "Anagrafica Asset",
     "subtitle": "Catalogo degli strumenti finanziari monitorati nel portafoglio.",
     "add": "Aggiungi Asset",
     "add_title": "Nuovo Asset",
