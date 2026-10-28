@@ -13,6 +13,8 @@ La vista si articola in due tab principali:
 
 Il calendario mensile offre una visualizzazione chiara e immediata dell'andamento operativo giorno per giorno e settimana per settimana.
 
+![Calendario Mensile](/docs/images/calendar/calendar-monthly.webp)
+*Visualizzazione del Calendario mensile con indicatori KPI di performance, Win Rate e giorni operativi.*
 ### 1. Banner KPI Mensile
 
 In cima al calendario, un pannello riepilogativo sintetizza le metriche del mese visualizzato:
@@ -55,7 +57,8 @@ Cliccando su un giorno qualsiasi, una finestra modale mostra:
 
 Il Gantt dei mercati mostra in una finestra temporale scorrevole di **24 ore** (a partire dall'ora corrente) quali mercati sono aperti, stanno per aprire o sono chiusi.
 
-### Come leggere il Gantt
+![Gantt Mercati Mondiali](/docs/images/calendar/markets-gantt.webp)
+*Diagramma di Gantt in tempo reale con lo stato di apertura e gli orari di contrattazione delle borse mondiali.*
 
 Ogni riga rappresenta un mercato o exchange configurato nei tuoi broker. La barra orizzontale indica la **finestra di contrattazione**:
 

@@ -13,6 +13,8 @@ The view is divided into two main tabs:
 
 The monthly calendar provides a clear, high-level overview of your trading activity day by day and week by week.
 
+![Monthly Calendar](/docs/images/calendar/calendar-monthly.webp)
+*Monthly Calendar view featuring KPI performance banner, Win Rate, and trading days.*
 ### 1. Monthly KPI Summary Banner
 
 At the top of the calendar, an executive summary card highlights the key metrics for the selected month:
@@ -55,6 +57,8 @@ Clicking on any calendar day opens a dedicated modal drawer with:
 
 The market Gantt shows a continuous **24-hour scrolling window** (starting from the current time) indicating which markets are open, preparing to open, or closed.
 
+![Global Markets Gantt](/docs/images/calendar/markets-gantt.webp)
+*Real-time Gantt timeline showing trading session windows and open/closed status for global exchanges.*
 ### How to Read the Gantt
 
 Each row represents a market/exchange configured in your brokers. The colored horizontal bar indicates the **trading window**:
