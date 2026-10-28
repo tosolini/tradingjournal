@@ -1,5 +1,38 @@
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: [
+    "p",
+    "br",
+    "strong",
+    "b",
+    "em",
+    "i",
+    "u",
+    "s",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "blockquote",
+    "code",
+    "pre",
+    "span",
+    "div",
+    "hr",
+  ],
+  ALLOWED_ATTR: ["href", "target", "rel", "class"],
+};
+
+function sanitizeHTML(html: string): string {
+  if (!html) return "";
+  return DOMPurify.sanitize(html, SANITIZE_CONFIG);
+}
+
 
 interface RichTextEditorProps {
   value: string;
@@ -23,7 +56,7 @@ export function RichTextEditor({
     if (!editor) return;
 
     const currentHTML = editor.innerHTML;
-    const sanitizedIncoming = value || "";
+    const sanitizedIncoming = sanitizeHTML(value || "");
 
     if (currentHTML !== sanitizedIncoming) {
       editor.innerHTML = sanitizedIncoming;
@@ -49,10 +82,10 @@ export function RichTextEditor({
     checkIfEmpty();
     const rawHTML = editor.innerHTML;
     // Normalize empty editor states
-    if (rawHTML === "<p><br></p>" || rawHTML === "<br>") {
+    if (rawHTML === "<p><br></p>" || rawHTML === "<br>" || rawHTML.trim() === "") {
       onChange("");
     } else {
-      onChange(rawHTML);
+      onChange(sanitizeHTML(rawHTML));
     }
   };
 
