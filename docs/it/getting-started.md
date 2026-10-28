@@ -85,10 +85,9 @@ Su smartphone e tablet, l'interfaccia si adatta dinamicamente:
 - La barra laterale si trasforma in un **drawer a scomparsa** azionabile dal pulsante menu in alto a sinistra.
 - I grafici, il calendario e le tabelle supportano lo scorrimento orizzontale fluido e pulsanti compatti ottimizzati per il tocco.
 
-### Checklist di Disciplina Operativa (Note)
+### Scouting e Checklist di Disciplina Operativa (Note)
 
-Nel modulo **Note** del diario giornaliero è presente una **Checklist Psicologica** pre/post-sessione per annotare se hai rispettato il piano di trading, se hai impostato correttamente lo Stop Loss e prevenire comportamenti dannosi come l'overtrading e il revenge trading.
-
+Nel modulo **Note** puoi gestire sia lo **Scouting & Idee di Trading** (monitorando azioni osservate con trigger automatici di prezzo e alert in-app) sia il **Diario Giornaliero** con editor rich-text e **Checklist Psicologica** pre/post-sessione per annotare se hai rispettato il piano di trading, prevenendo comportamenti dannosi come l'overtrading e il revenge trading.
 ---
 
 ## Struttura dell'Applicazione
@@ -98,7 +97,7 @@ Nel modulo **Note** del diario giornaliero è presente una **Checklist Psicologi
 | **Dashboard** | Cruscotto analitico avanzato: PnL netto odierno/settimanale/mensile/totale, Win Rate, Expectancy, Payoff Ratio, Max Drawdown, Grafico a barre PnL periodico, Curva Equity e Card Best vs Worst Trade |
 | **Calendario** | Calendario mensile unificato con PnL giornaliero color-coded, colonna PnL settimanale consolidato, cassetto dettaglio giorno e Gantt orari mercati globali in tempo reale |
 | **Trade** | Registro storico operazioni con calcolatore Risk/Reward live, wizard guidato a 6 passi, inserimento rapido, paginazione tabellare e preset temporali |
-| **Note** | Diario giornaliero con editor rich-text, tag di mercato, indicatore di umore/disciplina (mood) e checklist psicologica |
+| **Note** | Scouting & Idee di Trading con alert di prezzo automatici, conversione rapida in trade e Diario Giornaliero con editor rich-text e checklist psicologica |
 | **Portfolio** | Monitoraggio posizioni azionarie, ETF e obbligazioni con mark-to-market e allocazione percentuale |
 | **Performance** | Analisi avanzata del valore di portafoglio, drawdown e curva patrimoniale cumulata |
 | **Assets** | Anagrafica strumenti finanziari gestiti (azioni, ETF, obbligazioni, crypto, materie prime) |
