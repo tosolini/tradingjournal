@@ -275,39 +275,40 @@ export function RichTextEditor({
         >
           <span className="text-xs">Tx</span>
         </button>
+        <div className="h-4 w-[1px] bg-slate-700 dark:bg-slate-300 mx-1"></div>
 
-        <div className="ml-auto flex items-center gap-1">
-          {/* Undo */}
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              execute("undo");
-            }}
-            className="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-200 cursor-pointer"
-            title="Annulla (Ctrl+Z)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-              <path d="M3 7v6h6" />
-              <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-            </svg>
-          </button>
-          {/* Redo */}
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              execute("redo");
-            }}
-            className="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-200 cursor-pointer"
-            title="Ripristina (Ctrl+Y)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-              <path d="M21 7v6h-6" />
-              <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
-            </svg>
-          </button>
-        </div>
+        {/* Undo */}
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            execute("undo");
+          }}
+          className="rounded p-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-200 cursor-pointer"
+          title="Annulla (Ctrl+Z)"
+          aria-label="Annulla"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+            <path d="M3 7v6h6" />
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+          </svg>
+        </button>
+        {/* Redo */}
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            execute("redo");
+          }}
+          className="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-200 cursor-pointer"
+          title="Ripristina (Ctrl+Y)"
+          aria-label="Ripristina"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+            <path d="M21 7v6h-6" />
+            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+          </svg>
+        </button>
       </div>
 
       {/* ── ContentEditable Editor Area ─────────────────────── */}

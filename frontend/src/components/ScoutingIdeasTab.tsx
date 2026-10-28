@@ -840,7 +840,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
         if (e.target === e.currentTarget && !saveMutation.isPending) onClose();
       }}
     >
-      <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl dark:border-slate-200 dark:bg-white max-h-[90vh] overflow-y-auto fade-up">
+      <div className="w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl dark:border-slate-200 dark:bg-white max-h-[90vh] overflow-y-auto fade-up">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 dark:border-slate-200">
           <h3 className="text-base font-bold text-slate-100 dark:text-slate-900">
             {initialData
