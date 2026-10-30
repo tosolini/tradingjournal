@@ -502,15 +502,15 @@ def dashboard_kpis(
         portfolio_history.append(
             {
                 "date": snapshot_date.isoformat(),
-                "value": float(value),
-                "cost": float(cost),
-                "return_pct": float(return_pct),
-                "holdings_value": float(h_val),
-                "holdings_cost": float(h_cost),
-                "holdings_return_pct": float(h_pct),
-                "trades_value": float(t_val),
-                "trades_cost": float(t_cost),
-                "trades_return_pct": float(t_pct),
+                "value": round(float(value), 2),
+                "cost": round(float(cost), 2),
+                "return_pct": round(float(return_pct), 4),
+                "holdings_value": round(float(h_val), 2),
+                "holdings_cost": round(float(h_cost), 2),
+                "holdings_return_pct": round(float(h_pct), 4),
+                "trades_value": round(float(t_val), 2),
+                "trades_cost": round(float(t_cost), 2),
+                "trades_return_pct": round(float(t_pct), 4),
             }
         )
     by_symbol: dict[str, dict] = {}

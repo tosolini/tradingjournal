@@ -211,7 +211,7 @@ def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
         raw_rate = Decimal("0.0000")
 
     # 1. Detect annual rate from title/name if available (e.g. "BTP TF 3,85% DC29" -> 3.85%, "BTP 4.3% OCT54 EUR" -> 4.30%)
-    name_rate_match = re.search(r'(\d+[.,]\d+)\s*%', clean_name)
+    name_rate_match = re.search(r'\b(\d{1,3}(?:[.,]\d{1,4})?)\s*%', clean_name)
     if name_rate_match:
         try:
             annual_coupon_rate = Decimal(name_rate_match.group(1).replace(",", "."))
