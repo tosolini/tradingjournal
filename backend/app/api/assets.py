@@ -140,3 +140,50 @@ def delete_asset(
     db.delete(asset)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/{asset_id}/sync-euronext", response_model=AssetResponse)
+@router.post("/{asset_id}/sync-euronext/", response_model=AssetResponse, include_in_schema=False)
+def sync_asset_euronext(
+    asset_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    asset = db.execute(
+        select(Asset)
+        .options(joinedload(Asset.bond_detail))
+        .where(Asset.id == asset_id, Asset.user_id == current_user.id)
+    ).scalar_one_or_none()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    query = asset.isin or asset.symbol
+    if not query:
+        raise HTTPException(status_code=400, detail="Asset has no ISIN or symbol for Euronext lookup")
+
+    from app.services.euronext import fetch_euronext_bond_details
+    try:
+        data = fetch_euronext_bond_details(query)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore Euronext: {e}")
+
+    bd_data = data.get("bond_detail")
+    if not bd_data:
+        raise HTTPException(status_code=400, detail="Nessun dato obbligazionario trovato su Euronext")
+
+    if not asset.bond_detail:
+        asset.bond_detail = BondDetail(asset_id=asset.id)
+
+    for k, v in bd_data.items():
+        setattr(asset.bond_detail, k, v)
+
+    if data.get("name") and (not asset.name or asset.name.startswith("BTP ")):
+        asset.name = data["name"]
+    if data.get("exchange") and not asset.exchange:
+        asset.exchange = data["exchange"]
+
+    asset.instrument_type = "bond"
+
+    db.commit()
+    db.refresh(asset)
+    return asset

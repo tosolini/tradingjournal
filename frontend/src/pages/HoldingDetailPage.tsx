@@ -14,6 +14,7 @@ import {
   HoldingPriceHistory,
   HoldingPriceHistoryPoint,
   HoldingSingleDetail,
+  syncHoldingEuronext,
 } from "../lib/api";
 import { HoldingEditFormModal } from "./PortfolioPage";
 import { formatMoney, formatNumber, formatPct, getNumberLocale, parseLocaleNumber as asNumber } from "../lib/numbers";
@@ -241,6 +242,22 @@ export function HoldingDetailPage() {
     },
   });
 
+  const syncMutation = useMutation({
+    mutationFn: () => syncHoldingEuronext(holdingId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["bonds"] });
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      refetchDetail();
+      toast.success(
+        t("portfolio.sync_euronext_success", "Dati obbligazione sincronizzati con successo da Euronext")
+      );
+    },
+    onError: (err: Error) => {
+      toast.error(`Errore sincronizzazione Euronext: ${err.message}`);
+    },
+  });
+
   const isBond = useMemo(() => {
     const it = (holding?.instrument_type || "").toLowerCase();
     return it === "bond" || it === "government_bond";
@@ -340,6 +357,21 @@ export function HoldingDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {isBond && (
+            <button
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              className="flex items-center gap-1.5 rounded-lg border border-teal-500/40 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/20 disabled:opacity-50 dark:text-teal-800"
+              title={t("portfolio.sync_euronext_title", "Aggiorna dati cedole e quotazione live da Euronext MOT")}
+            >
+              <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              </svg>
+              {syncMutation.isPending
+                ? t("portfolio.sync_euronext_loading", "Sincronizzazione...")
+                : t("portfolio.sync_euronext", "Sincronizza Euronext")}
+            </button>
+          )}
           <button
             onClick={() => setEditOpen(true)}
             className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-400 hover:bg-sky-500/20 dark:text-sky-700"
@@ -423,8 +455,8 @@ export function HoldingDetailPage() {
           </div>
           <div className="mt-1.5 text-xl font-bold font-mono text-slate-100 dark:text-slate-900">
             {isBond
-              ? `${Number(holding.quantity).toLocaleString("it-IT")} €`
-              : Number(holding.quantity).toLocaleString("it-IT", { maximumFractionDigits: 4 })}
+              ? `${Number(holding.quantity).toLocaleString(locale)} €`
+              : Number(holding.quantity).toLocaleString(locale, { maximumFractionDigits: 4 })}
           </div>
           <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
             Controvalore di Carico: {formatMoney(holding.cost_basis, holding.asset_currency)}
