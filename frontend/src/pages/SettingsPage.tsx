@@ -16,6 +16,9 @@ type UserPreferencesPayload = {
     dashboard?: {
       chart_asset_filter?: "all" | "portfolio" | "trades";
     };
+    portfolio?: {
+      auto_record_maturity?: boolean;
+    };
     [key: string]: unknown;
   };
 };
@@ -828,6 +831,97 @@ function DashboardSettingsSection() {
   );
 }
 
+function PortfolioSettingsSection() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [autoMaturity, setAutoMaturity] = useState(false);
+  const [state, setState] = useState<"idle" | "saved" | "error">("idle");
+
+  const { data: prefData } = useQuery({
+    queryKey: ["user-preferences"],
+    queryFn: () => api<UserPreferencesPayload>("/api/auth/preferences"),
+  });
+
+  useEffect(() => {
+    setAutoMaturity(
+      prefData?.preferences?.portfolio?.auto_record_maturity === true,
+    );
+  }, [prefData]);
+
+  const save = useMutation({
+    mutationFn: (value: boolean) =>
+      api("/api/auth/preferences", {
+        method: "PATCH",
+        body: JSON.stringify({
+          preferences: {
+            portfolio: {
+              auto_record_maturity: value,
+            },
+          },
+        }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user-preferences"] });
+      setState("saved");
+      setTimeout(() => setState("idle"), 3000);
+    },
+    onError: () => setState("error"),
+  });
+
+  return (
+    <section className="card p-4">
+      <h2 className="mb-2 text-lg font-semibold">
+        {t("settings.portfolio.title", "Portafoglio")}
+      </h2>
+      <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">
+        {t(
+          "settings.portfolio.description",
+          "Automatizza la registrazione dei rimborsi obbligazionari a scadenza.",
+        )}
+      </p>
+      <label className="flex items-center gap-2 text-sm text-slate-300 dark:text-slate-900">
+        <input
+          type="checkbox"
+          checked={autoMaturity}
+          onChange={(e) => {
+            setAutoMaturity(e.target.checked);
+            setState("idle");
+          }}
+          className="rounded border-slate-700 text-teal-500 focus:ring-teal-400"
+        />
+        <span>
+          {t(
+            "settings.portfolio.auto_maturity",
+            "Registra automaticamente i rimborsi a scadenza",
+          )}
+        </span>
+      </label>
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => save.mutate(autoMaturity)}
+          disabled={save.isPending}
+          className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+        >
+          {save.isPending
+            ? t("settings.portfolio.saving", "Salvataggio...")
+            : t("settings.portfolio.save", "Salva")}
+        </button>
+        {state === "saved" && (
+          <span className="text-sm text-teal-400">
+            {t("settings.portfolio.saved", "Salvato")}
+          </span>
+        )}
+        {state === "error" && (
+          <span className="text-sm text-rose-400">
+            {t("settings.portfolio.error", "Errore")}
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -891,6 +985,7 @@ export function SettingsPage() {
       <SnapshotSettingsSection />
 
       <DashboardSettingsSection />
+      <PortfolioSettingsSection />
 
       <section className="card p-4">
         <h2 className="mb-2 text-lg font-semibold">{t("settings.session.title")}</h2>

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models import (
     Account, Asset, BondDetail, Broker, CashLedgerEntry, DailyNote, Exchange,
-    Holding, PortfolioSnapshot, PositionDailySnapshot, Ticker, Trade,
+    Holding, HoldingExit, PortfolioSnapshot, PositionDailySnapshot, Ticker, Trade,
     TradeExecution, TradeImage, User, broker_exchanges,
 )
 from app.deps import get_current_user
@@ -187,6 +187,21 @@ def export_data(
         del d["asset_id"]
         holdings_data.append(d)
 
+    # 11b. Holding exits (owned by user)
+    exits = db.execute(
+        select(HoldingExit).where(HoldingExit.user_id == user_id)
+    ).scalars().all()
+    holding_exits_data = []
+    for e in exits:
+        d = _entity_dict(e)
+        acc = account_map.get(e.account_id)
+        d["account_name"] = acc.name if acc else None
+        ast = asset_map.get(e.asset_id)
+        d["asset_symbol"] = ast.symbol if ast else None
+        del d["account_id"]
+        del d["asset_id"]
+        holding_exits_data.append(d)
+
     # 12. Position daily snapshots (through account → user_id)
     if account_ids:
         snapshots = db.execute(
@@ -252,6 +267,7 @@ def export_data(
         "daily_notes": notes_data,
         "assets": assets_data,
         "holdings": holdings_data,
+        "holding_exits": holding_exits_data,
         "position_daily_snapshots": snapshots_data,
         "cash_ledger_entries": ledger_data,
         "portfolio_snapshots": portfolios_data,
@@ -342,6 +358,8 @@ def import_data(
         "ticker": {},
         "trade": {},
         "asset": {},
+        "holding": {},
+        "holding_exit": {},
     }
 
     try:
@@ -636,9 +654,42 @@ def import_data(
                 for k, v in item.items():
                     if k not in ("user_id", "account_id", "asset_id"):
                         setattr(existing, k, v)
+                db.flush()
+                if old_id is not None:
+                    id_map["holding"][old_id] = existing.id
             else:
                 obj = Holding(**item)
                 db.add(obj)
+                db.flush()
+                if old_id is not None:
+                    id_map["holding"][old_id] = obj.id
+
+        # 11b. HoldingExit — FK: holding_id, account_name, asset_symbol
+        for item in data.get("holding_exits", []):
+            old_id = item.pop("id", None)
+            old_holding_id = item.pop("holding_id", None)
+            item.pop("account_name", None)
+            item.pop("asset_symbol", None)
+            item.pop("created_at", None)
+            item.pop("updated_at", None)
+            item["user_id"] = user_id
+            new_holding_id = id_map.get("holding", {}).get(old_holding_id)
+            if new_holding_id is None:
+                raise ValueError(
+                    f"Holding for exit {old_id} not found during import"
+                )
+            holding = db.get(Holding, new_holding_id)
+            item["holding_id"] = new_holding_id
+            item["account_id"] = holding.account_id
+            item["asset_id"] = holding.asset_id
+            for field in ("exit_date", "previous_exit_date"):
+                if item.get(field):
+                    item[field] = _parse_date(item[field])
+            obj = HoldingExit(**item)
+            db.add(obj)
+            db.flush()
+            if old_id is not None:
+                id_map["holding_exit"][old_id] = obj.id
 
         # 12. PositionDailySnapshot — FK: account_name
         for item in data.get("position_daily_snapshots", []):
@@ -670,7 +721,12 @@ def import_data(
         # 13. CashLedgerEntry — FK: account_name; always create
         for item in data.get("cash_ledger_entries", []):
             old_id = item.pop("id", None)
+            old_exit_id = item.pop("holding_exit_id", None)
             account_name = item.pop("account_name", None)
+            if old_exit_id is not None:
+                item["holding_exit_id"] = id_map.get("holding_exit", {}).get(old_exit_id)
+            else:
+                item["holding_exit_id"] = None
             if account_name:
                 acc_id = _resolve_account(db, user_id, account_name)
                 if acc_id is None:
@@ -725,6 +781,7 @@ def import_data(
         "daily_notes": len(data.get("daily_notes", [])),
         "assets": len(data.get("assets", [])),
         "holdings": len(data.get("holdings", [])),
+        "holding_exits": len(data.get("holding_exits", [])),
         "position_daily_snapshots": len(data.get("position_daily_snapshots", [])),
         "cash_ledger_entries": len(data.get("cash_ledger_entries", [])),
         "portfolio_snapshots": len(data.get("portfolio_snapshots", [])),

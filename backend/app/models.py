@@ -234,6 +234,9 @@ class CashLedgerEntry(TimestampMixin, Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     entry_date: Mapped[date] = mapped_column(Date, nullable=False, default=date.today, index=True)
+    holding_exit_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("holding_exits.id", ondelete="CASCADE"), nullable=True, index=True
+    )
 
 
 class Asset(TimestampMixin, Base):
@@ -288,8 +291,52 @@ class Holding(TimestampMixin, Base):
     exit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     accrued_interest_in: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
     eligible_for_bonus: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    fee_in: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"), server_default=text("0"))
+    closed_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     owner: Mapped[User] = relationship(back_populates="holdings")
     account: Mapped[Account] = relationship(back_populates="holdings")
+    asset: Mapped[Asset] = relationship()
+    exits: Mapped[list["HoldingExit"]] = relationship(
+        back_populates="holding", cascade="all, delete-orphan"
+    )
+
+
+class HoldingExit(TimestampMixin, Base):
+    __tablename__ = "holding_exits"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), index=True)
+    asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id"), index=True)
+    holding_id: Mapped[int] = mapped_column(
+        ForeignKey("holdings.id", ondelete="CASCADE"), index=True
+    )
+    exit_date: Mapped[date] = mapped_column(Date, index=True)
+    exit_type: Mapped[str] = mapped_column(String(32))
+    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    quantity_before: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    quantity_after: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    clean_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    accrued_interest_out: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
+    fees: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    taxes: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    capital_gain_tax: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    interest_tax: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    tax_mode: Mapped[str] = mapped_column(String(16), default="immediate")
+    fee_in_allocated: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    coupons_received: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    bonus_received: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    gross_proceeds: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    net_proceeds: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    cost_basis: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    realized_capital_gain: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    realized_interest_income: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    realized_pnl: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    previous_exit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    holding: Mapped[Holding] = relationship(back_populates="exits")
+    account: Mapped[Account] = relationship()
     asset: Mapped[Asset] = relationship()
 
 

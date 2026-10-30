@@ -25,6 +25,7 @@ def get_bond_calendar(
     holding_id: int | None = None,
     from_date: date | None = None,
     to_date: date | None = None,
+    aggregate: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -38,7 +39,7 @@ def get_bond_calendar(
         .join(Asset, Asset.id == Holding.asset_id)
         .where(
             Holding.user_id == current_user.id,
-            func.lower(Asset.instrument_type).in_(["bond", "government_bond"]),
+            func.lower(Asset.instrument_type).in_(["bond", "government_bond", "titolo_di_stato"]),
             or_(Holding.exit_date.is_(None), Holding.exit_date >= start_date),
             Holding.quantity > Decimal("0"),
         )
@@ -51,6 +52,7 @@ def get_bond_calendar(
     holdings = db.execute(query).scalars().all()
 
     items: list[BondCalendarItem] = []
+    merged: dict[tuple[date, int, int, str], dict] = {}
 
     for h in holdings:
         if not h.asset.bond_detail:
@@ -71,6 +73,26 @@ def get_bond_calendar(
             if h.exit_date and f.date > h.exit_date:
                 continue
 
+            if aggregate:
+                key = (f.date, h.asset_id, h.account_id, f.flow_type)
+                item = merged.get(key)
+                if item is None:
+                    merged[key] = {
+                        "holding_id": h.id,
+                        "asset_symbol": h.asset.symbol,
+                        "asset_name": h.asset.name,
+                        "account_name": acc_name,
+                        "rate": f.rate,
+                        "gross_amount": f.gross_amount,
+                        "tax_amount": f.tax_amount,
+                        "net_amount": f.net_amount,
+                    }
+                else:
+                    item["gross_amount"] += f.gross_amount
+                    item["tax_amount"] += f.tax_amount
+                    item["net_amount"] += f.net_amount
+                continue
+
             items.append(
                 BondCalendarItem(
                     holding_id=h.id,
@@ -85,6 +107,23 @@ def get_bond_calendar(
                     net_amount=f.net_amount,
                 )
             )
+
+    if aggregate:
+        items = [
+            BondCalendarItem(
+                holding_id=data["holding_id"],
+                asset_symbol=data["asset_symbol"],
+                asset_name=data["asset_name"],
+                account_name=data["account_name"],
+                date=flow_date,
+                flow_type=flow_type,
+                rate=data["rate"],
+                gross_amount=data["gross_amount"],
+                tax_amount=data["tax_amount"],
+                net_amount=data["net_amount"],
+            )
+            for (flow_date, _asset_id, _account_id, flow_type), data in merged.items()
+        ]
 
     items.sort(key=lambda x: x.date)
     return items
@@ -105,7 +144,7 @@ def get_bond_metrics(
         .join(Asset, Asset.id == Holding.asset_id)
         .where(
             Holding.user_id == current_user.id,
-            func.lower(Asset.instrument_type).in_(["bond", "government_bond"]),
+            func.lower(Asset.instrument_type).in_(["bond", "government_bond", "titolo_di_stato"]),
             or_(Holding.exit_date.is_(None), Holding.exit_date >= today),
             Holding.quantity > Decimal("0"),
         )
@@ -121,10 +160,9 @@ def get_bond_metrics(
     weighted_ytm_net_sum = Decimal("0")
     estimated_annual_income_net = Decimal("0")
 
-    bonds_count = 0
+    bonds_count = len({h.asset_id for h in holdings})
 
     for h in holdings:
-        bonds_count += 1
         qty = h.quantity
         total_nominal += qty
 

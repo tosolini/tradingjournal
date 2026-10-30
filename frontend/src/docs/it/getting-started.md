@@ -98,7 +98,7 @@ Nel modulo **Note** puoi gestire sia lo **Scouting & Idee di Trading** (monitora
 | **Calendario** | Calendario mensile unificato con PnL giornaliero color-coded, colonna PnL settimanale consolidato, cassetto dettaglio giorno e Gantt orari mercati globali in tempo reale |
 | **Trade** | Registro storico operazioni con calcolatore Risk/Reward live, wizard guidato a 6 passi, inserimento rapido, paginazione tabellare e preset temporali |
 | **Note** | Scouting & Idee di Trading con alert di prezzo automatici, conversione rapida in trade e Diario Giornaliero con editor rich-text e checklist psicologica |
-| **Portfolio** | Monitoraggio posizioni azionarie, ETF e obbligazioni con mark-to-market e allocazione percentuale |
+| **Portfolio** | Monitoraggio posizioni azionarie, ETF e obbligazioni con mark-to-market, tranche multiple, uscite totali/parziali, rimborsi a scadenza e allocazione percentuale |
 | **Performance** | Analisi avanzata del valore di portafoglio, drawdown e curva patrimoniale cumulata |
 | **Assets** | Anagrafica strumenti finanziari gestiti (azioni, ETF, obbligazioni, crypto, materie prime) |
 | **Conti** | Gestione conti di trading multi-valuta e libro cassa depositi/prelievi |

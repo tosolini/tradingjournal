@@ -294,14 +294,14 @@ def test_portfolio_daily_pnl_neutrality_with_coupon(db):
         total_return=Decimal("0.00"),
         total_return_pct=Decimal("0.00"),
     )
-    # Day 2: snapshot 10,150 (bond value + cash from coupon)
+    # Day 2: snapshot 9,850 (bond value drops ex-coupon)
     s2 = PortfolioSnapshot(
         account_id=account.id,
         snapshot_date=date(2025, 5, 2),
-        total_value=Decimal("10150.00"),
+        total_value=Decimal("9850.00"),
         total_cost=Decimal("10000.00"),
-        total_return=Decimal("150.00"),
-        total_return_pct=Decimal("1.50"),
+        total_return=Decimal("-150.00"),
+        total_return_pct=Decimal("-1.50"),
     )
     db.add_all([s1, s2])
 
@@ -320,10 +320,12 @@ def test_portfolio_daily_pnl_neutrality_with_coupon(db):
     assert len(series) == 2
 
     day2 = series[1]
-    # Net external cash flow must be 0 (coupon is internal income, NOT an external deposit!)
-    assert day2.net_cash_flow == Decimal("0")
-    # Day PnL on Day 2 must reflect the 150.00 profit!
-    assert day2.day_pnl == Decimal("150.00")
+    # Coupon income is an internal inflow: it must not look like a market loss.
+    assert day2.net_cash_flow == Decimal("-150.00")
+    assert day2.day_pnl == Decimal("0.00")
+    assert day2.cumulative_pnl == Decimal("0.00")
+    assert day2.investment_inflows == Decimal("150.00")
+    assert day2.total_wealth == Decimal("10000.00")
 
 def test_bonds_api_crud_calendar_and_metrics(db):
     from app.models import User, Account
@@ -825,3 +827,207 @@ def test_sync_euronext_rejects_non_bond_asset(db):
         sync_asset_euronext(asset_id=asset.id, db=db, current_user=user)
 
     assert exc.value.status_code == 400
+
+
+def _make_aggregated_bond_fixture(db, instrument_type="bond"):
+    from app.models import Account, Asset, BondDetail, Holding, User
+    from app.security import hash_password
+
+    user = User(
+        email=f"agg-{instrument_type}@example.com",
+        username=f"agg_{instrument_type}",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    acc = Account(name="Directa", user_id=user.id, base_currency="EUR")
+    db.add(acc)
+    db.commit()
+    db.refresh(acc)
+
+    asset = Asset(
+        user_id=user.id,
+        symbol="IT0005583486",
+        name="BTP Valore Mar 2030",
+        isin="IT0005583486",
+        instrument_type=instrument_type,
+        exchange="MOT",
+        currency="EUR",
+    )
+    db.add(asset)
+    db.commit()
+    db.refresh(asset)
+
+    bond = BondDetail(
+        asset_id=asset.id,
+        bond_type="fixed",
+        issue_date=date(2023, 3, 5),
+        maturity_date=date(2030, 3, 5),
+        coupon_frequency=4,
+        annual_coupon_rate=Decimal("3.2500"),
+        tax_rate=Decimal("12.50"),
+        final_bonus_rate=Decimal("0.8000"),
+    )
+    db.add(bond)
+    db.commit()
+
+    h1 = Holding(
+        user_id=user.id,
+        account_id=acc.id,
+        asset_id=asset.id,
+        quantity=Decimal("15000.00"),
+        avg_cost=Decimal("100.00"),
+        entry_date=date(2024, 5, 14),
+        eligible_for_bonus=True,
+    )
+    h2 = Holding(
+        user_id=user.id,
+        account_id=acc.id,
+        asset_id=asset.id,
+        quantity=Decimal("10000.00"),
+        avg_cost=Decimal("100.00"),
+        entry_date=date(2026, 10, 26),
+        eligible_for_bonus=True,
+    )
+    db.add_all([h1, h2])
+    db.commit()
+    db.refresh(h1)
+    db.refresh(h2)
+    return user, acc, asset, h1, h2
+
+
+def test_aggregated_holding_detail_calendar_and_history(db, monkeypatch):
+    from app.api.portfolio import holding_calendar, holding_detail, holding_price_history
+
+    user, _acc, _asset, h1, h2 = _make_aggregated_bond_fixture(db)
+    monkeypatch.setattr(
+        "app.services.portfolio.get_current_price",
+        lambda *_args, **_kwargs: Decimal("100.00"),
+    )
+
+    detail = holding_detail(holding_id=h1.id, aggregate=True, db=db, current_user=user)
+    assert detail.id == h1.id
+    assert detail.tranche_count == 2
+    assert len(detail.tranches) == 2
+    assert {t.id for t in detail.tranches} == {h1.id, h2.id}
+    assert detail.all_eligible_for_bonus is True
+    assert detail.has_eligible_for_bonus is True
+    assert detail.quantity == Decimal("25000.00")
+    assert detail.avg_cost == Decimal("100.00")
+    assert detail.market_value - detail.return_value == Decimal("25000.00")
+    assert detail.return_value == detail.market_value - Decimal("25000.00")
+    assert detail.market_value > Decimal("25000.00")
+    # Weighted YTM must match the single tranche (same price and bond).
+    single = holding_detail(holding_id=h1.id, db=db, current_user=user)
+    assert detail.ytm_net == single.ytm_net
+
+    # Backward compatibility: without aggregate only the requested tranche is returned.
+    assert single.quantity == Decimal("15000.00")
+    assert single.tranche_count == 1
+    assert single.tranches == []
+
+    # Aggregated calendar consolidates coupons by (date, flow_type).
+    cal = holding_calendar(
+        holding_id=h1.id,
+        from_date=date(2026, 1, 1),
+        to_date=date(2031, 1, 1),
+        aggregate=True,
+        db=db,
+        current_user=user,
+    )
+    keys = [(c.date, c.flow_type) for c in cal]
+    assert len(keys) == len(set(keys))
+    redemption = [c for c in cal if c.flow_type == "redemption"]
+    assert len(redemption) == 1
+    assert redemption[0].net_amount == Decimal("25000.00")
+    first_coupon = next(c for c in cal if c.flow_type == "coupon")
+    assert first_coupon.net_amount == Decimal("177.734375")
+    bonus = [c for c in cal if c.flow_type == "bonus"]
+    assert len(bonus) == 1
+    assert bonus[0].gross_amount == Decimal("200.000000")
+
+    # Aggregated price history uses the earliest entry date and weighted avg cost.
+    history = holding_price_history(
+        holding_id=h1.id, aggregate=True, db=db, current_user=user
+    )
+    assert history.avg_cost == Decimal("100.00")
+    assert history.points[0].date == "2024-05-14"
+    assert history.points[0].avg_cost == Decimal("100.00")
+
+    single_history = holding_price_history(
+        holding_id=h2.id, db=db, current_user=user
+    )
+    assert single_history.points[0].date == "2026-10-26"
+
+
+def test_government_bond_uses_bond_valuation(db, monkeypatch):
+    from app.services.portfolio import get_holding_details, get_single_holding_detail
+
+    user, _acc, _asset, h1, _h2 = _make_aggregated_bond_fixture(
+        db, instrument_type="government_bond"
+    )
+    monkeypatch.setattr(
+        "app.services.portfolio.get_current_price",
+        lambda *_args, **_kwargs: Decimal("100.00"),
+    )
+
+    details = get_holding_details(db, user.id)
+    assert len(details) == 2
+    for item in details:
+        # Bond formula: qty * (clean price + accrued) / 100, NOT price * qty.
+        assert item.market_value < Decimal("20000.00")
+        assert item.market_value - item.return_value == item.quantity
+
+    single = get_single_holding_detail(db, user.id, h1.id)
+    assert single is not None
+    assert single.market_value < Decimal("20000.00")
+
+
+def test_bond_metrics_counts_distinct_assets_not_tranches(db, monkeypatch):
+    from app.api.bonds import get_bond_metrics
+
+    user, _acc, _asset, _h1, _h2 = _make_aggregated_bond_fixture(db)
+    monkeypatch.setattr(
+        "app.api.bonds.get_current_price",
+        lambda *_args, **_kwargs: Decimal("100.00"),
+    )
+
+    metrics = get_bond_metrics(db=db, current_user=user)
+    assert metrics.bonds_count == 1
+    assert metrics.total_nominal == Decimal("25000.00")
+
+
+def test_bond_calendar_aggregate_consolidates_tranches(db):
+    from app.api.bonds import get_bond_calendar
+
+    user, _acc, _asset, _h1, _h2 = _make_aggregated_bond_fixture(db)
+    params = {
+        "from_date": date(2026, 1, 1),
+        "to_date": date(2031, 1, 1),
+        "db": db,
+        "current_user": user,
+    }
+
+    raw = get_bond_calendar(**params)
+    aggregated = get_bond_calendar(**params, aggregate=True)
+
+    assert len(aggregated) < len(raw)
+    keys = [(c.date, c.flow_type) for c in aggregated]
+    assert len(keys) == len(set(keys))
+
+    raw_first_coupon = [
+        c for c in raw if c.flow_type == "coupon" and c.date == date(2026, 12, 5)
+    ]
+    assert len(raw_first_coupon) == 2
+
+    aggregated_first_coupon = next(
+        c for c in aggregated if c.flow_type == "coupon" and c.date == date(2026, 12, 5)
+    )
+    assert aggregated_first_coupon.net_amount == Decimal("177.734375")
+
+    redemption = [c for c in aggregated if c.flow_type == "redemption"]
+    assert len(redemption) == 1
+    assert redemption[0].net_amount == Decimal("25000.00")

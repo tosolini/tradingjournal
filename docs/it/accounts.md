@@ -118,3 +118,4 @@ Seleziona un conto per gestirne il **libro cassa** (depositi e prelievi):
 - Registra un **deposito** o un **prelievo** con data, importo e descrizione opzionale
 - Il libro cassa mostra i totali **Entrate / Uscite / Saldo** per il conto
 - Le voci possono essere modificate o eliminate; il saldo del conto riflette i movimenti
+- Le **uscite di portafoglio** generano automaticamente movimenti di tipo `asset_sale`, `bond_redemption`, `coupon` e `bond_bonus`; sono entrate e concorrono al totale Entrate

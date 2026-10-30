@@ -305,7 +305,7 @@ def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
     }
 
 
-BOND_INSTRUMENT_TYPES = {"bond", "government_bond"}
+BOND_INSTRUMENT_TYPES = {"bond", "government_bond", "titolo_di_stato"}
 
 
 class EuronextSyncError(Exception):

@@ -110,15 +110,36 @@ function LedgerSection({ accounts }: { accounts: Account[] }) {
   });
 
   const totals = useMemo(() => {
-    let deposits = 0;
-    let withdrawals = 0;
+    let inflows = 0;
+    let outflows = 0;
     for (const e of entries) {
       const n = asNumber(e.amount);
-      if (e.entry_type === "deposit") deposits += n;
-      else withdrawals += n;
+      if (e.entry_type === "withdrawal") outflows += n;
+      else inflows += n;
     }
-    return { deposits, withdrawals, net: deposits - withdrawals };
+    return { inflows, outflows, net: inflows - outflows };
   }, [entries]);
+
+  const entryLabel = (type: string): string => {
+    switch (type) {
+      case "deposit":
+        return t("accounts.ledger_deposit");
+      case "withdrawal":
+        return t("accounts.ledger_withdrawal");
+      case "coupon":
+        return t("accounts.ledger_coupon", "Cedola");
+      case "bond_bonus":
+        return t("accounts.ledger_bond_bonus", "Premio fedeltà");
+      case "bond_redemption":
+        return t("accounts.ledger_bond_redemption", "Rimborso obbligazione");
+      case "dividend":
+        return t("accounts.ledger_dividend", "Dividendo");
+      case "asset_sale":
+        return t("accounts.ledger_asset_sale", "Vendita titolo");
+      default:
+        return type;
+    }
+  };
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
   const currency = selectedAccount?.base_currency || "EUR";
@@ -196,10 +217,10 @@ function LedgerSection({ accounts }: { accounts: Account[] }) {
       {/* Totals */}
       <div className="mb-3 flex flex-wrap gap-4 text-sm">
         <span className="text-emerald-300 dark:text-emerald-700">
-          {t("accounts.ledger_totals_in")}: {formatMoney(totals.deposits, currency)}
+          {t("accounts.ledger_totals_in")}: {formatMoney(totals.inflows, currency)}
         </span>
         <span className="text-red-400 dark:text-red-600">
-          {t("accounts.ledger_totals_out")}: {formatMoney(totals.withdrawals, currency)}
+          {t("accounts.ledger_totals_out")}: {formatMoney(totals.outflows, currency)}
         </span>
         <span className="font-semibold text-slate-200 dark:text-slate-900">
           {t("accounts.ledger_totals_net")}: {formatMoney(totals.net, currency)}
@@ -232,18 +253,18 @@ function LedgerSection({ accounts }: { accounts: Account[] }) {
                   <td className="px-3 py-2">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        entry.entry_type === "deposit"
-                          ? "bg-emerald-500/15 text-emerald-300 dark:text-emerald-700"
-                          : "bg-red-500/15 text-red-400 dark:text-red-600"
+                        entry.entry_type === "withdrawal"
+                          ? "bg-red-500/15 text-red-400 dark:text-red-600"
+                          : "bg-emerald-500/15 text-emerald-300 dark:text-emerald-700"
                       }`}
                     >
-                      {entry.entry_type === "deposit" ? t("accounts.ledger_deposit") : t("accounts.ledger_withdrawal")}
+                      {entryLabel(entry.entry_type)}
                     </span>
                   </td>
                   <td className={`px-3 py-2 font-mono tabular-nums ${
-                    entry.entry_type === "deposit" ? "text-emerald-300 dark:text-emerald-700" : "text-red-400 dark:text-red-600"
+                    entry.entry_type === "withdrawal" ? "text-red-400 dark:text-red-600" : "text-emerald-300 dark:text-emerald-700"
                   }`}>
-                    {entry.entry_type === "deposit" ? "+" : "-"}{formatMoney(entry.amount, currency)}
+                    {entry.entry_type === "withdrawal" ? "-" : "+"}{formatMoney(entry.amount, currency)}
                   </td>
                   <td className="px-3 py-2 text-slate-300 dark:text-slate-900">{entry.description || "-"}</td>
                   <td className="px-3 py-2">

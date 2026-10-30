@@ -797,6 +797,7 @@ function AllocationPanel({ allocation, classes }: { allocation: DashboardAllocat
         return t("dashboard.class_stock", "Azioni");
       case "bond":
       case "government_bond":
+      case "titolo_di_stato":
         return t("dashboard.class_bond", "Obbligazioni");
       case "etf":
         return t("dashboard.class_etf", "ETF");
@@ -856,6 +857,222 @@ function AllocationPanel({ allocation, classes }: { allocation: DashboardAllocat
           )}
         </div>
       )}
+    </Panel>
+  );
+}
+
+/* ─── Capital composition donut ───────────── */
+const PIE_COLORS = [
+  "#2dd4bf",
+  "#38bdf8",
+  "#f59e0b",
+  "#a78bfa",
+  "#fb7185",
+  "#34d399",
+  "#f97316",
+  "#60a5fa",
+  "#c084fc",
+  "#facc15",
+];
+
+type PieSlice = {
+  key: string;
+  label: string;
+  value: number;
+  weight: number;
+  color: string;
+};
+
+function AllocationPiePanel({
+  allocation,
+  classes,
+  currency,
+}: {
+  allocation: DashboardAllocation[];
+  classes: DashboardAllocation[];
+  currency?: string;
+}) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
+  const [mode, setMode] = useState<"class" | "asset">("class");
+
+  const formatInstrumentType = (type: string): string => {
+    const norm = (type || "").toLowerCase();
+    switch (norm) {
+      case "stock":
+      case "shares":
+      case "equity":
+        return t("dashboard.class_stock", "Azioni");
+      case "bond":
+      case "government_bond":
+      case "titolo_di_stato":
+        return t("dashboard.class_bond", "Obbligazioni");
+      case "etf":
+        return t("dashboard.class_etf", "ETF");
+      case "fund":
+        return t("dashboard.class_fund", "Fondi");
+      case "crypto":
+        return t("dashboard.class_crypto", "Crypto");
+      default:
+        return norm.toUpperCase();
+    }
+  };
+
+  const slices = useMemo<PieSlice[]>(() => {
+    if (mode === "class") {
+      return classes.map((item, index) => ({
+        key: item.instrument_type,
+        label: formatInstrumentType(item.instrument_type),
+        value: asNumber(item.market_value),
+        weight: item.weight_pct,
+        color: PIE_COLORS[index % PIE_COLORS.length],
+      }));
+    }
+
+    const assetSlices: PieSlice[] = allocation.map((item, index) => ({
+      key: item.symbol,
+      label: item.symbol,
+      value: asNumber(item.market_value),
+      weight: item.weight_pct,
+      color: PIE_COLORS[index % PIE_COLORS.length],
+    }));
+    const totalValue = classes.reduce(
+      (sum, item) => sum + asNumber(item.market_value),
+      0,
+    );
+    const listedValue = assetSlices.reduce((sum, item) => sum + item.value, 0);
+    const remaining = Math.max(0, totalValue - listedValue);
+    if (remaining > 0.01) {
+      assetSlices.push({
+        key: "__other__",
+        label: t("dashboard.other_assets", "Altri"),
+        value: remaining,
+        weight: totalValue > 0 ? (remaining / totalValue) * 100 : 0,
+        color: "#64748b",
+      });
+    }
+    return assetSlices;
+  }, [mode, allocation, classes, t]);
+
+  const total = slices.reduce((sum, item) => sum + item.value, 0);
+  const radius = 52;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <Panel title={t("dashboard.capital_composition", "Composizione del capitale")}>
+      <div className="p-4">
+        <div className="mb-3 flex justify-end gap-1 text-[10px]">
+          <button
+            type="button"
+            onClick={() => setMode("class")}
+            className={`rounded px-2 py-1 font-medium transition ${
+              mode === "class"
+                ? "bg-teal-500 font-bold text-slate-950"
+                : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
+            }`}
+          >
+            {t("dashboard.pie_by_class", "Classi")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("asset")}
+            className={`rounded px-2 py-1 font-medium transition ${
+              mode === "asset"
+                ? "bg-teal-500 font-bold text-slate-950"
+                : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
+            }`}
+          >
+            {t("dashboard.pie_by_asset", "Asset")}
+          </button>
+        </div>
+
+        {slices.length === 0 ? (
+          <div className="flex h-52 items-center justify-center px-6 text-center text-sm text-slate-400 dark:text-slate-500">
+            {t("dashboard.no_allocation")}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <svg
+                viewBox="0 0 140 140"
+                className="h-40 w-40 -rotate-90"
+                aria-label={t("dashboard.capital_composition", "Composizione del capitale")}
+              >
+                <circle
+                  cx="70"
+                  cy="70"
+                  r={radius}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="18"
+                  className="text-slate-700/40 dark:text-slate-300/40"
+                />
+                {slices.map((slice) => {
+                  const fraction = total > 0 ? slice.value / total : 0;
+                  const dash = fraction * circumference;
+                  const dashOffset = -offset * circumference;
+                  offset += fraction;
+                  return (
+                    <circle
+                      key={slice.key}
+                      cx="70"
+                      cy="70"
+                      r={radius}
+                      fill="none"
+                      stroke={slice.color}
+                      strokeWidth="18"
+                      strokeDasharray={`${dash} ${circumference - dash}`}
+                      strokeDashoffset={dashOffset}
+                      strokeLinecap="butt"
+                    >
+                      <title>{`${slice.label}: ${slice.weight.toFixed(1)}%`}</title>
+                    </circle>
+                  );
+                })}
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  {t("dashboard.total", "Totale")}
+                </span>
+                <span className="text-sm font-bold text-slate-100 dark:text-slate-900">
+                  {formatMoney(total, currency, locale)}
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full space-y-2">
+              {slices.map((slice) => (
+                <div key={slice.key} className="flex items-center justify-between gap-2 text-xs">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: slice.color }}
+                    />
+                    <span className="truncate text-slate-300 dark:text-slate-700">
+                      {slice.label}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-baseline gap-2 tabular-nums">
+                    <span className="text-slate-200 dark:text-slate-800">
+                      {formatMoney(slice.value, currency, locale)}
+                    </span>
+                    <span className="w-10 text-right text-slate-400 dark:text-slate-500">
+                      {slice.weight.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-1 text-center text-[10px] text-slate-400 dark:text-slate-500">
+              {t(
+                "dashboard.composition_hint",
+                "Include portafoglio e trade aperti",
+              )}
+            </p>
+          </div>
+        )}
+      </div>
     </Panel>
   );
 }
@@ -1204,7 +1421,10 @@ export function DashboardPage() {
       label: t("dashboard.cards.realized_pnl"),
       value: formatSignedMoney(data?.realized_pnl, currency, locale),
       tone: pnlTone(asNumber(data?.realized_pnl)),
-      caption: t("dashboard.caption_realized"),
+      caption:
+        asNumber(data?.holding_realized_pnl) !== 0
+          ? `${t("dashboard.caption_realized")} · ${t("dashboard.cards.portfolio_exits", "Uscite portafoglio")}: ${formatSignedMoney(data?.holding_realized_pnl, currency, locale)}`
+          : t("dashboard.caption_realized"),
     },
     {
       label: t("dashboard.cards.weekly_pnl", "PnL Questa Settimana"),
@@ -1328,6 +1548,11 @@ export function DashboardPage() {
             />
             <AllAssetsDailyPnlPanel data={data?.all_assets_daily_pnl ?? []} />
             <AllocationPanel allocation={data?.asset_allocation ?? []} classes={data?.asset_classes ?? []} />
+            <AllocationPiePanel
+              allocation={data?.asset_allocation ?? []}
+              classes={data?.asset_classes ?? []}
+              currency={currency}
+            />
           </section>
 
           <TopTradesTable trades={data?.top_trades ?? []} />

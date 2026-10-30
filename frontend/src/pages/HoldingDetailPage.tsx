@@ -8,15 +8,20 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import {
   deleteHolding,
+  deleteHoldingExit,
   fetchHoldingCalendar,
   fetchHoldingDetail,
+  fetchHoldingExits,
   fetchHoldingPriceHistory,
+  HoldingDetail,
+  HoldingExit,
   HoldingPriceHistory,
   HoldingPriceHistoryPoint,
   HoldingSingleDetail,
   syncHoldingEuronext,
 } from "../lib/api";
 import { HoldingEditFormModal } from "./PortfolioPage";
+import { HoldingExitModal } from "../components/HoldingExitModal";
 import { formatMoney, formatNumber, formatPct, getNumberLocale, parseLocaleNumber as asNumber } from "../lib/numbers";
 function colorForPct(value: string | number | null | undefined): string {
   const n = asNumber(value);
@@ -34,6 +39,12 @@ function formatDate(dateStr: string | null | undefined, locale = "it-IT"): strin
   } catch {
     return dateStr;
   }
+}
+
+function exitTypeLabel(type: string): string {
+  if (type === "maturity") return "Rimborso a scadenza";
+  if (type === "early_redemption") return "Rimborso anticipato";
+  return "Vendita a mercato";
 }
 
 function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPriceHistory; locale?: string }) {
@@ -202,8 +213,11 @@ export function HoldingDetailPage() {
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<HoldingDetail | HoldingSingleDetail | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; symbol: string } | null>(null);
+  const [exitTarget, setExitTarget] = useState<HoldingDetail | HoldingSingleDetail | null>(null);
+  const [exitToDelete, setExitToDelete] = useState<HoldingExit | null>(null);
+  const [bulkExitMode, setBulkExitMode] = useState(false);
 
   // Queries
   const {
@@ -213,32 +227,65 @@ export function HoldingDetailPage() {
     refetch: refetchDetail,
   } = useQuery<HoldingSingleDetail>({
     queryKey: ["portfolio", "holding", holdingId],
-    queryFn: () => fetchHoldingDetail(holdingId!),
+    queryFn: () => fetchHoldingDetail(holdingId!, true),
     enabled: Boolean(holdingId),
   });
 
   const { data: priceHistory, isLoading: loadingHistory } = useQuery<HoldingPriceHistory>({
     queryKey: ["portfolio", "holding", holdingId, "history"],
-    queryFn: () => fetchHoldingPriceHistory(holdingId!),
+    queryFn: () => fetchHoldingPriceHistory(holdingId!, true),
     enabled: Boolean(holdingId),
   });
 
   const { data: calendarItems, isLoading: loadingCalendar } = useQuery({
     queryKey: ["portfolio", "holding", holdingId, "calendar"],
-    queryFn: () => fetchHoldingCalendar(holdingId!),
+    queryFn: () => fetchHoldingCalendar(holdingId!, true),
     enabled: Boolean(holdingId),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteHolding(Number(holdingId)),
-    onSuccess: () => {
+  const { data: exitHistory, refetch: refetchExits } = useQuery<HoldingExit[]>({
+    queryKey: ["portfolio", "holding", holdingId, "exits"],
+    queryFn: () => fetchHoldingExits(holdingId!, true),
+    enabled: Boolean(holdingId),
+  });
+
+  const deleteMutation = useMutation<void, Error, number>({
+    mutationFn: (id) => deleteHolding(id),
+    onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["bonds"] });
       toast.success(t("portfolio.holding_deleted", "Posizione eliminata con successo"));
-      navigate("/portfolio");
+
+      const remaining = (holding?.tranches ?? []).filter((tr) => tr.id !== deletedId);
+      if (remaining.length > 0) {
+        if (Number(holdingId) === deletedId) {
+          navigate(`/portfolio/holdings/${remaining[0].id}`, { replace: true });
+        } else {
+          refetchDetail();
+        }
+      } else {
+        navigate("/portfolio");
+      }
+      setDeleteTarget(null);
     },
     onError: (err: Error) => {
       toast.error(`Errore eliminazione: ${err.message}`);
+    },
+  });
+
+  const deleteExitMutation = useMutation({
+    mutationFn: (exitId: number) => deleteHoldingExit(exitId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["bonds"] });
+      queryClient.invalidateQueries({ queryKey: ["ledger"] });
+      refetchDetail();
+      refetchExits();
+      toast.success(t("portfolio.exit_deleted", "Uscita annullata con successo"));
+      setExitToDelete(null);
+    },
+    onError: (err: Error) => {
+      toast.error(`Errore annullamento uscita: ${err.message}`);
     },
   });
 
@@ -260,8 +307,40 @@ export function HoldingDetailPage() {
 
   const isBond = useMemo(() => {
     const it = (holding?.instrument_type || "").toLowerCase();
-    return it === "bond" || it === "government_bond";
+    return it === "bond" || it === "government_bond" || it === "titolo_di_stato";
   }, [holding]);
+
+  const tranches = useMemo(() => holding?.tranches ?? [], [holding]);
+  const trancheCount = holding?.tranche_count ?? 1;
+  const isAggregated = trancheCount > 1 && tranches.length > 0;
+  const isClosed = asNumber(holding?.quantity) <= 0;
+  const isMatured = Boolean(
+    isBond &&
+      holding?.bond_detail?.maturity_date &&
+      new Date(holding.bond_detail.maturity_date).getTime() <= Date.now() &&
+      asNumber(holding?.quantity) > 0,
+  );
+
+  const handleExitDone = () => {
+    refetchDetail();
+    refetchExits();
+    queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+    queryClient.invalidateQueries({ queryKey: ["bonds"] });
+    queryClient.invalidateQueries({ queryKey: ["ledger"] });
+    setExitTarget(null);
+    setBulkExitMode(false);
+  };
+
+  const openSingleExit = (target: HoldingDetail | HoldingSingleDetail) => {
+    setBulkExitMode(false);
+    setExitTarget(target);
+  };
+
+  const startBulkExit = () => {
+    if (!holding) return;
+    setBulkExitMode(true);
+    setExitTarget(holding);
+  };
 
   // Aggregated future cash flows
   const cashFlowSummary = useMemo(() => {
@@ -372,30 +451,105 @@ export function HoldingDetailPage() {
                 : t("portfolio.sync_euronext", "Sincronizza Euronext")}
             </button>
           )}
-          <button
-            onClick={() => setEditOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-400 hover:bg-sky-500/20 dark:text-sky-700"
-          >
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-            </svg>
-            {t("portfolio.edit_holding", "Modifica")}
-          </button>
+          {!isAggregated && !isClosed && (
+            <>
+              <button
+                onClick={() => openSingleExit(holding)}
+                className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 dark:text-amber-800"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <path d="M16 17l5-5-5-5" />
+                  <path d="M21 12H9" />
+                </svg>
+                {t("portfolio.register_exit", "Registra uscita")}
+              </button>
+              <button
+                onClick={() => setEditTarget(holding)}
+                className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-400 hover:bg-sky-500/20 dark:text-sky-700"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+                {t("portfolio.edit_holding", "Modifica")}
+              </button>
 
-          <button
-            onClick={() => setDeleteOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 dark:text-red-700"
-          >
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 6h18" />
-              <path d="M8 6V4h8v2" />
-              <path d="M19 6l-1 14H6L5 6" />
-            </svg>
-            {t("portfolio.delete", "Elimina")}
-          </button>
+              <button
+                onClick={() => setDeleteTarget({ id: holding.id, symbol: holding.asset_symbol })}
+                className="flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 dark:text-red-700"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4h8v2" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                </svg>
+                {t("portfolio.delete", "Elimina")}
+              </button>
+            </>
+          )}
+          {!isAggregated && isClosed && (
+            <span className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-300 dark:text-purple-800">
+              {t("portfolio.position_closed", "Posizione chiusa")}
+              {holding.closed_at ? ` · ${formatDate(holding.closed_at, locale)}` : ""}
+            </span>
+          )}
+          {isAggregated && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-600">
+                Modifica, uscite ed eliminazioni si gestiscono dalla tabella delle tranche
+              </span>
+              <button
+                onClick={startBulkExit}
+                className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 dark:text-amber-800"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <path d="M16 17l5-5-5-5" />
+                  <path d="M21 12H9" />
+                </svg>
+                {t("portfolio.sell_all_position", "Vendi tutta la posizione")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {isMatured && (
+        <div className="card border-amber-500/40 bg-amber-500/10 p-4 dark:border-amber-300 dark:bg-amber-50/60">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-amber-300 dark:text-amber-800">
+                {t("portfolio.maturity_due", "Obbligazione scaduta")}
+              </h2>
+              <p className="mt-1 text-xs text-slate-300 dark:text-slate-700">
+                {t(
+                  "portfolio.maturity_due_hint",
+                  "La scadenza è stata raggiunta. Registra il rimborso a scadenza per chiudere la posizione.",
+                )}{" "}
+                {holding.bond_detail?.maturity_date
+                  ? formatDate(holding.bond_detail.maturity_date, locale)
+                  : ""}
+              </p>
+            </div>
+            {isAggregated ? (
+              <span className="text-xs text-amber-300 dark:text-amber-800">
+                {t(
+                  "portfolio.maturity_due_tranches",
+                  "Registra il rimborso per ogni tranche dalla tabella sottostante.",
+                )}
+              </span>
+            ) : (
+              <button
+                onClick={() => openSingleExit(holding)}
+                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400"
+              >
+                {t("portfolio.register_maturity", "Registra rimborso a scadenza")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Header Title & Badges ─────────────────────────────────────────────── */}
       <div className="card p-6">
@@ -413,10 +567,27 @@ export function HoldingDetailPage() {
               <span className="rounded-md bg-teal-500/15 px-2 py-0.5 text-xs font-semibold uppercase text-teal-300 dark:text-teal-800">
                 {holding.instrument_type}
               </span>
-              {holding.eligible_for_bonus && (
-                <span className="rounded-md border border-teal-500/40 bg-teal-500/20 px-2 py-0.5 text-xs font-bold text-teal-300 dark:text-teal-800">
-                  CUM / Premio Fedeltà
+              {isAggregated && (
+                <span className="rounded-md border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-300 dark:text-sky-800">
+                  {trancheCount} tranche
                 </span>
+              )}
+              {isAggregated ? (
+                holding.all_eligible_for_bonus ? (
+                  <span className="rounded-md border border-teal-500/40 bg-teal-500/20 px-2 py-0.5 text-xs font-bold text-teal-300 dark:text-teal-800">
+                    CUM / Premio Fedeltà su tutte le tranche
+                  </span>
+                ) : holding.has_eligible_for_bonus ? (
+                  <span className="rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300 dark:text-amber-800">
+                    CUM solo su alcune tranche
+                  </span>
+                ) : null
+              ) : (
+                holding.eligible_for_bonus && (
+                  <span className="rounded-md border border-teal-500/40 bg-teal-500/20 px-2 py-0.5 text-xs font-bold text-teal-300 dark:text-teal-800">
+                    CUM / Premio Fedeltà
+                  </span>
+                )
               )}
             </div>
             <p className="mt-1.5 text-base text-slate-300 dark:text-slate-700">{holding.asset_name}</p>
@@ -459,6 +630,7 @@ export function HoldingDetailPage() {
               : Number(holding.quantity).toLocaleString(locale, { maximumFractionDigits: 4 })}
           </div>
           <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
+            {isAggregated ? `${trancheCount} tranche · ` : ""}
             Controvalore di Carico: {formatMoney(holding.cost_basis, holding.asset_currency)}
           </div>
         </div>
@@ -781,7 +953,11 @@ export function HoldingDetailPage() {
                 Future Cedole & Flussi di Cassa del Titolo
               </h2>
               <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
-                Scadenzario dei flussi finanziari futuri calcolati esclusivamente per questa posizione ({Number(holding.quantity).toLocaleString(locale)} € nominali).
+                Scadenzario dei flussi finanziari futuri{" "}
+                {isAggregated
+                  ? `consolidati per tutte le ${trancheCount} tranche`
+                  : "calcolati per questa posizione"}{" "}
+                ({Number(holding.quantity).toLocaleString(locale)} € nominali totali).
               </p>
             </div>
 
@@ -897,24 +1073,269 @@ export function HoldingDetailPage() {
         </div>
       )}
 
+      {/* ── Tranche Breakdown (aggregated view only) ─────────────────────────── */}
+      {isAggregated && (
+        <div className="card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 p-5 dark:border-slate-200">
+            <div>
+              <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
+                Tranche della Posizione
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
+                Dettaglio delle {trancheCount} tranche che compongono questa posizione. I totali sopra sono la loro somma.
+              </p>
+            </div>
+            <span className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 dark:bg-slate-100 dark:text-slate-800">
+              {trancheCount} tranche
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-700 bg-slate-850 text-xs uppercase text-slate-400 dark:border-slate-300 dark:bg-slate-50 dark:text-slate-600">
+                  <th className="p-3">#</th>
+                  <th className="p-3">Data Ingresso</th>
+                  <th className="p-3 text-right">{isBond ? "Nominale" : "Quantità"}</th>
+                  <th className="p-3 text-right">Prezzo di Carico</th>
+                  <th className="p-3 text-right">Rateo Acquisto</th>
+                  <th className="p-3 text-right">Valore Mercato</th>
+                  <th className="p-3 text-right">Rendimento</th>
+                  <th className="p-3 text-center">CUM</th>
+                  <th className="p-3 text-right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tranches.map((tr, idx) => (
+                  <tr
+                    key={tr.id}
+                    className="border-b border-slate-850 hover:bg-slate-800/40 dark:border-slate-100 dark:hover:bg-slate-50"
+                  >
+                    <td className="p-3 font-mono text-slate-400 dark:text-slate-600">#{idx + 1}</td>
+                    <td className="p-3 font-mono text-slate-200 dark:text-slate-900">
+                      {formatDate(tr.entry_date, locale)}
+                    </td>
+                    <td className="p-3 text-right font-mono text-slate-200 dark:text-slate-900">
+                      {isBond
+                        ? `${Number(tr.quantity).toLocaleString(locale)} €`
+                        : Number(tr.quantity).toLocaleString(locale, { maximumFractionDigits: 4 })}
+                    </td>
+                    <td className="p-3 text-right font-mono text-amber-300 dark:text-amber-800">
+                      {isBond
+                        ? `${formatNumber(tr.avg_cost, { minDecimals: 2, maxDecimals: 2, locale })}%`
+                        : formatMoney(tr.avg_cost, tr.asset_currency, locale)}
+                    </td>
+                    <td className="p-3 text-right font-mono text-slate-400 dark:text-slate-600">
+                      {asNumber(tr.accrued_interest_in) > 0
+                        ? `+${formatNumber(tr.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%`
+                        : "—"}
+                    </td>
+                    <td className="p-3 text-right font-mono text-slate-200 dark:text-slate-900">
+                      {formatMoney(tr.market_value, tr.asset_currency, locale)}
+                    </td>
+                    <td className={`p-3 text-right font-mono font-semibold ${colorForPct(tr.return_pct)}`}>
+                      {formatMoney(tr.return_value, tr.asset_currency, locale)} ({formatPct(tr.return_pct, 2, locale)})
+                    </td>
+                    <td className="p-3 text-center">
+                      {tr.eligible_for_bonus ? (
+                        <span className="rounded bg-teal-500/20 px-1.5 py-0.5 text-[10px] font-bold text-teal-300 dark:text-teal-800">
+                          SÌ
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">—</span>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex justify-end gap-1.5">
+                        {asNumber(tr.quantity) > 0 && (
+                          <button
+                            onClick={() => openSingleExit(tr)}
+                            className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-1.5 text-amber-400 hover:bg-amber-500/20 dark:text-amber-800"
+                            title={t("portfolio.register_exit", "Registra uscita")}
+                          >
+                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                              <path d="M16 17l5-5-5-5" />
+                              <path d="M21 12H9" />
+                            </svg>
+                          </button>
+                        )}
+                        {asNumber(tr.quantity) > 0 && (
+                          <button
+                            onClick={() => setEditTarget(tr)}
+                            className="rounded-lg border border-sky-500/40 bg-sky-500/10 p-1.5 text-sky-400 hover:bg-sky-500/20 dark:text-sky-700"
+                            title={t("portfolio.edit_holding", "Modifica")}
+                          >
+                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                            </svg>
+                          </button>
+                        )}
+                        {asNumber(tr.quantity) > 0 && (
+                          <button
+                            onClick={() => setDeleteTarget({ id: tr.id, symbol: tr.asset_symbol })}
+                            className="rounded-lg border border-red-500/40 bg-red-500/10 p-1.5 text-red-400 hover:bg-red-500/20 dark:text-red-700"
+                            title={t("portfolio.delete", "Elimina")}
+                          >
+                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M3 6h18" />
+                              <path d="M8 6V4h8v2" />
+                              <path d="M19 6l-1 14H6L5 6" />
+                            </svg>
+                          </button>
+                        )}
+                        {asNumber(tr.quantity) <= 0 && (
+                          <span className="text-[11px] text-purple-300 dark:text-purple-800">
+                            {t("portfolio.position_closed", "Chiusa")}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Exit History ─────────────────────────────────────────────────────── */}
+      {exitHistory && exitHistory.length > 0 && (
+        <div className="card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 p-5 dark:border-slate-200">
+            <div>
+              <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
+                {t("portfolio.exit_history", "Uscite registrate")}
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
+                {t(
+                  "portfolio.exit_history_hint",
+                  "Vendite a mercato, rimborsi a scadenza e rimborsi anticipati dell'emittente.",
+                )}
+              </p>
+            </div>
+            <span className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 dark:bg-slate-100 dark:text-slate-800">
+              {exitHistory.length} {t("portfolio.exit_count", "uscite")}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-700 bg-slate-850 text-xs uppercase text-slate-400 dark:border-slate-300 dark:bg-slate-50 dark:text-slate-600">
+                  <th className="p-3">{t("portfolio.exit_col_date", "Data")}</th>
+                  <th className="p-3">{t("portfolio.exit_col_type", "Tipo")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_quantity", "Quantità")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_price", "Prezzo")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_net", "Incasso netto")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_pnl", "P&L realizzato")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_taxes", "Tasse")}</th>
+                  <th className="p-3">{t("portfolio.exit_col_notes", "Note")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_actions", "Azioni")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {exitHistory.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-b border-slate-850 hover:bg-slate-800/40 dark:border-slate-100 dark:hover:bg-slate-50"
+                  >
+                    <td className="p-3 font-mono text-slate-200 dark:text-slate-900">
+                      {formatDate(item.exit_date, locale)}
+                    </td>
+                    <td className="p-3">
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                          item.exit_type === "maturity"
+                            ? "bg-purple-500/20 text-purple-300 dark:text-purple-800"
+                            : item.exit_type === "early_redemption"
+                              ? "bg-amber-500/20 text-amber-300 dark:text-amber-800"
+                              : "bg-teal-500/20 text-teal-300 dark:text-teal-800"
+                        }`}
+                      >
+                        {exitTypeLabel(item.exit_type)}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right font-mono text-slate-200 dark:text-slate-900">
+                      {formatNumber(item.quantity, { minDecimals: 0, maxDecimals: 6, locale })}
+                    </td>
+                    <td className="p-3 text-right font-mono text-slate-200 dark:text-slate-900">
+                      {isBond
+                        ? `${formatNumber(item.clean_price, { minDecimals: 2, maxDecimals: 2, locale })}%`
+                        : formatMoney(item.clean_price, item.currency, locale)}
+                    </td>
+                    <td className="p-3 text-right font-mono font-semibold text-teal-300 dark:text-teal-800">
+                      {formatMoney(item.net_proceeds, item.currency, locale)}
+                    </td>
+                    <td className={`p-3 text-right font-mono font-semibold ${colorForPct(item.realized_pnl)}`}>
+                      {formatMoney(item.realized_pnl, item.currency, locale)}
+                    </td>
+                    <td className="p-3 text-right font-mono text-slate-400 dark:text-slate-600">
+                      {formatMoney(item.taxes, item.currency, locale)}
+                    </td>
+                    <td className="p-3 max-w-[220px] truncate text-xs text-slate-400 dark:text-slate-600">
+                      {item.notes || "—"}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => setExitToDelete(item)}
+                          className="rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 dark:text-red-700"
+                        >
+                          {t("portfolio.exit_undo", "Annulla")}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ── Modals ───────────────────────────────────────────────────────────── */}
       <HoldingEditFormModal
-        open={editOpen}
-        holding={holding}
-        onClose={() => setEditOpen(false)}
+        open={editTarget !== null}
+        holding={editTarget}
+        onClose={() => setEditTarget(null)}
         onUpdated={() => {
           refetchDetail();
           queryClient.invalidateQueries({ queryKey: ["portfolio"] });
         }}
       />
 
-      {deleteOpen && (
+      <HoldingExitModal
+        key={`${exitTarget?.id ?? "exit-modal"}-${bulkExitMode ? "bulk" : "single"}`}
+        open={exitTarget !== null}
+        holding={exitTarget}
+        maturityDate={holding.bond_detail?.maturity_date ?? null}
+        bulk={bulkExitMode}
+        onClose={() => {
+          setExitTarget(null);
+          setBulkExitMode(false);
+        }}
+        onDone={handleExitDone}
+      />
+
+      {deleteTarget && (
         <ConfirmModal
-          message={`Sei sicuro di voler eliminare la partecipazione di ${holding.asset_symbol}?`}
+          message={`Sei sicuro di voler eliminare la tranche di ${deleteTarget.symbol}?`}
           confirmLabel={t("portfolio.delete", "Elimina")}
-          onConfirm={() => deleteMutation.mutate()}
-          onCancel={() => setDeleteOpen(false)}
+          onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+          onCancel={() => setDeleteTarget(null)}
           isPending={deleteMutation.isPending}
+        />
+      )}
+
+      {exitToDelete && (
+        <ConfirmModal
+          message={`Annullare l'uscita del ${formatDate(exitToDelete.exit_date, locale)} per ${exitToDelete.asset_symbol}? La quantità verrà ripristinata.`}
+          confirmLabel={t("portfolio.exit_undo", "Annulla uscita")}
+          onConfirm={() => deleteExitMutation.mutate(exitToDelete.id)}
+          onCancel={() => setExitToDelete(null)}
+          isPending={deleteExitMutation.isPending}
         />
       )}
     </div>
