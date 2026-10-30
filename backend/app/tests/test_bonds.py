@@ -705,3 +705,97 @@ def test_euronext_bond_rate_normalization_and_step_up(monkeypatch):
         {"from_year": 1, "to_year": 3, "rate": 3.25},
         {"from_year": 4, "to_year": 6, "rate": 4.0},
     ]
+
+
+def test_sync_asset_and_holding_euronext(db, monkeypatch):
+    from app.models import User, Account, Asset, Holding, BondDetail
+    from app.api.assets import sync_asset_euronext
+    from app.api.portfolio import holding_sync_euronext
+
+    user = User(email="test_sync@example.com", username="test_sync", hashed_password="pw")
+    db.add(user)
+    db.commit()
+
+    account = Account(user_id=user.id, name="Test BTP Account")
+    db.add(account)
+    db.commit()
+
+    # Create asset with old buggy bond_detail (quarterly rate 0.838)
+    asset = Asset(
+        user_id=user.id,
+        symbol="IT0005594483",
+        name="BTPVAL SC MG30EUR",
+        isin="IT0005594483",
+        instrument_type="bond",
+        exchange="MOT",
+        currency="EUR",
+    )
+    db.add(asset)
+    db.commit()
+
+    bd = BondDetail(
+        asset_id=asset.id,
+        bond_type="step_up",
+        issue_date=date(2024, 5, 14),
+        maturity_date=date(2030, 5, 14),
+        coupon_frequency=4,
+        annual_coupon_rate=Decimal("0.8380"),
+        step_up_schedule=[
+            {"from_year": 1, "to_year": 3, "rate": 0.838},
+            {"from_year": 4, "to_year": 5, "rate": 1.588},
+        ],
+        final_bonus_rate=Decimal("0.8000"),
+        tax_rate=Decimal("12.50"),
+    )
+    db.add(bd)
+    db.commit()
+
+    holding = Holding(
+        user_id=user.id,
+        account_id=account.id,
+        asset_id=asset.id,
+        quantity=Decimal("15000"),
+        avg_cost=Decimal("100"),
+        entry_date=date(2024, 5, 14),
+        exit_date=date(2030, 5, 14),
+        eligible_for_bonus=True,
+    )
+    db.add(holding)
+    db.commit()
+
+    # Mock euronext fetch
+    mock_data = {
+        "symbol": "IT0005594483",
+        "name": "BTPVAL SC MG30EUR",
+        "isin": "IT0005594483",
+        "instrument_type": "bond",
+        "exchange": "MOT",
+        "currency": "EUR",
+        "live_price": Decimal("99.59"),
+        "bond_detail": {
+            "bond_type": "step_up",
+            "issue_date": date(2024, 5, 14),
+            "maturity_date": date(2030, 5, 14),
+            "coupon_frequency": 4,
+            "annual_coupon_rate": Decimal("3.35"),
+            "step_up_schedule": [
+                {"from_year": 1, "to_year": 3, "rate": 3.35},
+                {"from_year": 4, "to_year": 6, "rate": 3.90},
+            ],
+            "final_bonus_rate": Decimal("0.8000"),
+            "tax_rate": Decimal("12.50"),
+            "day_count_convention": "ACT/ACT ICMA",
+        },
+    }
+    monkeypatch.setattr("app.services.euronext.fetch_euronext_bond_details", lambda q: mock_data)
+
+    # 1. Test sync_asset_euronext
+    res_asset = sync_asset_euronext(asset_id=asset.id, db=db, current_user=user)
+    assert res_asset.bond_detail.annual_coupon_rate == Decimal("3.3500")
+    assert res_asset.bond_detail.step_up_schedule[1]["to_year"] == 6
+
+    # 2. Test holding_sync_euronext
+    res_holding = holding_sync_euronext(holding_id=holding.id, db=db, current_user=user)
+    assert res_holding.nominal_yield == Decimal("3.35")
+    assert res_holding.bond_detail.annual_coupon_rate == Decimal("3.3500")
+    assert res_holding.ytm_gross > Decimal("3.5")

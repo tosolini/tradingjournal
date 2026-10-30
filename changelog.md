@@ -2,6 +2,11 @@
 
 ## [0.2.0] - 2026-10-30
 
+- Bond Rate Healing & Euronext MOT Re-Sync
+  - Added Alembic migration `20261030_0015_fix_periodic_bond_rates` to automatically heal existing database records storing quarterly/semiannual periodic rates instead of annualized coupon rates.
+  - Fixed BTP Valore step-up schedules and normalized coupons to the nearest 0.05% across factsheets.
+  - Added Euronext sync endpoints (`POST /api/assets/{id}/sync-euronext` and `POST /api/portfolio/holdings/{id}/sync-euronext`) to re-fetch live characteristics and prices on demand.
+  - Frontend: added "Sincronizza Euronext" button on holding details, quick sync button in assets table, and enabled Euronext lookup during asset editing.
 - Dashboard Equity Chart Asset Filtering
   - Added dedicated asset class filtering on the Dashboard equity chart panel with three interactive modes:
     - `Cumulato` / `Combined`: shows total portfolio equity and nominal cost curves combining both long-term holdings (ETFs & bonds) and stock trading positions.

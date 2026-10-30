@@ -584,6 +584,10 @@ export function deleteAsset(id: number): Promise<void> {
   return api(`/api/assets/${id}`, { method: "DELETE" });
 }
 
+export function syncAssetEuronext(id: number | string): Promise<Asset> {
+  return api(`/api/assets/${id}/sync-euronext`, { method: "POST" });
+}
+
 // ── Accounts ────────────────────────────────────────
 export function fetchAccounts(): Promise<Account[]> {
   return api("/api/accounts");
@@ -689,6 +693,10 @@ export function fetchHoldingPriceHistory(holdingId: number | string): Promise<Ho
 
 export function fetchHoldingCalendar(holdingId: number | string): Promise<BondCalendarItem[]> {
   return api(`/api/portfolio/holdings/${holdingId}/calendar`);
+}
+
+export function syncHoldingEuronext(holdingId: number | string): Promise<HoldingSingleDetail> {
+  return api(`/api/portfolio/holdings/${holdingId}/sync-euronext`, { method: "POST" });
 }
 
 // ── Tickers ─────────────────────────────────────────

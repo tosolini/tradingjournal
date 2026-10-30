@@ -964,7 +964,11 @@
     "flow_redemption": "Capital Redemption",
     "view_detail": "View full detail",
     "holding_deleted": "Holding deleted successfully",
-    "holding_updated": "Holding updated successfully"
+    "holding_updated": "Holding updated successfully",
+    "sync_euronext": "Sync Euronext",
+    "sync_euronext_loading": "Syncing...",
+    "sync_euronext_success": "Bond details successfully synced from Euronext",
+    "sync_euronext_title": "Update coupon schedule and live price from Euronext MOT"
   },
   "assets": {
     "title": "Asset Registry",
@@ -1026,7 +1030,9 @@
     "euronext_import_placeholder": "Paste Euronext URL or ISIN (e.g. IT0005611741)",
     "euronext_import_btn": "Import Live Data",
     "euronext_import_success": "Bond details successfully imported from Euronext!",
-    "euronext_import_loading": "Fetching live data..."
+    "euronext_import_loading": "Fetching live data...",
+    "sync_euronext": "Sync with Euronext",
+    "sync_euronext_success": "Bond details successfully updated from Euronext"
   },
   "help": {
     "nav": {

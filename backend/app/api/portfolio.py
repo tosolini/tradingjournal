@@ -204,3 +204,54 @@ def holding_calendar(
 
     items.sort(key=lambda x: x.date)
     return items
+
+
+@router.post("/holdings/{holding_id}/sync-euronext", response_model=HoldingSingleDetailResponse)
+def holding_sync_euronext(
+    holding_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy.orm import joinedload
+    from app.models import BondDetail
+
+    h = db.execute(
+        select(Holding)
+        .options(joinedload(Holding.asset).joinedload(Asset.bond_detail))
+        .where(Holding.id == holding_id, Holding.user_id == current_user.id)
+    ).scalars().first()
+    if not h:
+        raise HTTPException(status_code=404, detail="Holding not found")
+
+    query = (h.asset.isin if h.asset else None) or (h.asset.symbol if h.asset else None)
+    if not query:
+        raise HTTPException(status_code=400, detail="Asset has no ISIN or symbol for Euronext lookup")
+
+    from app.services.euronext import fetch_euronext_bond_details
+    try:
+        data = fetch_euronext_bond_details(query)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore Euronext: {e}")
+
+    bd_data = data.get("bond_detail")
+    if not bd_data:
+        raise HTTPException(status_code=400, detail="Nessun dato obbligazionario trovato su Euronext")
+
+    if not h.asset.bond_detail:
+        h.asset.bond_detail = BondDetail(asset_id=h.asset.id)
+
+    for k, v in bd_data.items():
+        setattr(h.asset.bond_detail, k, v)
+
+    if data.get("name") and (not h.asset.name or h.asset.name.startswith("BTP ")):
+        h.asset.name = data["name"]
+    if data.get("exchange") and not h.asset.exchange:
+        h.asset.exchange = data["exchange"]
+
+    h.asset.instrument_type = "bond"
+
+    db.commit()
+    db.refresh(h)
+
+    detail = get_single_holding_detail(db, current_user.id, holding_id)
+    return detail

@@ -223,16 +223,28 @@ def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
         quarterly_annual = raw_rate * Decimal("4")
         step_005 = Decimal("0.05")
         nearest = (quarterly_annual / step_005).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * step_005
-        if abs(quarterly_annual - nearest) <= Decimal("0.01"):
+        if abs(quarterly_annual - nearest) <= Decimal("0.02"):
             annual_coupon_rate = nearest
         else:
             annual_coupon_rate = quarterly_annual.quantize(Decimal("0.0001"))
     elif coupon_frequency == 4 and Decimal("0") < raw_rate < Decimal("2.0"):
         # Periodic quarterly coupon reported instead of annual
-        annual_coupon_rate = (raw_rate * Decimal("4")).quantize(Decimal("0.0001"))
+        quarterly_annual = raw_rate * Decimal("4")
+        step_005 = Decimal("0.05")
+        nearest = (quarterly_annual / step_005).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * step_005
+        if abs(quarterly_annual - nearest) <= Decimal("0.02"):
+            annual_coupon_rate = nearest
+        else:
+            annual_coupon_rate = quarterly_annual.quantize(Decimal("0.0001"))
     elif coupon_frequency == 2 and Decimal("0") < raw_rate < Decimal("2.0"):
         # Periodic semiannual coupon reported instead of annual
-        annual_coupon_rate = (raw_rate * Decimal("2")).quantize(Decimal("0.0001"))
+        semiannual_annual = raw_rate * Decimal("2")
+        step_005 = Decimal("0.05")
+        nearest = (semiannual_annual / step_005).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * step_005
+        if abs(semiannual_annual - nearest) <= Decimal("0.02"):
+            annual_coupon_rate = nearest
+        else:
+            annual_coupon_rate = semiannual_annual.quantize(Decimal("0.0001"))
     else:
         annual_coupon_rate = raw_rate
 
