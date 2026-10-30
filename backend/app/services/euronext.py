@@ -2,7 +2,7 @@ import base64
 import binascii
 import csv
 from datetime import date, datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 import hashlib
 import io
 import json
@@ -16,6 +16,12 @@ from typing import Any, Optional
 from bs4 import BeautifulSoup
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+from app.services.bond_rates import (
+    PERIODIC_RATE_MAX,
+    annualize_periodic_rate,
+    extract_rate_from_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +85,14 @@ def _parse_dmy_date(d_str: str) -> Optional[date]:
         return dt.date()
     except Exception:
         return None
+
+
+def _add_years(value: date, years: int) -> date:
+    """Add years to a date, clamping 29 February on non-leap target years."""
+    try:
+        return value.replace(year=value.year + years)
+    except ValueError:
+        return value.replace(year=value.year + years, day=28)
 
 
 def fetch_euronext_live_price(isin: str, mic: str = "MOTX") -> Optional[Decimal]:
@@ -211,40 +225,19 @@ def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
         raw_rate = Decimal("0.0000")
 
     # 1. Detect annual rate from title/name if available (e.g. "BTP TF 3,85% DC29" -> 3.85%, "BTP 4.3% OCT54 EUR" -> 4.30%)
-    name_rate_match = re.search(r'\b(\d{1,3}(?:[.,]\d{1,4})?)\s*%', clean_name)
-    if name_rate_match:
-        try:
-            annual_coupon_rate = Decimal(name_rate_match.group(1).replace(",", "."))
-        except Exception:
-            annual_coupon_rate = raw_rate
+    name_rate = extract_rate_from_name(clean_name)
+    if name_rate is not None:
+        annual_coupon_rate = name_rate
     elif is_btp_valore:
         # Euronext reports the quarterly coupon rate (e.g. 0.812% for 3.25% annual or 0.8375% for 3.35%)
         # Multiply by 4 to get annual coupon rate, rounding to nearest 0.05%
-        quarterly_annual = raw_rate * Decimal("4")
-        step_005 = Decimal("0.05")
-        nearest = (quarterly_annual / step_005).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * step_005
-        if abs(quarterly_annual - nearest) <= Decimal("0.02"):
-            annual_coupon_rate = nearest
-        else:
-            annual_coupon_rate = quarterly_annual.quantize(Decimal("0.0001"))
-    elif coupon_frequency == 4 and Decimal("0") < raw_rate < Decimal("2.0"):
+        annual_coupon_rate = annualize_periodic_rate(raw_rate, 4)
+    elif coupon_frequency == 4 and Decimal("0") < raw_rate < PERIODIC_RATE_MAX:
         # Periodic quarterly coupon reported instead of annual
-        quarterly_annual = raw_rate * Decimal("4")
-        step_005 = Decimal("0.05")
-        nearest = (quarterly_annual / step_005).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * step_005
-        if abs(quarterly_annual - nearest) <= Decimal("0.02"):
-            annual_coupon_rate = nearest
-        else:
-            annual_coupon_rate = quarterly_annual.quantize(Decimal("0.0001"))
-    elif coupon_frequency == 2 and Decimal("0") < raw_rate < Decimal("2.0"):
+        annual_coupon_rate = annualize_periodic_rate(raw_rate, 4, snap=False)
+    elif coupon_frequency == 2 and Decimal("0") < raw_rate < PERIODIC_RATE_MAX:
         # Periodic semiannual coupon reported instead of annual
-        semiannual_annual = raw_rate * Decimal("2")
-        step_005 = Decimal("0.05")
-        nearest = (semiannual_annual / step_005).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * step_005
-        if abs(semiannual_annual - nearest) <= Decimal("0.02"):
-            annual_coupon_rate = nearest
-        else:
-            annual_coupon_rate = semiannual_annual.quantize(Decimal("0.0001"))
+        annual_coupon_rate = annualize_periodic_rate(raw_rate, 2, snap=False)
     else:
         annual_coupon_rate = raw_rate
 
@@ -253,7 +246,7 @@ def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
     maturity_date = _parse_dmy_date(raw_data.get("Repayment date", ""))
     if not maturity_date:
         # Fallback if Repayment date is missing: estimate from issue date + 5 years
-        maturity_date = (issue_date or date.today()).replace(year=(issue_date or date.today()).year + 5)
+        maturity_date = _add_years(issue_date or date.today(), 5)
 
     # Bond structure
     if is_btp_valore:
@@ -310,6 +303,52 @@ def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
             "day_count_convention": "ACT/ACT ICMA",
         },
     }
+
+
+BOND_INSTRUMENT_TYPES = {"bond", "government_bond"}
+
+
+class EuronextSyncError(Exception):
+    """Raised when an asset cannot be synchronized from Euronext."""
+
+
+def apply_euronext_bond_data(asset: Any) -> None:
+    """Fetch bond characteristics from Euronext and apply them to ``asset``.
+
+    Shared by the asset and holding sync endpoints. The caller owns the
+    transaction (commit/rollback) and the response payload.
+    """
+    from app.models import BondDetail
+
+    instrument_type = (getattr(asset, "instrument_type", "") or "").strip().lower()
+    if instrument_type not in BOND_INSTRUMENT_TYPES:
+        raise EuronextSyncError(
+            "L'asset non è un'obbligazione: sincronizzazione Euronext non disponibile"
+        )
+
+    query = getattr(asset, "isin", None) or getattr(asset, "symbol", None)
+    if not query:
+        raise EuronextSyncError("Asset has no ISIN or symbol for Euronext lookup")
+
+    try:
+        data = fetch_euronext_bond_details(query)
+    except Exception as e:
+        raise EuronextSyncError(f"Errore Euronext: {e}") from e
+
+    bd_data = data.get("bond_detail")
+    if not bd_data:
+        raise EuronextSyncError("Nessun dato obbligazionario trovato su Euronext")
+
+    if not asset.bond_detail:
+        asset.bond_detail = BondDetail(asset_id=asset.id)
+
+    for key, value in bd_data.items():
+        setattr(asset.bond_detail, key, value)
+
+    if data.get("name") and (not asset.name or asset.name.startswith("BTP ")):
+        asset.name = data["name"]
+    if data.get("exchange") and not asset.exchange:
+        asset.exchange = data["exchange"]
 
 
 EURONEXT_MARKETS: dict[str, dict[str, Any]] = {

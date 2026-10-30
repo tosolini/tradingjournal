@@ -1031,6 +1031,7 @@
     "euronext_import_btn": "Importa Dati Live",
     "euronext_import_success": "Dati obbligazione importati con successo da Euronext!",
     "euronext_import_loading": "Recupero dati live...",
+    "euronext_apply_btn": "Compila da Euronext",
     "sync_euronext": "Sincronizza con Euronext",
     "sync_euronext_success": "Dati obbligazione aggiornati con successo da Euronext"
   },

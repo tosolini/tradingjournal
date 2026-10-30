@@ -1031,6 +1031,7 @@
     "euronext_import_btn": "Import Live Data",
     "euronext_import_success": "Bond details successfully imported from Euronext!",
     "euronext_import_loading": "Fetching live data...",
+    "euronext_apply_btn": "Fill from Euronext",
     "sync_euronext": "Sync with Euronext",
     "sync_euronext_success": "Bond details successfully updated from Euronext"
   },

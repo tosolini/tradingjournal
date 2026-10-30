@@ -157,32 +157,11 @@ def sync_asset_euronext(
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    query = asset.isin or asset.symbol
-    if not query:
-        raise HTTPException(status_code=400, detail="Asset has no ISIN or symbol for Euronext lookup")
-
-    from app.services.euronext import fetch_euronext_bond_details
+    from app.services.euronext import EuronextSyncError, apply_euronext_bond_data
     try:
-        data = fetch_euronext_bond_details(query)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Errore Euronext: {e}")
-
-    bd_data = data.get("bond_detail")
-    if not bd_data:
-        raise HTTPException(status_code=400, detail="Nessun dato obbligazionario trovato su Euronext")
-
-    if not asset.bond_detail:
-        asset.bond_detail = BondDetail(asset_id=asset.id)
-
-    for k, v in bd_data.items():
-        setattr(asset.bond_detail, k, v)
-
-    if data.get("name") and (not asset.name or asset.name.startswith("BTP ")):
-        asset.name = data["name"]
-    if data.get("exchange") and not asset.exchange:
-        asset.exchange = data["exchange"]
-
-    asset.instrument_type = "bond"
+        apply_euronext_bond_data(asset)
+    except EuronextSyncError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     db.commit()
     db.refresh(asset)
