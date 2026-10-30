@@ -373,3 +373,51 @@ def test_dashboard_portfolio_history_forward_fills_stocks_on_weekends_and_market
     assert sun_pt["trades_value"] == 1050.0
     assert sun_pt["trades_cost"] == 1000.0
     assert sun_pt["value"] == 6050.0
+
+def test_portfolio_history_does_not_double_count_today_holdings(db, monkeypatch):
+    from app.api.portfolio import portfolio_history
+    from app.models import Asset, Holding
+
+    user = User(
+        email="today_holdings@example.com",
+        username="today_holdings",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    acc = Account(name="Investments", user_id=user.id, base_currency="EUR")
+    asset = Asset(user_id=user.id, symbol="SWDA.MI", name="MSCI World", instrument_type="etf")
+    db.add_all([acc, asset])
+    db.commit()
+    db.refresh(acc)
+    db.refresh(asset)
+
+    # Holding entered TODAY with cost 100 * 50 = 5000
+    today = date.today()
+    h = Holding(
+        user_id=user.id,
+        account_id=acc.id,
+        asset_id=asset.id,
+        quantity=Decimal("100"),
+        avg_cost=Decimal("50"),
+        entry_date=today,
+    )
+    db.add(h)
+    db.commit()
+
+    monkeypatch.setattr(
+        "app.services.portfolio.get_current_price",
+        lambda *_args, **_kwargs: Decimal("55"),
+    )
+
+    history = portfolio_history(db=db, current_user=user)
+    today_str = today.isoformat()
+    today_pt = next(p for p in history if p.date == today_str)
+
+    # Cost should be 5000.0, NOT double-counted to 10000.0
+    assert today_pt.cost == 5000.0
+    # Value should be 100 * 55 = 5500.0, NOT 5500 + 5000 = 10500.0
+    assert today_pt.value == 5500.0

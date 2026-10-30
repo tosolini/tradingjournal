@@ -1242,7 +1242,7 @@ export function PortfolioPage() {
                                 {t("portfolio.cum_badge", "CUM")}
                               </span>
                             ) : g.hasBonusEligible ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title="Alcune tranche con diritto al CUM">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title={t("portfolio.cum_partial_tooltip", "Alcune tranche con diritto al CUM")}>
                                 {t("portfolio.cum_partial", "CUM parz.")}
                               </span>
                             ) : null}
@@ -1524,7 +1524,7 @@ export function PortfolioPage() {
                                 {t("portfolio.cum_badge", "CUM")}
                               </span>
                             ) : g.hasBonusEligible ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title="Alcune tranche con diritto al CUM">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title={t("portfolio.cum_partial_tooltip", "Alcune tranche con diritto al CUM")}>
                                 {t("portfolio.cum_partial", "CUM parz.")}
                               </span>
                             ) : null}
@@ -1586,12 +1586,12 @@ export function PortfolioPage() {
                                 )}
                               </td>
                               <td className="p-2.5 text-slate-400 dark:text-slate-600 truncate max-w-[200px]">
-                                {tItem.entry_date} {asNumber(tItem.accrued_interest_in) > 0 ? `(Rateo: +${formatNumber(tItem.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%)` : ""}
+                                {tItem.entry_date} {asNumber(tItem.accrued_interest_in) > 0 ? ` (${t("portfolio.accrued_label", "Rateo")}: +${formatNumber(tItem.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%)` : ""}
                               </td>
                               <td className="p-2.5 text-right font-mono">
                                 {Number(tItem.quantity).toLocaleString(locale)} €
                               </td>
-                              <td className="p-2.5 text-right font-mono text-slate-400 dark:text-slate-600" title="Prezzo di carico (clean)">
+                              <td className="p-2.5 text-right font-mono text-slate-400 dark:text-slate-600" title={t("portfolio.clean_price_tooltip", "Prezzo di carico (clean)")}>
                                 {formatPrice(tItem.avg_cost, true, undefined, locale)}
                               </td>
                               <td className="p-2.5 text-right text-slate-400 dark:text-slate-600 font-mono text-[11px]">
