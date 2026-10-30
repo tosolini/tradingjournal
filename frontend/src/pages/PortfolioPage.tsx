@@ -33,12 +33,6 @@ function isBondInstrumentType(value: string | null | undefined): boolean {
   return ["bond", "government_bond", "titolo_di_stato"].includes((value || "").toLowerCase());
 }
 
-function exitTypeLabel(type: string): string {
-  if (type === "maturity") return "Rimborso a scadenza";
-  if (type === "early_redemption") return "Rimborso anticipato";
-  return "Vendita a mercato";
-}
-
 function EditIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1008,6 +1002,15 @@ export function HoldingEditFormModal({
 export function PortfolioPage() {
   const { t, i18n } = useTranslation();
   const locale = getNumberLocale(i18n.resolvedLanguage);
+  const exitTypeLabel = (type: string) => {
+    if (type === "maturity") {
+      return t("portfolio.exit_maturity", "Rimborso a scadenza");
+    }
+    if (type === "early_redemption") {
+      return t("portfolio.exit_early_redemption", "Rimborso anticipato emittente");
+    }
+    return t("portfolio.exit_market_sale", "Vendita a mercato");
+  };
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [addTrancheTarget, setAddTrancheTarget] = useState<{ accountId?: number; assetId?: number } | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});

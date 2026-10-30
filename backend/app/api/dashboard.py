@@ -206,32 +206,38 @@ def dashboard_kpis(
         std_rate = Decimal(str(broker.capital_gain_rate if broker else Decimal("26.00")))
         gov_rate = Decimal(str(broker.capital_gain_rate_gov if broker else Decimal("12.50")))
 
-        if mode == "year_end":
-            # Interest tax is withheld immediately; capital gain is deferred to year end.
-            immediate_tax += exit_event.interest_tax
-            if is_gov:
-                immediate_tax_gov += exit_event.interest_tax
-                year_end_gov_buckets[broker_id] += exit_event.realized_capital_gain
-                year_end_gov_rates[broker_id] = gov_rate
-            else:
-                immediate_tax_std += exit_event.interest_tax
-                year_end_std_buckets[broker_id] += exit_event.realized_capital_gain
-                year_end_std_rates[broker_id] = std_rate
-        else:
-            immediate_tax += exit_event.capital_gain_tax + exit_event.interest_tax
-            if is_gov:
-                immediate_tax_gov += exit_event.capital_gain_tax + exit_event.interest_tax
-            else:
-                immediate_tax_std += exit_event.capital_gain_tax + exit_event.interest_tax
-
-            if exit_event.realized_capital_gain < 0:
-                loss = abs(exit_event.realized_capital_gain)
-                loss_offset += loss
-                nominal_loss += loss
+        if exit_event.exit_date >= year_start.date():
+            if mode == "year_end":
+                # Interest tax is withheld immediately; capital gain is deferred to year end.
+                immediate_tax += exit_event.interest_tax
                 if is_gov:
-                    loss_offset_gov += loss
+                    immediate_tax_gov += exit_event.interest_tax
+                    year_end_gov_buckets[broker_id] += exit_event.realized_capital_gain
+                    year_end_gov_rates[broker_id] = gov_rate
                 else:
-                    loss_offset_std += loss
+                    immediate_tax_std += exit_event.interest_tax
+                    year_end_std_buckets[broker_id] += exit_event.realized_capital_gain
+                    year_end_std_rates[broker_id] = std_rate
+            else:
+                immediate_tax += exit_event.capital_gain_tax + exit_event.interest_tax
+                if is_gov:
+                    immediate_tax_gov += exit_event.capital_gain_tax + exit_event.interest_tax
+                else:
+                    immediate_tax_std += exit_event.capital_gain_tax + exit_event.interest_tax
+
+                if exit_event.realized_capital_gain < 0:
+                    loss = abs(exit_event.realized_capital_gain)
+                    nominal_loss += loss
+                    if is_gov:
+                        loss_offset_gov += loss
+                        # Italian tax rule: Gov bond loss weighted at (12.5 / 26) in standard basket
+                        weighted_factor = (
+                            (gov_rate / std_rate) if std_rate > 0 else Decimal("0.480769")
+                        )
+                        loss_offset += loss * weighted_factor
+                    else:
+                        loss_offset_std += loss
+                        loss_offset += loss
 
     realized += holding_realized
 

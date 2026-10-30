@@ -496,3 +496,67 @@ def test_bulk_exit_api_endpoints(db):
     )
     assert len(created) == 2
     assert {item.holding_id for item in created} == {item.id for item in holdings}
+
+
+def test_dashboard_exit_tax_uses_current_year_and_gov_loss_weight(db):
+    from app.api.dashboard import dashboard_kpis
+
+    user, _account, _asset, holdings = _create_bond_fixture(
+        db,
+        email="exit-tax-current-year@example.com",
+        holdings=[(Decimal("10000.00"), date(2024, 5, 14))],
+    )
+    exit_event = create_holding_exit(
+        db,
+        user.id,
+        holdings[0].id,
+        HoldingExitCreate(
+            exit_type="market_sale",
+            exit_date=date(2026, 10, 1),
+            clean_price=Decimal("98"),
+            accrued_interest_out=Decimal("0"),
+            coupons_received=Decimal("0"),
+            fees=Decimal("0"),
+        ),
+    )
+    assert exit_event is not None
+    assert exit_event.realized_capital_gain == Decimal("-200.00")
+
+    kpis = dashboard_kpis(db=db, current_user=user)
+    assert Decimal(kpis["capital_gain_loss_gov"]) == Decimal("200.00")
+    # 12.5 / 26 = 0.480769... => 200 * ratio = 96.15
+    assert Decimal(kpis["capital_gain_loss_offset"]) == Decimal("96.15")
+    assert Decimal(kpis["capital_gain_loss_standard"]) == Decimal("0.00")
+    assert Decimal(kpis["capital_gain_loss_nominal"]) == Decimal("200.00")
+
+
+def test_dashboard_exit_tax_ignores_prior_year_exits(db):
+    from app.api.dashboard import dashboard_kpis
+
+    user, _account, _asset, holdings = _create_bond_fixture(
+        db,
+        email="exit-tax-prior-year@example.com",
+        holdings=[(Decimal("10000.00"), date(2024, 5, 14))],
+    )
+    exit_event = create_holding_exit(
+        db,
+        user.id,
+        holdings[0].id,
+        HoldingExitCreate(
+            exit_type="market_sale",
+            exit_date=date(2025, 6, 1),
+            clean_price=Decimal("98"),
+            accrued_interest_out=Decimal("0"),
+            coupons_received=Decimal("0"),
+            fees=Decimal("0"),
+        ),
+    )
+    assert exit_event is not None
+
+    kpis = dashboard_kpis(db=db, current_user=user)
+    # All-time realized P&L still includes the prior-year exit.
+    assert Decimal(kpis["holding_realized_pnl"]) == Decimal("-200.00")
+    # Current-year tax KPIs must not include it.
+    assert Decimal(kpis["capital_gain_loss_gov"]) == Decimal("0.00")
+    assert Decimal(kpis["capital_gain_loss_offset"]) == Decimal("0.00")
+    assert Decimal(kpis["capital_gain_tax_estimate"]) == Decimal("0.00")

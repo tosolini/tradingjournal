@@ -41,12 +41,6 @@ function formatDate(dateStr: string | null | undefined, locale = "it-IT"): strin
   }
 }
 
-function exitTypeLabel(type: string): string {
-  if (type === "maturity") return "Rimborso a scadenza";
-  if (type === "early_redemption") return "Rimborso anticipato";
-  return "Vendita a mercato";
-}
-
 function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPriceHistory; locale?: string }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const { theme } = useTheme();
@@ -212,6 +206,15 @@ export function HoldingDetailPage() {
   const locale = getNumberLocale(i18n.resolvedLanguage);
   const queryClient = useQueryClient();
   const toast = useToast();
+  const exitTypeLabel = (type: string) => {
+    if (type === "maturity") {
+      return t("portfolio.exit_maturity", "Rimborso a scadenza");
+    }
+    if (type === "early_redemption") {
+      return t("portfolio.exit_early_redemption", "Rimborso anticipato emittente");
+    }
+    return t("portfolio.exit_market_sale", "Vendita a mercato");
+  };
 
   const [editTarget, setEditTarget] = useState<HoldingDetail | HoldingSingleDetail | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; symbol: string } | null>(null);
