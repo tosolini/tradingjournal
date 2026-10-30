@@ -25,23 +25,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import { AssetFormModal } from "./AssetsPage";
 import { QuickAccountModal } from "../components/QuickAccountModal";
-
-function asNumber(value: string | number | null | undefined): number {
-  if (value === undefined || value === null) return 0;
-  if (typeof value === "number") return value;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatMoney(value: string | number | null | undefined, currency?: string): string {
-  const n = asNumber(value);
-  const ccy = (currency || "EUR").trim().toUpperCase();
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: ccy }).format(n);
-  } catch {
-    return `${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${ccy}`;
-  }
-}
+import { cleanNumberInput, formatMoney, formatPct, getNumberLocale, parseLocaleNumber, parseLocaleNumber as asNumber } from "../lib/numbers";
 
 function EditIcon() {
   return (
@@ -64,10 +48,6 @@ function DeleteIcon() {
   );
 }
 
-function formatPct(value: string | number | null | undefined): string {
-  const n = asNumber(value);
-  return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
-}
 
 function colorForPct(value: string | number | null | undefined): string {
   const n = asNumber(value);
@@ -346,9 +326,9 @@ function BondRateoInput({
   const [localEur, setLocalEur] = useState("");
   const [localTotal, setLocalTotal] = useState("");
 
-  const nominal = Number(quantity) || 0;
-  const cleanPrice = Number(avgCost) || 0;
-  const currentAccruedPct = Number(accruedInterestIn) || 0;
+  const nominal = parseLocaleNumber(quantity);
+  const cleanPrice = parseLocaleNumber(avgCost);
+  const currentAccruedPct = parseLocaleNumber(accruedInterestIn);
 
   // Capital value (corso secco) = nominal * cleanPrice / 100
   const cleanCapital = nominal > 0 && cleanPrice > 0 ? (nominal * cleanPrice) / 100 : 0;
@@ -371,7 +351,7 @@ function BondRateoInput({
 
   const handleEurChange = (val: string) => {
     setLocalEur(val);
-    const parsedEur = Number(val.replace(",", "."));
+    const parsedEur = parseLocaleNumber(val);
     if (!isNaN(parsedEur) && nominal > 0) {
       const calculatedPct = (parsedEur / nominal) * 100;
       onChangeAccruedInterestIn(String(Number(calculatedPct.toFixed(6))));
@@ -382,7 +362,7 @@ function BondRateoInput({
 
   const handleTotalChange = (val: string) => {
     setLocalTotal(val);
-    const parsedTotal = Number(val.replace(",", "."));
+    const parsedTotal = parseLocaleNumber(val);
     if (!isNaN(parsedTotal) && nominal > 0) {
       const diffEur = parsedTotal - cleanCapital;
       const calculatedPct = (diffEur / nominal) * 100;
@@ -595,11 +575,11 @@ function HoldingFormModal({
       createHolding({
         account_id: Number(accountId),
         asset_id: Number(assetId),
-        quantity,
-        avg_cost: avgCost,
+        quantity: cleanNumberInput(quantity),
+        avg_cost: cleanNumberInput(avgCost),
         entry_date: entryDate,
         exit_date: exitDate || null,
-        accrued_interest_in: accruedInterestIn || "0",
+        accrued_interest_in: cleanNumberInput(accruedInterestIn) || "0",
         eligible_for_bonus: eligibleForBonus,
       }),
     onSuccess: () => {
@@ -862,11 +842,11 @@ export function HoldingEditFormModal({
   const updateMutation = useMutation({
     mutationFn: () =>
       updateHolding(holding!.id, {
-        quantity,
-        avg_cost: avgCost,
+        quantity: cleanNumberInput(quantity),
+        avg_cost: cleanNumberInput(avgCost),
         entry_date: entryDate,
         exit_date: exitDate || null,
-        accrued_interest_in: accruedInterestIn || "0",
+        accrued_interest_in: cleanNumberInput(accruedInterestIn) || "0",
         eligible_for_bonus: eligibleForBonus,
       }),
     onSuccess: () => {
@@ -963,7 +943,8 @@ export function HoldingEditFormModal({
 }
 
 export function PortfolioPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = getNumberLocale(i18n.resolvedLanguage);
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [addTrancheTarget, setAddTrancheTarget] = useState<{ accountId?: number; assetId?: number } | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});

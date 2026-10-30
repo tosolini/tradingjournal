@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Account, Broker, Ticker, Trade, api, tickersApi, tradeIdeasApi } from "../lib/api";
 import { INSTRUMENT_TYPES, detectIsGovernmentBond, estimateExecutionFee } from "../lib/fees";
 import { TradeModalPrefill } from "../lib/trade-modal-event";
+import { getNumberLocale, parseLocaleNumber } from "../lib/numbers";
 import { XIcon } from "./icons";
 import { QuickAccountModal } from "./QuickAccountModal";
 
@@ -374,8 +375,10 @@ function QuickTradeForm({ onClose, initialValues }: { onClose: () => void; initi
     queryFn: () => api<Broker[]>("/api/brokers"),
   });
 
-  const ep = parseFloat(entryPrice) || 0;
-  const qty = parseFloat(quantity) || 0;
+  const ep = parseLocaleNumber(entryPrice);
+  const qty = parseLocaleNumber(quantity);
+  const tpNum = parseLocaleNumber(takeProfit);
+  const slNum = parseLocaleNumber(stopLoss);
 
   const estimatedFee = useMemo(() => {
     if (!accounts?.length || !brokers?.length || !accountId || accountId <= 0 || !ep || !qty) return null;
@@ -392,8 +395,6 @@ function QuickTradeForm({ onClose, initialValues }: { onClose: () => void; initi
     });
   }, [accounts, brokers, accountId, ep, qty, selectedTicker]);
 
-  const tpNum = parseFloat(takeProfit) || 0;
-  const slNum = parseFloat(stopLoss) || 0;
   const tpPct = ep > 0 && tpNum > 0 ? ((tpNum - ep) / ep) * 100 : null;
   const slPct = ep > 0 && slNum > 0
     ? (direction === "long" ? ((ep - slNum) / ep) * 100 : ((slNum - ep) / ep) * 100)
@@ -764,9 +765,9 @@ export function TradeCreateModal({ open, onClose, initialValues }: Props) {
   }, []);
 
   // ── Derived values ──
-  const ep = parseFloat(st.entryPrice) || 0;
-  const qty = parseFloat(st.quantity) || 0;
-  const entryValueNum = parseFloat(st.entryValue) || 0;
+  const ep = parseLocaleNumber(st.entryPrice);
+  const qty = parseLocaleNumber(st.quantity);
+  const entryValueNum = parseLocaleNumber(st.entryValue);
 
   // Auto-compute quantity when in "value" mode
   const computedQty =
@@ -779,8 +780,8 @@ export function TradeCreateModal({ open, onClose, initialValues }: Props) {
   const displayQuantity = st.quantityMode === "value" ? computedQty : qty;
 
   // TP derived
-  const tpPriceNum = parseFloat(st.tpPrice) || 0;
-  const tpPercentNum = parseFloat(st.tpPercent) || 0;
+  const tpPriceNum = parseLocaleNumber(st.tpPrice);
+  const tpPercentNum = parseLocaleNumber(st.tpPercent);
   const computedTpPrice = st.tpMode === "percent" && ep > 0 ? ep * (1 + tpPercentNum / 100) : tpPriceNum;
   const computedTpPercent =
     st.tpMode === "price" && ep > 0 && tpPriceNum > 0
@@ -788,8 +789,8 @@ export function TradeCreateModal({ open, onClose, initialValues }: Props) {
       : tpPercentNum;
 
   // SL derived
-  const slPriceNum = parseFloat(st.slPrice) || 0;
-  const slPercentNum = parseFloat(st.slPercent) || 0;
+  const slPriceNum = parseLocaleNumber(st.slPrice);
+  const slPercentNum = parseLocaleNumber(st.slPercent);
   const computedSlPrice = st.slMode === "percent" && ep > 0 ? ep * (1 - slPercentNum / 100) : slPriceNum;
   const computedSlPercent =
     st.slMode === "price" && ep > 0 && slPriceNum > 0

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Asset, Ticker, createAsset, deleteAsset, fetchAssets, lookupBond, tickersApi, updateAsset } from "../lib/api";
+import { parseLocaleNumber } from "../lib/numbers";
 import { useToast } from "../contexts/ToastContext";
 
 const INSTRUMENT_TYPES = ["etf", "stock", "bond", "fund"];
@@ -222,9 +223,9 @@ export function AssetFormModal({
           issue_date: issueDate.trim() ? issueDate.trim() : null,
           maturity_date: maturityDate.trim(),
           coupon_frequency: Number(couponFrequency),
-          annual_coupon_rate: Number(annualCouponRate) || 0,
-          final_bonus_rate: Number(finalBonusRate) || 0,
-          tax_rate: Number(taxRate) || 12.5,
+          annual_coupon_rate: parseLocaleNumber(annualCouponRate),
+          final_bonus_rate: parseLocaleNumber(finalBonusRate),
+          tax_rate: parseLocaleNumber(taxRate) || 12.5,
           step_up_schedule: bondType === "step_up" ? stepUpSchedule : null,
           day_count_convention: "ACT/ACT ICMA",
         };

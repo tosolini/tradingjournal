@@ -209,3 +209,44 @@ def test_multiple_holdings_for_same_asset_allowed(db):
     # total cost = 10*100 + 20*110 = 1000 + 2200 = 3200
     assert summaries[0].total_cost == Decimal("3200.00")
     assert summaries[0].holdings_count == 2
+
+def test_locale_decimal_parsing_in_schemas():
+    from datetime import date
+    from decimal import Decimal
+    from app.schemas import HoldingCreate, ExecutionCreate, BondDetailCreate
+
+    # Comma decimal separator commonly used in Italy/Europe
+    hc = HoldingCreate(
+        account_id=1,
+        asset_id=1,
+        quantity="10,5",
+        avg_cost="98,50",
+        accrued_interest_in="0,45",
+        entry_date=date(2026, 1, 1),
+    )
+    assert hc.quantity == Decimal("10.5")
+    assert hc.avg_cost == Decimal("98.50")
+    assert hc.accrued_interest_in == Decimal("0.45")
+
+    # Execution with European format numbers
+    ec = ExecutionCreate(
+        action="BUY",
+        executed_at="2026-01-01T10:00:00Z",
+        quantity="1.250,5",
+        price="12,75",
+        fee="2,50",
+    )
+    assert ec.quantity == Decimal("1250.5")
+    assert ec.price == Decimal("12.75")
+    assert ec.fee == Decimal("2.50")
+
+    # Bond detail with coupon rate
+    bc = BondDetailCreate(
+        annual_coupon_rate="3,85",
+        final_bonus_rate="0,80",
+        tax_rate="12,50",
+        maturity_date=date(2030, 1, 1),
+    )
+    assert bc.annual_coupon_rate == Decimal("3.85")
+    assert bc.final_bonus_rate == Decimal("0.80")
+    assert bc.tax_rate == Decimal("12.50")

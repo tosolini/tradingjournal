@@ -1,9 +1,38 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
 
+
+def _parse_locale_decimal(v: Any) -> Any:
+    if isinstance(v, str):
+        cleaned = v.strip().replace(" ", "").replace("'", "")
+        if not cleaned:
+            return Decimal("0")
+        if "," in cleaned and "." in cleaned:
+            last_comma = cleaned.rfind(",")
+            last_dot = cleaned.rfind(".")
+            if last_comma > last_dot:
+                cleaned = cleaned.replace(".", "").replace(",", ".")
+            else:
+                cleaned = cleaned.replace(",", "")
+        elif "," in cleaned:
+            cleaned = cleaned.replace(",", ".")
+        return Decimal(cleaned)
+    return v
+
+
+def _parse_optional_locale_decimal(v: Any) -> Any:
+    if v is None:
+        return None
+    if isinstance(v, str) and not v.strip():
+        return None
+    return _parse_locale_decimal(v)
+
+
+LocaleDecimal = Annotated[Decimal, BeforeValidator(_parse_locale_decimal)]
+OptionalLocaleDecimal = Annotated[Optional[Decimal], BeforeValidator(_parse_optional_locale_decimal)]
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -115,7 +144,7 @@ class AccountResponse(BaseModel):
 class CashLedgerCreate(BaseModel):
     account_id: int
     entry_type: str  # "deposit" | "withdrawal" | "coupon" | "bond_bonus" | "bond_redemption" | "dividend"
-    amount: Decimal
+    amount: LocaleDecimal
     description: Optional[str] = None
     entry_date: Optional[date] = None
 
@@ -241,8 +270,8 @@ class TradeCreate(BaseModel):
     status: str = "open"
     strategy_name: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
-    target_price: Optional[Decimal] = None
-    stop_loss: Optional[Decimal] = None
+    target_price: OptionalLocaleDecimal = None
+    stop_loss: OptionalLocaleDecimal = None
     confidence_score: Optional[int] = None
     journal_notes: Optional[str] = None
 
@@ -258,8 +287,8 @@ class TradeUpdate(BaseModel):
     status: Optional[str] = None
     strategy_name: Optional[str] = None
     tags: Optional[list[str]] = None
-    target_price: Optional[Decimal] = None
-    stop_loss: Optional[Decimal] = None
+    target_price: OptionalLocaleDecimal = None
+    stop_loss: OptionalLocaleDecimal = None
     confidence_score: Optional[int] = None
     journal_notes: Optional[str] = None
 
@@ -299,9 +328,9 @@ class TradeResponse(BaseModel):
 class ExecutionCreate(BaseModel):
     action: str
     executed_at: datetime
-    quantity: Decimal
-    price: Decimal
-    fee: Decimal = Decimal("0")
+    quantity: LocaleDecimal
+    price: LocaleDecimal
+    fee: LocaleDecimal = Decimal("0")
     currency: str = "EUR"
     venue: Optional[str] = None
     note: Optional[str] = None
@@ -310,9 +339,9 @@ class ExecutionCreate(BaseModel):
 class ExecutionUpdate(BaseModel):
     action: Optional[str] = None
     executed_at: Optional[datetime] = None
-    quantity: Optional[Decimal] = None
-    price: Optional[Decimal] = None
-    fee: Optional[Decimal] = None
+    quantity: OptionalLocaleDecimal = None
+    price: OptionalLocaleDecimal = None
+    fee: OptionalLocaleDecimal = None
     currency: Optional[str] = None
     venue: Optional[str] = None
     note: Optional[str] = None
@@ -447,10 +476,10 @@ class BondDetailCreate(BaseModel):
     issue_date: date | None = None
     maturity_date: date
     coupon_frequency: int = 2
-    annual_coupon_rate: Decimal = Decimal("0")
+    annual_coupon_rate: LocaleDecimal = Decimal("0")
     step_up_schedule: list[dict[str, Any]] | None = None
-    final_bonus_rate: Decimal = Decimal("0")
-    tax_rate: Decimal = Decimal("12.50")
+    final_bonus_rate: LocaleDecimal = Decimal("0")
+    tax_rate: LocaleDecimal = Decimal("12.50")
     day_count_convention: str = "ACT/ACT ICMA"
 
 
@@ -459,10 +488,10 @@ class BondDetailUpdate(BaseModel):
     issue_date: date | None = None
     maturity_date: date | None = None
     coupon_frequency: int | None = None
-    annual_coupon_rate: Decimal | None = None
+    annual_coupon_rate: OptionalLocaleDecimal = None
     step_up_schedule: list[dict[str, Any]] | None = None
-    final_bonus_rate: Decimal | None = None
-    tax_rate: Decimal | None = None
+    final_bonus_rate: OptionalLocaleDecimal = None
+    tax_rate: OptionalLocaleDecimal = None
     day_count_convention: str | None = None
 
 
@@ -517,20 +546,20 @@ class AssetResponse(BaseModel):
 class HoldingCreate(BaseModel):
     account_id: int
     asset_id: int
-    quantity: Decimal
-    avg_cost: Decimal = Decimal("0")
+    quantity: LocaleDecimal
+    avg_cost: LocaleDecimal = Decimal("0")
     entry_date: date
     exit_date: date | None = None
-    accrued_interest_in: Decimal = Decimal("0")
+    accrued_interest_in: LocaleDecimal = Decimal("0")
     eligible_for_bonus: bool = False
 
 
 class HoldingUpdate(BaseModel):
-    quantity: Decimal | None = None
-    avg_cost: Decimal | None = None
+    quantity: OptionalLocaleDecimal = None
+    avg_cost: OptionalLocaleDecimal = None
     entry_date: date | None = None
     exit_date: date | None = None
-    accrued_interest_in: Decimal | None = None
+    accrued_interest_in: OptionalLocaleDecimal = None
     eligible_for_bonus: bool | None = None
 
 
@@ -734,11 +763,11 @@ class TradeIdeaCreate(BaseModel):
     symbol: str = Field(min_length=1, max_length=32)
     market: str = Field(default="Euronext", max_length=80)
     direction: str = Field(default="long", pattern="^(long|short)$")
-    initial_price: Optional[Decimal] = None
-    trigger_price: Decimal
+    initial_price: OptionalLocaleDecimal = None
+    trigger_price: LocaleDecimal
     trigger_condition: str = Field(default="<=", pattern="^(<=|>=)$")
-    stop_loss: Optional[Decimal] = None
-    target_price: Optional[Decimal] = None
+    stop_loss: OptionalLocaleDecimal = None
+    target_price: OptionalLocaleDecimal = None
     thesis_notes: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     stale_days: Optional[int] = Field(default=None, ge=1, le=365)
@@ -749,10 +778,10 @@ class TradeIdeaUpdate(BaseModel):
     symbol: Optional[str] = Field(default=None, min_length=1, max_length=32)
     market: Optional[str] = Field(default=None, max_length=80)
     direction: Optional[str] = Field(default=None, pattern="^(long|short)$")
-    trigger_price: Optional[Decimal] = None
+    trigger_price: OptionalLocaleDecimal = None
     trigger_condition: Optional[str] = Field(default=None, pattern="^(<=|>=)$")
-    stop_loss: Optional[Decimal] = None
-    target_price: Optional[Decimal] = None
+    stop_loss: OptionalLocaleDecimal = None
+    target_price: OptionalLocaleDecimal = None
     thesis_notes: Optional[str] = None
     tags: Optional[list[str]] = None
     stale_days: Optional[int] = Field(default=None, ge=1, le=365)
