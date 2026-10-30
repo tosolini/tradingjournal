@@ -3,7 +3,7 @@ import { AreaSeries, ColorType, LineSeries, createChart } from "lightweight-char
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../contexts/ThemeContext";
-import { AllAssetsPnlPoint, DashboardAllocation, DashboardKpis, MonthlyPnlPoint, TradeStat, WeeklyPnlPoint, dashboardKpis } from "../lib/api";
+import { AllAssetsPnlPoint, DashboardAllocation, DashboardKpis, MonthlyPnlPoint, PortfolioHistoryPoint, TradeStat, WeeklyPnlPoint, api, dashboardKpis } from "../lib/api";
 
 function asNumber(value: string | number | undefined): number {
   if (value === undefined) return 0;
@@ -12,7 +12,7 @@ function asNumber(value: string | number | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function formatMoney(value: string | number | undefined, currency?: string, locale = "en-US"): string {
+function formatMoney(value: string | number | undefined, currency?: string, locale = "it-IT"): string {
   const n = asNumber(value);
   const normalized = (currency || "").trim().toUpperCase();
   if (!normalized) return n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -26,15 +26,16 @@ function formatMoney(value: string | number | undefined, currency?: string, loca
   }
 }
 
-function formatSignedMoney(value: string | number | undefined, currency?: string, locale = "en-US"): string {
+function formatSignedMoney(value: string | number | undefined, currency?: string, locale = "it-IT"): string {
   const n = asNumber(value);
   const sign = n < 0 ? "-" : n > 0 ? "+" : "";
   return `${sign}${formatMoney(Math.abs(n), currency, locale)}`;
 }
 
-function formatPct(value: string | number | undefined): string {
+function formatPct(value: string | number | undefined, locale = "it-IT"): string {
   const n = asNumber(value);
-  return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+  const formatted = Math.abs(n).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${n >= 0 ? "+" : "-"}${formatted}%`;
 }
 
 function pnlTone(n: number): string {
@@ -88,7 +89,7 @@ function Panel({
   return (
     <section className={`card overflow-hidden fade-up ${className}`} style={{ animationDelay: `${delay}ms` }}>
       {(title || aside) && (
-        <header className="flex items-center justify-between gap-3 border-b border-slate-700/40 px-4 py-3 dark:border-slate-300/30">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/40 px-4 py-3 dark:border-slate-300/30">
           <h2 className="text-sm font-semibold text-slate-200 dark:text-slate-800">{title}</h2>
           {aside}
         </header>
@@ -100,20 +101,30 @@ function Panel({
 
 /* ─── Equity curve (lightweight-charts) ── */
 type RangeKey = "1M" | "3M" | "6M" | "1Y" | "ALL";
+export type ChartAssetFilter = "all" | "portfolio" | "trades";
 
 function EquityChartPanel({
   data,
   currency,
+  defaultFilter = "all",
 }: {
   data: DashboardKpis["portfolio_history"];
   currency?: string;
+  defaultFilter?: ChartAssetFilter;
 }) {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const ref = useRef<HTMLDivElement | null>(null);
   const [range, setRange] = useState<RangeKey>("ALL");
-  const [hoveredPoint, setHoveredPoint] = useState<DashboardKpis["portfolio_history"][number] | null>(null);
+  const [filter, setFilter] = useState<ChartAssetFilter>(defaultFilter);
+  const [hasUserChangedFilter, setHasUserChangedFilter] = useState(false);
+  const [hoveredPoint, setHoveredPoint] = useState<PortfolioHistoryPoint | null>(null);
 
+  useEffect(() => {
+    if (!hasUserChangedFilter) {
+      setFilter(defaultFilter);
+    }
+  }, [defaultFilter, hasUserChangedFilter]);
   const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
 
   const cutoff = (months: number): string => {
@@ -123,13 +134,37 @@ function EquityChartPanel({
     const dd = String(d.getDate()).padStart(2, "0");
     return `${d.getFullYear()}-${mm}-${dd}`;
   };
+  const mappedPoints = useMemo(() => {
+    return data.map((p) => {
+      let val = p.value;
+      let cst = p.cost;
+      if (filter === "portfolio") {
+        val = p.holdings_value ?? 0;
+        cst = p.holdings_cost ?? 0;
+      } else if (filter === "trades") {
+        val = p.trades_value ?? 0;
+        cst = p.trades_cost ?? 0;
+      }
+      return {
+        ...p,
+        value: val,
+        cost: cst,
+      };
+    });
+  }, [data, filter]);
+
+  // Trim leading zeros before any activity in the selected category
+  const activePoints = useMemo(() => {
+    if (filter === "all") return mappedPoints;
+    const firstActiveIdx = mappedPoints.findIndex((p) => p.value > 0 || (p.cost != null && p.cost > 0));
+    return firstActiveIdx === -1 ? [] : mappedPoints.slice(firstActiveIdx);
+  }, [mappedPoints, filter]);
 
   const visible = useMemo(() => {
-    if (!data.length) return data;
+    if (!activePoints.length) return activePoints;
     const from = range === "ALL" ? null : cutoff({ "1M": 1, "3M": 3, "6M": 6, "1Y": 12 }[range]);
-    return from ? data.filter((p) => p.date >= from) : data;
-  }, [data, range]);
-
+    return from ? activePoints.filter((p) => p.date >= from) : activePoints;
+  }, [activePoints, range]);
   useEffect(() => {
     if (!ref.current || visible.length < 2) return;
     const isDark = theme === "dark";
@@ -218,25 +253,81 @@ function EquityChartPanel({
     { key: "ALL", label: t("dashboard.range_all") },
   ];
 
+  const assetFilters: { key: ChartAssetFilter; label: string; description: string }[] = [
+    {
+      key: "all",
+      label: t("dashboard.filter_all"),
+      description: t("dashboard.filter_all_title"),
+    },
+    {
+      key: "portfolio",
+      label: t("dashboard.filter_portfolio"),
+      description: t("dashboard.filter_portfolio_title"),
+    },
+    {
+      key: "trades",
+      label: t("dashboard.filter_trades"),
+      description: t("dashboard.filter_trades_title"),
+    },
+  ];
+
   return (
     <Panel
       title={t("dashboard.equity")}
       className="xl:col-span-2"
       aside={
-        <div className="flex rounded-lg border border-slate-600/50 p-0.5 text-xs dark:border-slate-300/60">
-          {ranges.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setRange(r.key)}
-              className={`rounded-md px-2 py-1 transition ${
-                range === r.key
-                  ? "bg-teal-500 font-semibold text-slate-950"
-                  : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Asset filter selector */}
+          <div
+            className="flex rounded-lg border border-slate-600/50 p-0.5 text-xs dark:border-slate-300/60"
+            role="group"
+            aria-label={t("dashboard.filter_aria")}
+          >
+            {assetFilters.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => {
+                  setFilter(f.key);
+                  setHasUserChangedFilter(true);
+                  setHoveredPoint(null);
+                }}
+                title={f.description}
+                className={`rounded-md px-2.5 py-1 transition ${
+                  filter === f.key
+                    ? "bg-teal-500 font-semibold text-slate-950"
+                    : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Time range selector */}
+          <div
+            className="flex rounded-lg border border-slate-600/50 p-0.5 text-xs dark:border-slate-300/60"
+            role="group"
+            aria-label={t("dashboard.range_aria")}
+          >
+            {ranges.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => {
+                  setRange(r.key);
+                  setHoveredPoint(null);
+                }}
+                className={`rounded-md px-2 py-1 transition ${
+                  range === r.key
+                    ? "bg-teal-500 font-semibold text-slate-950"
+                    : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
         </div>
       }
     >
@@ -272,7 +363,7 @@ function EquityChartPanel({
             >
               <span className="font-medium text-slate-300 dark:text-slate-600">{t("dashboard.theoretical_gain")}:</span>
               <span className="font-bold">
-                {formatSignedMoney(activeDelta, currency, locale)} ({formatPct(activeDeltaPct)})
+                {formatSignedMoney(activeDelta, currency, locale)} ({formatPct(activeDeltaPct, locale)})
               </span>
             </div>
           </div>
@@ -287,9 +378,9 @@ function EquityChartPanel({
         </div>
       )}
 
-      {data.length < 2 ? (
+      {visible.length < 2 ? (
         <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-slate-400 dark:text-slate-500">
-          {t("dashboard.no_history")}
+          {filter === "all" ? t("dashboard.no_history") : t("dashboard.no_history_filter")}
         </div>
       ) : (
         <div ref={ref} className="w-full px-1 pt-1" />
@@ -1056,6 +1147,19 @@ export function DashboardPage() {
     queryKey: ["kpis"],
     queryFn: dashboardKpis,
   });
+  const { data: userPreferences } = useQuery({
+    queryKey: ["user-preferences"],
+    queryFn: () =>
+      api<{
+        preferences?: {
+          dashboard?: {
+            chart_asset_filter?: "all" | "portfolio" | "trades";
+          };
+        };
+      }>("/api/auth/preferences"),
+  });
+  const defaultChartFilter =
+    (userPreferences?.preferences?.dashboard?.chart_asset_filter as ChartAssetFilter) || "all";
 
   const currency = data?.kpi_currency;
 
@@ -1199,7 +1303,11 @@ export function DashboardPage() {
           </section>
 
           <section className="grid gap-4 xl:grid-cols-3">
-            <EquityChartPanel data={data?.portfolio_history ?? []} currency={currency} />
+            <EquityChartPanel
+              data={data?.portfolio_history ?? []}
+              currency={currency}
+              defaultFilter={defaultChartFilter}
+            />
             <OutcomeDonut kpis={data as DashboardKpis} />
           </section>
 

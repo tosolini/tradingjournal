@@ -13,6 +13,9 @@ type UserPreferencesPayload = {
   preferences?: {
     onboarding_completed?: boolean;
     snapshot_time?: string;
+    dashboard?: {
+      chart_asset_filter?: "all" | "portfolio" | "trades";
+    };
     [key: string]: unknown;
   };
 };
@@ -748,6 +751,83 @@ function SnapshotSettingsSection() {
   );
 }
 
+function DashboardSettingsSection() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [filter, setFilter] = useState<"all" | "portfolio" | "trades">("all");
+  const [state, setState] = useState<"idle" | "saved" | "error">("idle");
+
+  const { data: prefData } = useQuery({
+    queryKey: ["user-preferences"],
+    queryFn: () => api<UserPreferencesPayload>("/api/auth/preferences"),
+  });
+
+  useEffect(() => {
+    const saved = prefData?.preferences?.dashboard?.chart_asset_filter;
+    if (saved === "all" || saved === "portfolio" || saved === "trades") {
+      setFilter(saved);
+    }
+  }, [prefData]);
+
+  const save = useMutation({
+    mutationFn: (value: "all" | "portfolio" | "trades") =>
+      api("/api/auth/preferences", {
+        method: "PATCH",
+        body: JSON.stringify({
+          preferences: {
+            dashboard: {
+              chart_asset_filter: value,
+            },
+          },
+        }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user-preferences"] });
+      setState("saved");
+      setTimeout(() => setState("idle"), 3000);
+    },
+    onError: () => setState("error"),
+  });
+
+  return (
+    <section className="card p-4">
+      <h2 className="mb-2 text-lg font-semibold">{t("settings.dashboard.title")}</h2>
+      <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">{t("settings.dashboard.description")}</p>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-sm text-slate-300 dark:text-slate-900">
+          <span className="mb-1 block">{t("settings.dashboard.default_filter_label")}</span>
+          <select
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value as "all" | "portfolio" | "trades");
+              setState("idle");
+            }}
+            className="rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2 text-sm text-slate-200 dark:text-slate-900"
+          >
+            <option value="all">{t("settings.dashboard.option_all")}</option>
+            <option value="portfolio">{t("settings.dashboard.option_portfolio")}</option>
+            <option value="trades">{t("settings.dashboard.option_trades")}</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => save.mutate(filter)}
+          disabled={save.isPending}
+          className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+        >
+          {save.isPending ? t("settings.dashboard.saving") : t("settings.dashboard.save")}
+        </button>
+        {state === "saved" && (
+          <span className="text-sm text-teal-400">{t("settings.dashboard.saved")}</span>
+        )}
+        {state === "error" && (
+          <span className="text-sm text-rose-400">{t("settings.dashboard.error")}</span>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -809,6 +889,8 @@ export function SettingsPage() {
       <DataSection />
 
       <SnapshotSettingsSection />
+
+      <DashboardSettingsSection />
 
       <section className="card p-4">
         <h2 className="mb-2 text-lg font-semibold">{t("settings.session.title")}</h2>

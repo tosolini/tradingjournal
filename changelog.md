@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.2.0] - 2026-10-30
+
+- Dashboard Equity Chart Asset Filtering
+  - Added dedicated asset class filtering on the Dashboard equity chart panel with three interactive modes:
+    - `Cumulato` / `Combined`: shows total portfolio equity and nominal cost curves combining both long-term holdings (ETFs & bonds) and stock trading positions.
+    - `Portafoglio` / `Portfolio`: isolates investment holdings (ETFs, bonds, and funds) with their own market value and nominal cost basis.
+    - `Azionario` / `Equities`: isolates stock trading positions with their own market value and cost basis.
+  - Dynamic KPI badges: Market Value, Nominal Cost, and Theoretical Return update instantaneously upon switching views and during hover crosshair tracking.
+  - Automatic trimming of leading inactive dates: charts cleanly start from when the selected asset class was first active, avoiding misleading initial flatlines.
+  - Backend breakdown support in `/api/dashboard/kpis`: `portfolio_history` entries now provide distinct `holdings_value`, `holdings_cost`, `holdings_return_pct`, `trades_value`, `trades_cost`, and `trades_return_pct` alongside cumulative totals.
+- Dashboard Preferences & User Settings
+  - New "Grafico Dashboard" / "Dashboard Chart" preferences section in Settings (`/settings`).
+  - Allows users to configure their default visualization preference (`all`, `portfolio`, or `trades`) persisted in user profile preferences (`PATCH /api/auth/preferences`).
+  - The Dashboard automatically initializes with the user's preferred default on load.
+- Weekend & Market Closure Normalization (Sawtooth Fix)
+  - Fixed an issue where stock positions dropped to zero on weekends and non-trading days when portfolio snapshots were recorded, producing sawtooth dips in the equity curve.
+  - Implemented smart forward-fill: accounts with active open trades retain their last known valuation over weekends and market holidays instead of resetting to zero.
+  - Real position liquidations on active trading days continue to properly drop to zero.
+- Comprehensive Documentation & Guide Updates
+  - Updated in-app help documentation and Markdown guides in both Italian and English (`docs/it`, `docs/en`, `frontend/src/docs/it`, `frontend/src/docs/en`).
+  - Documented the asset filter controls, settings configuration, and weekend normalization behavior.
+- Version bump to 0.2.0 (Backend 0.2.0 / Frontend 0.2.0)
+
 ## [0.1.9] - 2026-10-28
 
 - Stock Scouting & Trade Ideas Engine

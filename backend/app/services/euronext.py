@@ -2,7 +2,7 @@ import base64
 import binascii
 import csv
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import hashlib
 import io
 import json
@@ -203,12 +203,38 @@ def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
     else:
         coupon_frequency = 2
 
-    # Coupon rate
+    # Coupon rate extraction
     rate_str = raw_data.get("Interest Rate", "").replace("%", "").strip()
     try:
-        annual_coupon_rate = Decimal(rate_str) if rate_str else Decimal("0.0000")
+        raw_rate = Decimal(rate_str) if rate_str else Decimal("0.0000")
     except Exception:
-        annual_coupon_rate = Decimal("0.0000")
+        raw_rate = Decimal("0.0000")
+
+    # 1. Detect annual rate from title/name if available (e.g. "BTP TF 3,85% DC29" -> 3.85%, "BTP 4.3% OCT54 EUR" -> 4.30%)
+    name_rate_match = re.search(r'\b(\d{1,3}(?:[.,]\d{1,4})?)\s*%', clean_name)
+    if name_rate_match:
+        try:
+            annual_coupon_rate = Decimal(name_rate_match.group(1).replace(",", "."))
+        except Exception:
+            annual_coupon_rate = raw_rate
+    elif is_btp_valore:
+        # Euronext reports the quarterly coupon rate (e.g. 0.812% for 3.25% annual or 0.8375% for 3.35%)
+        # Multiply by 4 to get annual coupon rate, rounding to nearest 0.05%
+        quarterly_annual = raw_rate * Decimal("4")
+        step_005 = Decimal("0.05")
+        nearest = (quarterly_annual / step_005).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * step_005
+        if abs(quarterly_annual - nearest) <= Decimal("0.01"):
+            annual_coupon_rate = nearest
+        else:
+            annual_coupon_rate = quarterly_annual.quantize(Decimal("0.0001"))
+    elif coupon_frequency == 4 and Decimal("0") < raw_rate < Decimal("2.0"):
+        # Periodic quarterly coupon reported instead of annual
+        annual_coupon_rate = (raw_rate * Decimal("4")).quantize(Decimal("0.0001"))
+    elif coupon_frequency == 2 and Decimal("0") < raw_rate < Decimal("2.0"):
+        # Periodic semiannual coupon reported instead of annual
+        annual_coupon_rate = (raw_rate * Decimal("2")).quantize(Decimal("0.0001"))
+    else:
+        annual_coupon_rate = raw_rate
 
     # Dates
     issue_date = _parse_dmy_date(raw_data.get("Issue Date", ""))
@@ -221,9 +247,17 @@ def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
     if is_btp_valore:
         bond_type = "step_up"
         final_bonus_rate = Decimal("0.8000")
+        total_years = (maturity_date.year - issue_date.year) if (issue_date and maturity_date) else 6
+        step_split = 3 if total_years >= 5 else 2
+        if annual_coupon_rate == Decimal("3.35"):
+            step2_rate = 3.90
+        elif annual_coupon_rate == Decimal("4.10"):
+            step2_rate = 4.50
+        else:
+            step2_rate = float(annual_coupon_rate) + 0.75 if annual_coupon_rate > 0 else 4.00
         step_up_schedule = [
-            {"from_year": 1, "to_year": 3, "rate": float(annual_coupon_rate) if annual_coupon_rate > 0 else 3.25},
-            {"from_year": 4, "to_year": 5, "rate": (float(annual_coupon_rate) + 0.75) if annual_coupon_rate > 0 else 4.00},
+            {"from_year": 1, "to_year": step_split, "rate": float(annual_coupon_rate) if annual_coupon_rate > 0 else 3.25},
+            {"from_year": step_split + 1, "to_year": total_years, "rate": round(step2_rate, 4)},
         ]
     elif is_bot or (annual_coupon_rate == Decimal("0") and coupon_frequency == 0):
         bond_type = "zero_coupon"

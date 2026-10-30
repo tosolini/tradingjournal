@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -45,7 +45,7 @@ def portfolio_summary(
 
 @router.get("/history", response_model=list[PortfolioHistoryPoint])
 def portfolio_history(
-    account_id: int | None = Query(None),
+    account_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -71,12 +71,12 @@ def portfolio_history(
         by_date[d_str]["value"] += val
         by_date[d_str]["cost"] += cost
 
+    today_str = date.today().isoformat()
     # Include current live valuation as today's point
     live_summaries = get_portfolio_summary(db, current_user.id, account_id)
     if live_summaries:
         live_val = sum(s.total_value for s in live_summaries)
         live_cost = sum(s.total_cost for s in live_summaries)
-        today_str = date.today().isoformat()
         by_date[today_str] = {"value": live_val, "cost": live_cost}
 
     # If there are fewer than 2 points, backfill starting points from holding entry dates
@@ -87,11 +87,24 @@ def portfolio_history(
         holdings = db.execute(holdings_query).scalars().all()
         for h in holdings:
             e_str = h.entry_date.isoformat()
+            # Do not fold entry-date costs into today's already-complete live valuation
+            if e_str == today_str:
+                continue
+            is_bond = (h.asset.instrument_type or "").lower() in ("bond", "government_bond")
+            cost = (h.quantity * (h.avg_cost + (h.accrued_interest_in or Decimal("0")))) / Decimal("100") if is_bond else h.quantity * h.avg_cost
             if e_str not in by_date:
-                is_bond = (h.asset.instrument_type or "").lower() in ("bond", "government_bond")
-                cost = (h.quantity * (h.avg_cost + (h.accrued_interest_in or Decimal("0")))) / Decimal("100") if is_bond else h.quantity * h.avg_cost
                 by_date[e_str] = {"value": cost, "cost": cost}
+            else:
+                by_date[e_str]["value"] += cost
+                by_date[e_str]["cost"] += cost
 
+        # If still only today's point exists, ensure a starting baseline at yesterday
+        if len(by_date) == 1 and today_str in by_date and by_date[today_str]["cost"] > Decimal("0"):
+            yesterday_str = (date.today() - timedelta(days=1)).isoformat()
+            by_date[yesterday_str] = {
+                "value": by_date[today_str]["cost"],
+                "cost": by_date[today_str]["cost"],
+            }
     points: list[PortfolioHistoryPoint] = []
     for d_str in sorted(by_date.keys()):
         val = by_date[d_str]["value"]

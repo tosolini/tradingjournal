@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Ticker, TradeIdea, TradeIdeaStatus, tickersApi, tradeIdeasApi } from "../lib/api";
 import { openTradeCreateModal } from "../lib/trade-modal-event";
+import { parseLocaleNumber } from "../lib/numbers";
 import { ConfirmModal } from "./ConfirmModal";
 import { TagInput } from "./TagInput";
 import { TradingViewChart } from "./TradingViewChart";
@@ -812,11 +813,11 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
         symbol: symbol.trim().toUpperCase(),
         market: market.trim(),
         direction,
-        initial_price: initialPrice ? parseFloat(initialPrice) : undefined,
-        trigger_price: parseFloat(triggerPrice),
+        initial_price: initialPrice ? parseLocaleNumber(initialPrice) : undefined,
+        trigger_price: parseLocaleNumber(triggerPrice),
         trigger_condition: triggerCondition,
-        stop_loss: stopLoss ? parseFloat(stopLoss) : undefined,
-        target_price: targetPrice ? parseFloat(targetPrice) : undefined,
+        stop_loss: stopLoss ? parseLocaleNumber(stopLoss) : undefined,
+        target_price: targetPrice ? parseLocaleNumber(targetPrice) : undefined,
         thesis_notes: thesisNotes.trim() || undefined,
         tags,
         stale_days: staleDays,
@@ -831,7 +832,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
     onSuccess,
   });
 
-  const isValid = symbol.trim().length > 0 && parseFloat(triggerPrice) > 0;
+  const isValid = symbol.trim().length > 0 && parseLocaleNumber(triggerPrice) > 0;
 
   return (
     <div

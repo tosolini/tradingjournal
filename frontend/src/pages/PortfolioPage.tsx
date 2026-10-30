@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createChart, AreaSeries } from "lightweight-charts";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,23 +25,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import { AssetFormModal } from "./AssetsPage";
 import { QuickAccountModal } from "../components/QuickAccountModal";
-
-function asNumber(value: string | number | null | undefined): number {
-  if (value === undefined || value === null) return 0;
-  if (typeof value === "number") return value;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatMoney(value: string | number | null | undefined, currency?: string): string {
-  const n = asNumber(value);
-  const ccy = (currency || "EUR").trim().toUpperCase();
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: ccy }).format(n);
-  } catch {
-    return `${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${ccy}`;
-  }
-}
+import { cleanNumberInput, formatMoney, formatNumber, formatPct, formatPrice, formatQuantity, getNumberLocale, parseLocaleNumber, parseLocaleNumber as asNumber } from "../lib/numbers";
 
 function EditIcon() {
   return (
@@ -64,16 +48,134 @@ function DeleteIcon() {
   );
 }
 
-function formatPct(value: string | number | null | undefined): string {
-  const n = asNumber(value);
-  return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
-}
 
 function colorForPct(value: string | number | null | undefined): string {
   const n = asNumber(value);
   if (n > 0) return "text-green-400 dark:text-green-700";
   if (n < 0) return "text-red-400 dark:text-red-600";
   return "text-slate-300 dark:text-slate-900";
+}
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className || "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className || "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+export type GroupedHolding = {
+  key: string;
+  account_id: number;
+  asset_id: number;
+  asset_symbol: string;
+  asset_name: string;
+  instrument_type: string;
+  asset_currency: string;
+  tranches: HoldingDetail[];
+  totalQuantity: number;
+  avgCost: number;
+  currentPrice: number;
+  marketValue: number;
+  returnValue: number;
+  returnPct: number;
+  hasBonusEligible: boolean;
+  allBonusEligible: boolean;
+  accruedInterest?: number | null;
+  dirtyPrice?: number | null;
+  weightedYtmNet?: number | null;
+};
+
+function groupHoldings(items: HoldingDetail[]): GroupedHolding[] {
+  const map = new Map<string, GroupedHolding>();
+
+  for (const h of items) {
+    const key = `${h.account_id}_${h.asset_id}`;
+    let group = map.get(key);
+    if (!group) {
+      group = {
+        key,
+        account_id: h.account_id,
+        asset_id: h.asset_id,
+        asset_symbol: h.asset_symbol,
+        asset_name: h.asset_name,
+        instrument_type: h.instrument_type,
+        asset_currency: h.asset_currency,
+        tranches: [],
+        totalQuantity: 0,
+        avgCost: 0,
+        currentPrice: asNumber(h.current_price),
+        marketValue: 0,
+        returnValue: 0,
+        returnPct: 0,
+        hasBonusEligible: false,
+        allBonusEligible: true,
+        accruedInterest: h.accrued_interest !== undefined && h.accrued_interest !== null ? asNumber(h.accrued_interest) : null,
+        dirtyPrice: h.dirty_price !== undefined && h.dirty_price !== null ? asNumber(h.dirty_price) : null,
+        weightedYtmNet: null,
+      };
+      map.set(key, group);
+    }
+    group.tranches.push(h);
+  }
+
+  for (const group of map.values()) {
+    const isBond =
+      (group.instrument_type || "").toLowerCase() === "bond" ||
+      (group.instrument_type || "").toLowerCase() === "government_bond";
+
+    let totalQty = 0;
+    let totalCostBasis = 0;
+    let totalMktVal = 0;
+    let totalRetVal = 0;
+    let ytmSum = 0;
+
+    for (const t of group.tranches) {
+      const q = asNumber(t.quantity);
+      const c = asNumber(t.avg_cost);
+      const mv = asNumber(t.market_value);
+      const rv = asNumber(t.return_value);
+      totalQty += q;
+      totalMktVal += mv;
+      totalRetVal += rv;
+
+      if (isBond) {
+        const accIn = asNumber(t.accrued_interest_in);
+        totalCostBasis += (q * (c + accIn)) / 100;
+        if (t.ytm_net !== undefined && t.ytm_net !== null) {
+          ytmSum += q * asNumber(t.ytm_net);
+        }
+      } else {
+        totalCostBasis += q * c;
+      }
+    }
+
+    group.totalQuantity = totalQty;
+    group.marketValue = totalMktVal;
+    group.returnValue = totalRetVal;
+    group.returnPct = totalCostBasis > 0 ? (totalRetVal / totalCostBasis) * 100 : 0;
+    group.hasBonusEligible = group.tranches.some((t) => t.eligible_for_bonus);
+    group.allBonusEligible = group.tranches.length > 0 && group.tranches.every((t) => t.eligible_for_bonus);
+
+    if (isBond) {
+      const weightedClean = group.tranches.reduce((sum, t) => sum + asNumber(t.quantity) * asNumber(t.avg_cost), 0);
+      group.avgCost = totalQty > 0 ? weightedClean / totalQty : 0;
+      group.weightedYtmNet = totalQty > 0 ? ytmSum / totalQty : null;
+    } else {
+      group.avgCost = totalQty > 0 ? totalCostBasis / totalQty : 0;
+    }
+
+    group.tranches.sort((a, b) => a.entry_date.localeCompare(b.entry_date));
+  }
+
+  return Array.from(map.values());
 }
 
 function ChartPanel({
@@ -208,13 +310,229 @@ function DatePickerWidget({ value, onChange }: { value: string; onChange: (v: st
     </div>
   );
 }
+function BondRateoInput({
+  quantity,
+  avgCost,
+  accruedInterestIn,
+  onChangeAccruedInterestIn,
+}: {
+  quantity: string;
+  avgCost: string;
+  accruedInterestIn: string;
+  onChangeAccruedInterestIn: (val: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const locale = getNumberLocale(i18n.resolvedLanguage);
+  const [mode, setMode] = useState<"pct" | "eur" | "total">("pct");
+  const [localEur, setLocalEur] = useState("");
+  const [localTotal, setLocalTotal] = useState("");
+
+  const nominal = parseLocaleNumber(quantity);
+  const cleanPrice = parseLocaleNumber(avgCost);
+  const currentAccruedPct = parseLocaleNumber(accruedInterestIn);
+
+  // Capital value (corso secco) = nominal * cleanPrice / 100
+  const cleanCapital = nominal > 0 && cleanPrice > 0 ? (nominal * cleanPrice) / 100 : 0;
+  // Accrued euro amount = nominal * currentAccruedPct / 100
+  const accruedEur = nominal > 0 ? (nominal * currentAccruedPct) / 100 : 0;
+  // Total dirty settlement = cleanCapital + accruedEur
+  const dirtyTotal = cleanCapital + accruedEur;
+
+  // Keep localEur and localTotal in sync when in pct mode or when nominal/cleanPrice change
+  useEffect(() => {
+    if (mode === "pct") {
+      setLocalEur(accruedEur > 0 ? accruedEur.toFixed(2) : "");
+      setLocalTotal(dirtyTotal > 0 ? dirtyTotal.toFixed(2) : "");
+    }
+  }, [mode, accruedEur, dirtyTotal]);
+
+  const handlePctChange = (val: string) => {
+    onChangeAccruedInterestIn(val);
+  };
+
+  const handleEurChange = (val: string) => {
+    setLocalEur(val);
+    const parsedEur = parseLocaleNumber(val);
+    if (!isNaN(parsedEur) && nominal > 0) {
+      const calculatedPct = (parsedEur / nominal) * 100;
+      onChangeAccruedInterestIn(String(Number(calculatedPct.toFixed(6))));
+    } else if (!val.trim()) {
+      onChangeAccruedInterestIn("0");
+    }
+  };
+
+  const handleTotalChange = (val: string) => {
+    setLocalTotal(val);
+    const parsedTotal = parseLocaleNumber(val);
+    if (!isNaN(parsedTotal) && nominal > 0) {
+      const diffEur = parsedTotal - cleanCapital;
+      const calculatedPct = (diffEur / nominal) * 100;
+      onChangeAccruedInterestIn(String(Number(calculatedPct.toFixed(6))));
+      setLocalEur(diffEur.toFixed(2));
+    } else if (!val.trim()) {
+      onChangeAccruedInterestIn("0");
+      setLocalEur("");
+    }
+  };
+
+  const handleSwitchMode = (newMode: "pct" | "eur" | "total") => {
+    setMode(newMode);
+    if (newMode === "eur") {
+      setLocalEur(accruedEur > 0 ? accruedEur.toFixed(2) : "");
+    } else if (newMode === "total") {
+      setLocalTotal(dirtyTotal > 0 ? dirtyTotal.toFixed(2) : "");
+    }
+  };
+
+  const isNegativeDiff =
+    mode === "total" && localTotal.trim() !== "" && Number(localTotal.replace(",", ".")) < cleanCapital;
+
+  return (
+    <div className="space-y-2.5 rounded-lg border border-slate-700/60 dark:border-slate-300/80 bg-slate-800/40 dark:bg-slate-100/60 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <label
+          className="text-xs font-semibold text-slate-300 dark:text-slate-800"
+          title={t("portfolio.accrued_interest_in_hint")}
+        >
+          {mode === "pct" && t("portfolio.rateo_pct_label", "Rateo all'Acquisto (% base 100)")}
+          {mode === "eur" && t("portfolio.rateo_eur_label", "Importo Rateo all'Acquisto (€)")}
+          {mode === "total" && t("portfolio.rateo_total_label", "Totale Pagato Regolato (€)")}
+        </label>
+        {/* Mode selector pills */}
+        <div className="flex rounded-md bg-slate-900/80 dark:bg-slate-200/80 p-0.5 text-[11px] shrink-0">
+          <button
+            type="button"
+            onClick={() => handleSwitchMode("pct")}
+            className={`px-2 py-0.5 rounded font-medium transition-colors ${
+              mode === "pct"
+                ? "bg-teal-500 text-slate-950 font-semibold shadow-sm"
+                : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
+            }`}
+          >
+            {t("portfolio.rateo_mode_pct", "% Base 100")}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchMode("eur")}
+            className={`px-2 py-0.5 rounded font-medium transition-colors ${
+              mode === "eur"
+                ? "bg-teal-500 text-slate-950 font-semibold shadow-sm"
+                : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
+            }`}
+          >
+            {t("portfolio.rateo_mode_eur", "Importo in €")}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchMode("total")}
+            className={`px-2 py-0.5 rounded font-medium transition-colors ${
+              mode === "total"
+                ? "bg-teal-500 text-slate-950 font-semibold shadow-sm"
+                : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
+            }`}
+          >
+            {t("portfolio.rateo_mode_total", "Totale Pagato (€)")}
+          </button>
+        </div>
+      </div>
+
+      {mode === "pct" && (
+        <div>
+          <input
+            type="text"
+            value={accruedInterestIn}
+            onChange={(e) => handlePctChange(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900 font-mono"
+            placeholder="0.00"
+          />
+          {currentAccruedPct > 15 && (
+            <p className="mt-1 text-xs text-amber-400">
+              {t("portfolio.accrued_warning", "Attenzione: inserisci il rateo in percentuale (es. 0.50 per 0,50%), non in Euro. Un rateo > 15% è anomalo.")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {mode === "eur" && (
+        <div>
+          <div className="relative">
+            <input
+              type="text"
+              value={localEur}
+              onChange={(e) => handleEurChange(e.target.value)}
+              className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 pr-8 text-sm text-slate-200 dark:text-slate-900 font-mono"
+              placeholder="0.00"
+            />
+            <span className="absolute right-3 top-2.5 text-xs text-slate-400">€</span>
+          </div>
+          {nominal <= 0 && (
+            <p className="mt-1 text-[11px] text-amber-400">
+              {t("portfolio.nominal_needed_hint", "Inserisci prima il valore nominale per convertire l'importo in percentuale.")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {mode === "total" && (
+        <div>
+          <div className="relative">
+            <input
+              type="text"
+              value={localTotal}
+              onChange={(e) => handleTotalChange(e.target.value)}
+              className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 pr-8 text-sm text-slate-200 dark:text-slate-900 font-mono"
+              placeholder={cleanCapital > 0 ? cleanCapital.toFixed(2) : "0.00"}
+            />
+            <span className="absolute right-3 top-2.5 text-xs text-slate-400">€</span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+            {t("portfolio.rateo_total_hint", "Inserisci il totale titoli pagato sul conto (escluse commissioni banca)")}
+          </p>
+          {isNegativeDiff && (
+            <p className="mt-1 text-[11px] text-amber-400">
+              {t("portfolio.rateo_negative_warning", "Attenzione: il totale pagato risulta inferiore al controvalore capitale (rateo negativo).")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Live transparency card */}
+      {nominal > 0 && cleanPrice > 0 && (
+        <div className="mt-2 rounded-lg border border-slate-700/40 dark:border-slate-300/40 bg-slate-900/60 dark:bg-white/80 p-2.5 text-xs space-y-1">
+          <div className="flex justify-between text-slate-400 dark:text-slate-600">
+            <span>{t("portfolio.clean_capital_value", "Controvalore Corso Secco:")}</span>
+            <span className="font-mono text-slate-200 dark:text-slate-800">
+              {formatMoney(cleanCapital, undefined, locale)} <span className="text-[11px] text-slate-400">({formatNumber(cleanPrice, { minDecimals: 2, maxDecimals: 2, locale })}%)</span>
+            </span>
+          </div>
+          <div className="flex justify-between text-teal-300 dark:text-teal-800 font-medium">
+            <span>{t("portfolio.accrued_amount_label", "Rateo all'acquisto:")}</span>
+            <span className="font-mono">
+              +{formatMoney(accruedEur, undefined, locale)} <span className="text-[11px]">(+{formatNumber(currentAccruedPct, { minDecimals: 4, maxDecimals: 4, locale })}%)</span>
+            </span>
+          </div>
+          <div className="border-t border-slate-700/50 dark:border-slate-200 pt-1 flex justify-between font-semibold text-slate-200 dark:text-slate-900">
+            <span>{t("portfolio.dirty_total_value", "Controvalore Tel Quel (Totale):")}</span>
+            <span className="font-mono text-teal-300 dark:text-teal-900">
+              {formatMoney(dirtyTotal, undefined, locale)} <span className="text-[11px] font-normal text-slate-400">({formatNumber(cleanPrice + currentAccruedPct, { minDecimals: 4, maxDecimals: 4, locale })}%)</span>
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function HoldingFormModal({
   open,
   onClose,
+  initialAccountId,
+  initialAssetId,
 }: {
   open: boolean;
   onClose: () => void;
+  initialAccountId?: number;
+  initialAssetId?: number;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -236,8 +554,14 @@ function HoldingFormModal({
 
   useEffect(() => {
     if (open) {
-      setAccountId((prev) => prev || (accounts.length === 1 ? String(accounts[0].id) : ""));
-      setAssetId((prev) => prev || "");
+      setAccountId(
+        initialAccountId
+          ? String(initialAccountId)
+          : accounts.length === 1
+          ? String(accounts[0].id)
+          : ""
+      );
+      setAssetId(initialAssetId ? String(initialAssetId) : "");
       setQuantity("");
       setAvgCost("");
       setAccruedInterestIn("");
@@ -245,18 +569,18 @@ function HoldingFormModal({
       setEntryDate(new Date().toISOString().slice(0, 10));
       setExitDate("");
     }
-  }, [open, accounts]);
+  }, [open, accounts, initialAccountId, initialAssetId]);
 
   const createMutation = useMutation({
     mutationFn: () =>
       createHolding({
         account_id: Number(accountId),
         asset_id: Number(assetId),
-        quantity,
-        avg_cost: avgCost,
+        quantity: cleanNumberInput(quantity),
+        avg_cost: cleanNumberInput(avgCost),
         entry_date: entryDate,
         exit_date: exitDate || null,
-        accrued_interest_in: accruedInterestIn || "0",
+        accrued_interest_in: cleanNumberInput(accruedInterestIn) || "0",
         eligible_for_bonus: eligibleForBonus,
       }),
     onSuccess: () => {
@@ -387,31 +711,12 @@ function HoldingFormModal({
                 </div>
                 {isBond && (
                   <>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900" title={t("portfolio.accrued_interest_in_hint")}>
-                        {t("portfolio.accrued_interest_in", "Rateo all'Acquisto (% base 100)")}
-                      </label>
-                      <input
-                        type="text"
-                        value={accruedInterestIn}
-                        onChange={(e) => setAccruedInterestIn(e.target.value)}
-                        className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
-                        placeholder="0.00"
-                      />
-                      {Number(accruedInterestIn) > 15 && (
-                        <p className="mt-1 text-xs text-amber-400">
-                          {t("portfolio.accrued_warning", "Attenzione: inserisci il rateo in percentuale (es. 0.50 per 0,50%), non in Euro. Un rateo > 15% è anomalo.")}
-                        </p>
-                      )}
-                    </div>
-                    {Number(quantity) > 0 && Number(avgCost) > 0 && (
-                      <div className="rounded bg-slate-800/60 dark:bg-slate-200/60 p-2 text-xs text-slate-300 dark:text-slate-800 flex justify-between">
-                        <span>{t("portfolio.estimated_cost_basis", "Controvalore di Carico stimato:")}</span>
-                        <span className="font-mono font-semibold">
-                          {formatMoney((Number(quantity) * (Number(avgCost) + (Number(accruedInterestIn) || 0))) / 100)}
-                        </span>
-                      </div>
-                    )}
+                    <BondRateoInput
+                      quantity={quantity}
+                      avgCost={avgCost}
+                      accruedInterestIn={accruedInterestIn}
+                      onChangeAccruedInterestIn={setAccruedInterestIn}
+                    />
                     <div className="flex items-center gap-2 pt-1">
                       <input
                         type="checkbox"
@@ -538,11 +843,11 @@ export function HoldingEditFormModal({
   const updateMutation = useMutation({
     mutationFn: () =>
       updateHolding(holding!.id, {
-        quantity,
-        avg_cost: avgCost,
+        quantity: cleanNumberInput(quantity),
+        avg_cost: cleanNumberInput(avgCost),
         entry_date: entryDate,
         exit_date: exitDate || null,
-        accrued_interest_in: accruedInterestIn || "0",
+        accrued_interest_in: cleanNumberInput(accruedInterestIn) || "0",
         eligible_for_bonus: eligibleForBonus,
       }),
     onSuccess: () => {
@@ -589,30 +894,12 @@ export function HoldingEditFormModal({
           </div>
           {holding.instrument_type === "bond" && (
             <>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900" title={t("portfolio.accrued_interest_in_hint")}>
-                  {t("portfolio.accrued_interest_in", "Rateo all'Acquisto (% base 100)")}
-                </label>
-                <input
-                  type="text"
-                  value={accruedInterestIn}
-                  onChange={(e) => setAccruedInterestIn(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
-                />
-                {Number(accruedInterestIn) > 15 && (
-                  <p className="mt-1 text-xs text-amber-400">
-                    {t("portfolio.accrued_warning", "Attenzione: inserisci il rateo in percentuale (es. 0.50 per 0,50%), non in Euro. Un rateo > 15% è anomalo.")}
-                  </p>
-                )}
-              </div>
-              {Number(quantity) > 0 && Number(avgCost) > 0 && (
-                <div className="rounded bg-slate-800/60 dark:bg-slate-200/60 p-2 text-xs text-slate-300 dark:text-slate-800 flex justify-between">
-                  <span>{t("portfolio.estimated_cost_basis", "Controvalore di Carico stimato:")}</span>
-                  <span className="font-mono font-semibold">
-                    {formatMoney((Number(quantity) * (Number(avgCost) + (Number(accruedInterestIn) || 0))) / 100)}
-                  </span>
-                </div>
-              )}
+              <BondRateoInput
+                quantity={quantity}
+                avgCost={avgCost}
+                accruedInterestIn={accruedInterestIn}
+                onChangeAccruedInterestIn={setAccruedInterestIn}
+              />
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
@@ -657,13 +944,20 @@ export function HoldingEditFormModal({
 }
 
 export function PortfolioPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = getNumberLocale(i18n.resolvedLanguage);
   const [showAddHolding, setShowAddHolding] = useState(false);
+  const [addTrancheTarget, setAddTrancheTarget] = useState<{ accountId?: number; assetId?: number } | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [editHolding, setEditHolding] = useState<HoldingDetail | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "bonds">("all");
   const queryClient = useQueryClient();
   const toast = useToast();
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const { data: summaries } = useQuery({
     queryKey: ["portfolio", "summary"],
@@ -710,16 +1004,16 @@ export function PortfolioPage() {
   const totalReturnPct = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
 
   const kpiCards = [
-    { label: t("portfolio.kpi_total_value"), value: formatMoney(totalValue) },
-    { label: t("portfolio.kpi_total_cost"), value: formatMoney(totalCost) },
+    { label: t("portfolio.kpi_total_value"), value: formatMoney(totalValue, undefined, locale) },
+    { label: t("portfolio.kpi_total_cost"), value: formatMoney(totalCost, undefined, locale) },
     {
       label: t("portfolio.kpi_total_return"),
-      value: formatMoney(totalReturn),
+      value: formatMoney(totalReturn, undefined, locale),
       color: colorForPct(totalReturn),
     },
     {
       label: t("portfolio.kpi_return_pct"),
-      value: formatPct(totalReturnPct),
+      value: formatPct(totalReturnPct, 2, locale),
       color: colorForPct(totalReturnPct),
     },
   ];
@@ -743,6 +1037,8 @@ export function PortfolioPage() {
   });
   const bondsCount = bondMetrics?.bonds_count ?? bondHoldings.length;
 
+  const groupedDetails = useMemo(() => groupHoldings(details ?? []), [details]);
+  const groupedBondHoldings = useMemo(() => groupHoldings(bondHoldings), [bondHoldings]);
 
   return (
     <div className="space-y-5">
@@ -752,7 +1048,10 @@ export function PortfolioPage() {
           <p className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.subtitle")}</p>
         </div>
         <button
-          onClick={() => setShowAddHolding(true)}
+          onClick={() => {
+            setAddTrancheTarget(null);
+            setShowAddHolding(true);
+          }}
           className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-teal-400"
         >
           {t("portfolio.add_holding")}
@@ -824,75 +1123,233 @@ export function PortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(details ?? []).length === 0 && (
+                  {groupedDetails.length === 0 && (
                     <tr>
                       <td colSpan={13} className="p-6 text-center text-slate-500 dark:text-slate-400">
                         {t("portfolio.no_holdings")}
                       </td>
                     </tr>
                   )}
-                  {(details ?? []).map((h: HoldingDetail) => {
-                    const isBond = h.instrument_type === "bond";
+                  {groupedDetails.map((g: GroupedHolding) => {
+                    const isBond = (g.instrument_type || "").toLowerCase() === "bond" || (g.instrument_type || "").toLowerCase() === "government_bond";
+                    const isExpanded = Boolean(expandedGroups[g.key]);
+                    const hasMulti = g.tranches.length > 1;
+
+                    if (!hasMulti) {
+                      const h = g.tranches[0];
+                      return (
+                        <tr key={h.id} className="border-b border-slate-800 hover:bg-slate-800/40">
+                          <td className="p-3 font-medium text-teal-300 dark:text-teal-900 flex items-center gap-1.5">
+                            <Link
+                              to={`/portfolio/holdings/${h.id}`}
+                              className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
+                              title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                            >
+                              {h.asset_symbol}
+                            </Link>
+                            {h.eligible_for_bonus && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
+                                {t("portfolio.cum_badge", "CUM")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-slate-300 dark:text-slate-900">{h.asset_name}</td>
+                          <td className="p-3 text-slate-400 dark:text-slate-900 uppercase text-xs">{h.instrument_type}</td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
+                            {formatQuantity(h.quantity, isBond, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
+                            {formatPrice(h.avg_cost, isBond, h.asset_currency, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-300 dark:text-slate-900 text-xs">{h.entry_date}</td>
+                          <td className="p-3 text-right text-slate-300 dark:text-slate-900 text-xs">{h.exit_date ?? "—"}</td>
+                          <td className="p-3 text-right text-slate-300 dark:text-slate-900 text-xs">
+                            {h.hold_duration_days != null ? `${h.hold_duration_days}d` : "—"}
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
+                            {formatPrice(h.current_price, isBond, h.asset_currency, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-medium">{formatMoney(h.market_value, h.asset_currency, locale)}</td>
+                          <td className={`p-3 text-right ${colorForPct(h.return_value)}`}>
+                            {formatMoney(h.return_value, h.asset_currency, locale)}
+                          </td>
+                          <td className={`p-3 text-right ${colorForPct(h.return_pct)}`}>
+                            {formatPct(h.return_pct, 2, locale)}
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setAddTrancheTarget({ accountId: h.account_id, assetId: h.asset_id });
+                                  setShowAddHolding(true);
+                                }}
+                                className="rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 dark:text-teal-900 border border-teal-500/40 p-2"
+                                title={t("portfolio.add_tranche", "Nuova tranche")}
+                                aria-label={t("portfolio.add_tranche", "Nuova tranche")}
+                              >
+                                <PlusIcon className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setEditHolding(h)}
+                                className="rounded bg-sky-500 p-2 text-slate-950"
+                                title={t("portfolio.edit_holding")}
+                                aria-label={t("portfolio.edit_holding")}
+                              >
+                                <EditIcon />
+                              </button>
+                              <button
+                                onClick={() => setDeleteId(h.id)}
+                                className="rounded bg-red-500 p-2 text-white"
+                                title={t("portfolio.delete_holding")}
+                                aria-label={t("portfolio.delete_holding")}
+                              >
+                                <DeleteIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+
                     return (
-                      <tr key={h.id} className="border-b border-slate-800 hover:bg-slate-800/40">
-                        <td className="p-3 font-medium text-teal-300 dark:text-teal-900 flex items-center gap-1.5">
-                          <Link
-                            to={`/portfolio/holdings/${h.id}`}
-                            className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
-                            title={t("portfolio.view_detail", "Vedi dettaglio completo")}
-                          >
-                            {h.asset_symbol}
-                          </Link>
-                          {h.eligible_for_bonus && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
-                              {t("portfolio.cum_badge", "CUM")}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3 text-slate-300 dark:text-slate-900">{h.asset_name}</td>
-                        <td className="p-3 text-slate-400 dark:text-slate-900 uppercase text-xs">{h.instrument_type}</td>
-                        <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                          {isBond ? Number(h.quantity).toLocaleString() : Number(h.quantity).toFixed(4)}
-                        </td>
-                        <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                          {isBond ? `${Number(h.avg_cost).toFixed(2)}%` : formatMoney(h.avg_cost)}
-                        </td>
-                        <td className="p-3 text-right text-slate-300 dark:text-slate-900 text-xs">{h.entry_date}</td>
-                        <td className="p-3 text-right text-slate-300 dark:text-slate-900 text-xs">{h.exit_date ?? "—"}</td>
-                        <td className="p-3 text-right text-slate-300 dark:text-slate-900 text-xs">
-                          {h.hold_duration_days != null ? `${h.hold_duration_days}d` : "—"}
-                        </td>
-                        <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                          {isBond ? `${Number(h.current_price).toFixed(2)}%` : formatMoney(h.current_price)}
-                        </td>
-                        <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-medium">{formatMoney(h.market_value)}</td>
-                        <td className={`p-3 text-right ${colorForPct(h.return_value)}`}>
-                          {formatMoney(h.return_value)}
-                        </td>
-                        <td className={`p-3 text-right ${colorForPct(h.return_pct)}`}>
-                          {formatPct(h.return_pct)}
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="flex justify-end gap-2">
+                      <Fragment key={g.key}>
+                        <tr className="border-b border-slate-800 bg-slate-900/40 dark:bg-slate-100/40 hover:bg-slate-800/50">
+                          <td className="p-3 font-medium text-teal-300 dark:text-teal-900 flex items-center gap-1.5">
                             <button
-                              onClick={() => setEditHolding(h)}
-                              className="rounded bg-sky-500 p-2 text-slate-950"
-                              title={t("portfolio.edit_holding")}
-                              aria-label={t("portfolio.edit_holding")}
+                              type="button"
+                              onClick={() => toggleGroup(g.key)}
+                              className="p-1 rounded text-slate-400 hover:text-teal-300 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
+                              title={isExpanded ? t("portfolio.collapse_tranches") : t("portfolio.expand_tranches")}
                             >
-                              <EditIcon />
+                              <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                             </button>
+                            <Link
+                              to={`/portfolio/holdings/${g.tranches[0].id}`}
+                              className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
+                              title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                            >
+                              {g.asset_symbol}
+                            </Link>
                             <button
-                              onClick={() => setDeleteId(h.id)}
-                              className="rounded bg-red-500 p-2 text-white"
-                              title={t("portfolio.delete_holding")}
-                              aria-label={t("portfolio.delete_holding")}
+                              type="button"
+                              onClick={() => toggleGroup(g.key)}
+                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-500/10 text-teal-300 dark:text-teal-800 border border-teal-500/20 hover:bg-teal-500/20 cursor-pointer"
                             >
-                              <DeleteIcon />
+                              {t("portfolio.tranches_count", { count: g.tranches.length })}
                             </button>
-                          </div>
-                        </td>
-                      </tr>
+                            {g.allBonusEligible ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
+                                {t("portfolio.cum_badge", "CUM")}
+                              </span>
+                            ) : g.hasBonusEligible ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title={t("portfolio.cum_partial_tooltip", "Alcune tranche con diritto al CUM")}>
+                                {t("portfolio.cum_partial", "CUM parz.")}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="p-3 text-slate-300 dark:text-slate-900">{g.asset_name}</td>
+                          <td className="p-3 text-slate-400 dark:text-slate-900 uppercase text-xs">{g.instrument_type}</td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
+                            {formatQuantity(g.totalQuantity, isBond, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold" title={t("portfolio.weighted_avg", "Media ponderata")}>
+                            {formatPrice(g.avgCost, isBond, undefined, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-400 dark:text-slate-600 text-xs">
+                            {g.tranches[0].entry_date}..
+                          </td>
+                          <td className="p-3 text-right text-slate-400 dark:text-slate-600 text-xs">—</td>
+                          <td className="p-3 text-right text-slate-400 dark:text-slate-600 text-xs">—</td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
+                            {formatPrice(g.currentPrice, isBond, undefined, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-bold">{formatMoney(g.marketValue, undefined, locale)}</td>
+                          <td className={`p-3 text-right font-semibold ${colorForPct(g.returnValue)}`}>
+                            {formatMoney(g.returnValue, undefined, locale)}
+                          </td>
+                          <td className={`p-3 text-right font-semibold ${colorForPct(g.returnPct)}`}>
+                            {formatPct(g.returnPct, 2, locale)}
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setAddTrancheTarget({ accountId: g.account_id, assetId: g.asset_id });
+                                  setShowAddHolding(true);
+                                }}
+                                className="rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 dark:text-teal-900 border border-teal-500/40 p-2 flex items-center gap-1 text-xs font-semibold"
+                                title={t("portfolio.add_tranche", "Nuova tranche")}
+                                aria-label={t("portfolio.add_tranche", "Nuova tranche")}
+                              >
+                                <PlusIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded &&
+                          g.tranches.map((tItem: HoldingDetail, idx: number) => (
+                            <tr key={tItem.id} className="border-b border-slate-800/60 bg-slate-800/30 dark:bg-slate-100/70 text-xs text-slate-300 dark:text-slate-800">
+                              <td className="p-2.5 pl-8 font-mono flex items-center gap-2">
+                                <span className="text-slate-500 dark:text-slate-400">↳</span>
+                                <Link
+                                  to={`/portfolio/holdings/${tItem.id}`}
+                                  className="font-medium text-teal-300 hover:text-teal-200 dark:text-teal-800 dark:hover:text-teal-700 hover:underline"
+                                  title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                                >
+                                  {t("portfolio.tranche_number", { number: idx + 1 })}
+                                </Link>
+                                {tItem.eligible_for_bonus && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
+                                    CUM
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-2.5 text-slate-400 dark:text-slate-600 truncate max-w-[200px]">{tItem.asset_name}</td>
+                              <td className="p-2.5 text-slate-400 dark:text-slate-600 uppercase text-[10px]">{tItem.instrument_type}</td>
+                              <td className="p-2.5 text-right font-mono">
+                                {formatQuantity(tItem.quantity, isBond, locale)}
+                              </td>
+                              <td className="p-2.5 text-right font-mono">
+                                {formatPrice(tItem.avg_cost, isBond, tItem.asset_currency, locale)}
+                              </td>
+                              <td className="p-2.5 text-right text-slate-400 dark:text-slate-600">{tItem.entry_date}</td>
+                              <td className="p-2.5 text-right text-slate-400 dark:text-slate-600">{tItem.exit_date ?? "—"}</td>
+                              <td className="p-2.5 text-right text-slate-400 dark:text-slate-600">
+                                {tItem.hold_duration_days != null ? `${tItem.hold_duration_days}d` : "—"}
+                              </td>
+                              <td className="p-2.5 text-right font-mono text-slate-400 dark:text-slate-600">
+                                {formatPrice(tItem.current_price, isBond, tItem.asset_currency, locale)}
+                              </td>
+                              <td className="p-2.5 text-right font-mono font-medium">{formatMoney(tItem.market_value, tItem.asset_currency, locale)}</td>
+                              <td className={`p-2.5 text-right font-mono ${colorForPct(tItem.return_value)}`}>
+                                {formatMoney(tItem.return_value, tItem.asset_currency, locale)}
+                              </td>
+                              <td className={`p-2.5 text-right font-mono ${colorForPct(tItem.return_pct)}`}>
+                                {formatPct(tItem.return_pct, 2, locale)}
+                              </td>
+                              <td className="p-2.5 text-right">
+                                <div className="flex justify-end gap-1.5">
+                                  <button
+                                    onClick={() => setEditHolding(tItem)}
+                                    className="rounded bg-sky-500/80 hover:bg-sky-500 p-1.5 text-slate-950"
+                                    title={t("portfolio.edit_holding")}
+                                    aria-label={t("portfolio.edit_holding")}
+                                  >
+                                    <EditIcon />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteId(tItem.id)}
+                                    className="rounded bg-red-500/80 hover:bg-red-500 p-1.5 text-white"
+                                    title={t("portfolio.delete_holding")}
+                                    aria-label={t("portfolio.delete_holding")}
+                                  >
+                                    <DeleteIcon />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -906,25 +1363,25 @@ export function PortfolioPage() {
             <article className="card p-4">
               <div className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.bonds_total_nominal")}</div>
               <div className="mt-2 text-2xl font-semibold text-teal-200 dark:text-teal-900">
-                {formatMoney(bondMetrics?.total_nominal)}
+                {formatMoney(bondMetrics?.total_nominal, undefined, locale)}
               </div>
             </article>
             <article className="card p-4">
               <div className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.bonds_market_value")}</div>
               <div className="mt-2 text-2xl font-semibold text-teal-200 dark:text-teal-900">
-                {formatMoney(bondMetrics?.total_market_value)}
+                {formatMoney(bondMetrics?.total_market_value, undefined, locale)}
               </div>
             </article>
             <article className="card p-4">
               <div className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.bonds_weighted_ytm")}</div>
               <div className="mt-2 text-2xl font-semibold text-green-400 dark:text-green-700">
-                {formatPct(bondMetrics?.weighted_ytm_net)}
+                {formatPct(bondMetrics?.weighted_ytm_net, 2, locale)}
               </div>
             </article>
             <article className="card p-4">
               <div className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.bonds_annual_income")}</div>
               <div className="mt-2 text-2xl font-semibold text-teal-200 dark:text-teal-900">
-                {formatMoney(bondMetrics?.estimated_annual_income_net)}
+                {formatMoney(bondMetrics?.estimated_annual_income_net, undefined, locale)}
               </div>
             </article>
           </section>
@@ -950,73 +1407,233 @@ export function PortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bondHoldings.length === 0 && (
+                  {groupedBondHoldings.length === 0 && (
                     <tr>
                       <td colSpan={10} className="p-6 text-center text-slate-500 dark:text-slate-400">
                         {t("portfolio.no_holdings")}
                       </td>
                     </tr>
                   )}
-                  {bondHoldings.map((h: HoldingDetail) => (
-                    <tr key={h.id} className="border-b border-slate-800 hover:bg-slate-800/40">
-                      <td className="p-3 font-medium text-teal-300 dark:text-teal-900 flex items-center gap-1.5">
-                        <Link
-                          to={`/portfolio/holdings/${h.id}`}
-                          className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
-                          title={t("portfolio.view_detail", "Vedi dettaglio completo")}
-                        >
-                          {h.asset_symbol}
-                        </Link>
-                        {h.eligible_for_bonus && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
-                            {t("portfolio.cum_badge", "CUM")}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-slate-300 dark:text-slate-900">{h.asset_name}</td>
-                      <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                        {Number(h.quantity).toLocaleString()} €
-                      </td>
-                      <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                        {Number(h.current_price).toFixed(2)}%
-                      </td>
-                      <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono text-xs">
-                        +{Number(h.accrued_interest ?? 0).toFixed(4)}%
-                      </td>
-                      <td className="p-3 text-right text-teal-300 dark:text-teal-800 font-mono font-medium">
-                        {Number(h.dirty_price ?? h.current_price).toFixed(2)}%
-                      </td>
-                      <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
-                        {formatMoney(h.market_value)}
-                      </td>
-                      <td className="p-3 text-right text-green-400 dark:text-green-700 font-mono font-medium">
-                        {formatPct(h.ytm_net)}
-                      </td>
-                      <td className={`p-3 text-right ${colorForPct(h.return_value)} font-mono`}>
-                        {formatMoney(h.return_value)} ({formatPct(h.return_pct)})
-                      </td>
-                      <td className="p-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => setEditHolding(h)}
-                            className="rounded bg-sky-500 p-2 text-slate-950"
-                            title={t("portfolio.edit_holding")}
-                            aria-label={t("portfolio.edit_holding")}
-                          >
-                            <EditIcon />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(h.id)}
-                            className="rounded bg-red-500 p-2 text-white"
-                            title={t("portfolio.delete_holding")}
-                            aria-label={t("portfolio.delete_holding")}
-                          >
-                            <DeleteIcon />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {groupedBondHoldings.map((g: GroupedHolding) => {
+                    const isExpanded = Boolean(expandedGroups[g.key]);
+                    const hasMulti = g.tranches.length > 1;
+
+                    if (!hasMulti) {
+                      const h = g.tranches[0];
+                      return (
+                        <tr key={h.id} className="border-b border-slate-800 hover:bg-slate-800/40">
+                          <td className="p-3 font-medium text-teal-300 dark:text-teal-900 flex items-center gap-1.5">
+                            <Link
+                              to={`/portfolio/holdings/${h.id}`}
+                              className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
+                              title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                            >
+                              {h.asset_symbol}
+                            </Link>
+                            {h.eligible_for_bonus && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
+                                {t("portfolio.cum_badge", "CUM")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-slate-300 dark:text-slate-900">{h.asset_name}</td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
+                            {Number(h.quantity).toLocaleString()} €
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
+                            {formatPrice(h.current_price, true, undefined, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono text-xs">
+                            +{formatNumber(h.accrued_interest ?? 0, { minDecimals: 4, maxDecimals: 4, locale })}%
+                          </td>
+                          <td className="p-3 text-right text-teal-300 dark:text-teal-800 font-mono font-medium">
+                            {formatPrice(h.dirty_price ?? h.current_price, true, undefined, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
+                            {formatMoney(h.market_value, undefined, locale)}
+                          </td>
+                          <td className="p-3 text-right text-green-400 dark:text-green-700 font-mono font-medium">
+                            {formatPct(h.ytm_net, 2, locale)}
+                          </td>
+                          <td className={`p-3 text-right ${colorForPct(h.return_value)} font-mono`}>
+                            {formatMoney(h.return_value, undefined, locale)} ({formatPct(h.return_pct, 2, locale)})
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setAddTrancheTarget({ accountId: h.account_id, assetId: h.asset_id });
+                                  setShowAddHolding(true);
+                                }}
+                                className="rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 dark:text-teal-900 border border-teal-500/40 p-2"
+                                title={t("portfolio.add_tranche", "Nuova tranche")}
+                                aria-label={t("portfolio.add_tranche", "Nuova tranche")}
+                              >
+                                <PlusIcon className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setEditHolding(h)}
+                                className="rounded bg-sky-500 p-2 text-slate-950"
+                                title={t("portfolio.edit_holding")}
+                                aria-label={t("portfolio.edit_holding")}
+                              >
+                                <EditIcon />
+                              </button>
+                              <button
+                                onClick={() => setDeleteId(h.id)}
+                                className="rounded bg-red-500 p-2 text-white"
+                                title={t("portfolio.delete_holding")}
+                                aria-label={t("portfolio.delete_holding")}
+                              >
+                                <DeleteIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return (
+                      <Fragment key={g.key}>
+                        <tr className="border-b border-slate-800 bg-slate-900/40 dark:bg-slate-100/40 hover:bg-slate-800/50">
+                          <td className="p-3 font-medium text-teal-300 dark:text-teal-900 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => toggleGroup(g.key)}
+                              className="p-1 rounded text-slate-400 hover:text-teal-300 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
+                              title={isExpanded ? t("portfolio.collapse_tranches") : t("portfolio.expand_tranches")}
+                            >
+                              <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                            </button>
+                            <Link
+                              to={`/portfolio/holdings/${g.tranches[0].id}`}
+                              className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
+                              title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                            >
+                              {g.asset_symbol}
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => toggleGroup(g.key)}
+                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-500/10 text-teal-300 dark:text-teal-800 border border-teal-500/20 hover:bg-teal-500/20 cursor-pointer"
+                            >
+                              {t("portfolio.tranches_count", { count: g.tranches.length })}
+                            </button>
+                            {g.allBonusEligible ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
+                                {t("portfolio.cum_badge", "CUM")}
+                              </span>
+                            ) : g.hasBonusEligible ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title={t("portfolio.cum_partial_tooltip", "Alcune tranche con diritto al CUM")}>
+                                {t("portfolio.cum_partial", "CUM parz.")}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="p-3 text-slate-300 dark:text-slate-900">{g.asset_name}</td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
+                            {Number(g.totalQuantity).toLocaleString(locale)} €
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold" title={t("portfolio.weighted_avg", "Media ponderata")}>
+                            {formatPrice(g.avgCost, true, undefined, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono text-xs">
+                            +{formatNumber(g.accruedInterest ?? 0, { minDecimals: 4, maxDecimals: 4, locale })}%
+                          </td>
+                          <td className="p-3 text-right text-teal-300 dark:text-teal-800 font-mono font-semibold">
+                            {formatPrice(g.dirtyPrice ?? g.currentPrice, true, undefined, locale)}
+                          </td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-bold">
+                            {formatMoney(g.marketValue, undefined, locale)}
+                          </td>
+                          <td className="p-3 text-right text-green-400 dark:text-green-700 font-mono font-semibold">
+                            {formatPct(g.weightedYtmNet, 2, locale)}
+                          </td>
+                          <td className={`p-3 text-right ${colorForPct(g.returnValue)} font-mono font-semibold`}>
+                            {formatMoney(g.returnValue, undefined, locale)} ({formatPct(g.returnPct, 2, locale)})
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setAddTrancheTarget({ accountId: g.account_id, assetId: g.asset_id });
+                                  setShowAddHolding(true);
+                                }}
+                                className="rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 dark:text-teal-900 border border-teal-500/40 p-2"
+                                title={t("portfolio.add_tranche", "Nuova tranche")}
+                                aria-label={t("portfolio.add_tranche", "Nuova tranche")}
+                              >
+                                <PlusIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded &&
+                          g.tranches.map((tItem: HoldingDetail, idx: number) => (
+                            <tr key={tItem.id} className="border-b border-slate-800/60 bg-slate-800/30 dark:bg-slate-100/70 text-xs text-slate-300 dark:text-slate-800">
+                              <td className="p-2.5 pl-8 font-mono flex items-center gap-2">
+                                <span className="text-slate-500 dark:text-slate-400">↳</span>
+                                <Link
+                                  to={`/portfolio/holdings/${tItem.id}`}
+                                  className="font-medium text-teal-300 hover:text-teal-200 dark:text-teal-800 dark:hover:text-teal-700 hover:underline"
+                                  title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                                >
+                                  {t("portfolio.tranche_number", { number: idx + 1 })}
+                                </Link>
+                                {tItem.eligible_for_bonus && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
+                                    CUM
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-2.5 text-slate-400 dark:text-slate-600 truncate max-w-[200px]">
+                                {tItem.entry_date} {asNumber(tItem.accrued_interest_in) > 0 ? ` (${t("portfolio.accrued_label", "Rateo")}: +${formatNumber(tItem.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%)` : ""}
+                              </td>
+                              <td className="p-2.5 text-right font-mono">
+                                {Number(tItem.quantity).toLocaleString(locale)} €
+                              </td>
+                              <td className="p-2.5 text-right font-mono text-slate-400 dark:text-slate-600" title={t("portfolio.clean_price_tooltip", "Prezzo di carico (clean)")}>
+                                {formatPrice(tItem.avg_cost, true, undefined, locale)}
+                              </td>
+                              <td className="p-2.5 text-right text-slate-400 dark:text-slate-600 font-mono text-[11px]">
+                                +{formatNumber(tItem.accrued_interest ?? 0, { minDecimals: 4, maxDecimals: 4, locale })}%
+                              </td>
+                              <td className="p-2.5 text-right text-slate-300 dark:text-slate-700 font-mono">
+                                {formatPrice(tItem.dirty_price ?? tItem.current_price, true, undefined, locale)}
+                              </td>
+                              <td className="p-2.5 text-right font-mono font-medium">
+                                {formatMoney(tItem.market_value, undefined, locale)}
+                              </td>
+                              <td className="p-2.5 text-right text-green-400 dark:text-green-700 font-mono">
+                                {formatPct(tItem.ytm_net, 2, locale)}
+                              </td>
+                              <td className={`p-2.5 text-right font-mono ${colorForPct(tItem.return_value)}`}>
+                                {formatMoney(tItem.return_value, undefined, locale)} ({formatPct(tItem.return_pct, 2, locale)})
+                              </td>
+                              <td className="p-2.5 text-right">
+                                <div className="flex justify-end gap-1.5">
+                                  <button
+                                    onClick={() => setEditHolding(tItem)}
+                                    className="rounded bg-sky-500/80 hover:bg-sky-500 p-1.5 text-slate-950"
+                                    title={t("portfolio.edit_holding")}
+                                    aria-label={t("portfolio.edit_holding")}
+                                  >
+                                    <EditIcon />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteId(tItem.id)}
+                                    className="rounded bg-red-500/80 hover:bg-red-500 p-1.5 text-white"
+                                    title={t("portfolio.delete_holding")}
+                                    aria-label={t("portfolio.delete_holding")}
+                                  >
+                                    <DeleteIcon />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1079,16 +1696,16 @@ export function PortfolioPage() {
                           </span>
                         </td>
                         <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono text-xs">
-                          {Number(item.rate).toFixed(2)}%
+                          {formatNumber(item.rate, { minDecimals: 2, maxDecimals: 2, locale })}%
                         </td>
                         <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono">
-                          {formatMoney(item.gross_amount)}
+                          {formatMoney(item.gross_amount, undefined, locale)}
                         </td>
                         <td className="p-3 text-right text-slate-400 dark:text-slate-500 font-mono text-xs">
-                          {formatMoney(item.tax_amount)}
+                          {formatMoney(item.tax_amount, undefined, locale)}
                         </td>
                         <td className="p-3 text-right font-mono font-semibold text-green-400 dark:text-green-700">
-                          {formatMoney(item.net_amount)}
+                          {formatMoney(item.net_amount, undefined, locale)}
                         </td>
                       </tr>
                     );
@@ -1099,7 +1716,15 @@ export function PortfolioPage() {
           </section>
         </>
       )}
-      <HoldingFormModal open={showAddHolding} onClose={() => setShowAddHolding(false)} />
+      <HoldingFormModal
+        open={showAddHolding}
+        initialAccountId={addTrancheTarget?.accountId}
+        initialAssetId={addTrancheTarget?.assetId}
+        onClose={() => {
+          setShowAddHolding(false);
+          setAddTrancheTarget(null);
+        }}
+      />
 
       <HoldingEditFormModal
         open={editHolding !== null}

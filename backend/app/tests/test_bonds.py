@@ -653,3 +653,55 @@ def test_single_holding_detail_and_history(db):
     # 4. Test /api/bonds/calendar filter by holding_id
     filtered_cal = get_bond_calendar(holding_id=holding.id, db=db, current_user=user)
     assert len(filtered_cal) == len(cal)
+
+
+def test_euronext_bond_rate_normalization_and_step_up(monkeypatch):
+    """Verify periodic coupons (e.g. 0.812% quarterly for BTP Valore) are converted to annual (3.25%)."""
+    from app.services.euronext import fetch_euronext_bond_details
+
+    # Mock urllib.request to return BTP Valore factsheet
+    import io
+
+    class DummyResponse:
+        def __init__(self, content: bytes):
+            self.content = content
+        def read(self):
+            return self.content
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+
+    def dummy_urlopen(req, timeout=10):
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if "fs_couponinfo_block" in url or "fs_info_block" in url:
+            html = b"""
+            <table>
+                <tr><td>Sub type</td><td>Btp Valore</td></tr>
+                <tr><td>Issue Date</td><td>05/03/2024</td></tr>
+                <tr><td>Repayment date</td><td>05/03/2030</td></tr>
+                <tr><td>Interest Rate</td><td>0.812%</td></tr>
+                <tr><td>Interest rate frequency</td><td>Quarterly</td></tr>
+                <tr><td>Market</td><td>MOT</td></tr>
+            </table>
+            """
+            return DummyResponse(html)
+        elif "/ajax/getFactsheetInfoBlock/" in url:
+            return DummyResponse(b"<table></table>")
+        else:
+            # Main page
+            return DummyResponse(b'<html><head><title>BTPVAL SC MZ30EUR</title></head><body></body></html>')
+
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", dummy_urlopen)
+
+    res = fetch_euronext_bond_details("IT0005583486")
+    bd = res["bond_detail"]
+    # 0.812% quarterly * 4 = 3.248% -> rounded to 3.25%
+    assert bd["annual_coupon_rate"] == Decimal("3.25")
+    assert bd["coupon_frequency"] == 4
+    assert bd["bond_type"] == "step_up"
+    assert bd["step_up_schedule"] == [
+        {"from_year": 1, "to_year": 3, "rate": 3.25},
+        {"from_year": 4, "to_year": 6, "rate": 4.0},
+    ]

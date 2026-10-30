@@ -178,3 +178,246 @@ def test_dashboard_portfolio_history_uses_live_quote_for_open_trades(db, monkeyp
     today_point = next(p for p in history if p["date"] == date.today().isoformat())
     assert today_point["cost"] == 1000.0
     assert today_point["value"] == 1200.0
+
+def test_dashboard_portfolio_history_breakdown_holdings_and_trades(db, monkeypatch):
+    user = User(
+        email="breakdown@example.com",
+        username="breakdown",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    acc = Account(name="Main", user_id=user.id, base_currency="EUR")
+    db.add(acc)
+    db.commit()
+    db.refresh(acc)
+
+    # Historical snapshot: ETF holding
+    ps = PortfolioSnapshot(
+        account_id=acc.id,
+        snapshot_date=date(2026, 9, 1),
+        total_value=Decimal("4200"),
+        total_cost=Decimal("4000"),
+        total_return=Decimal("200"),
+        total_return_pct=Decimal("5"),
+    )
+    # Historical snapshot: Stock position
+    pds = PositionDailySnapshot(
+        account_id=acc.id,
+        symbol="TSLA",
+        snapshot_date=date(2026, 9, 1),
+        position_qty=Decimal("5"),
+        close_price=Decimal("210"),
+        market_value=Decimal("1050"),
+        realized_pnl=Decimal("0"),
+        unrealized_pnl=Decimal("50"),
+    )
+    db.add_all([ps, pds])
+    db.commit()
+
+    kpis = dashboard_kpis(db=db, current_user=user)
+    history = kpis["portfolio_history"]
+
+    pt = next(p for p in history if p["date"] == "2026-09-01")
+    # Holdings (ETF & obbligazioni)
+    assert pt["holdings_value"] == 4200.0
+    assert pt["holdings_cost"] == 4000.0
+    assert pt["holdings_return_pct"] == 5.0
+    # Trades (azionario)
+    assert pt["trades_value"] == 1050.0
+    assert pt["trades_cost"] == 1000.0
+    assert pt["trades_return_pct"] == 5.0
+    # Cumulato
+    assert pt["value"] == 5250.0
+    assert pt["cost"] == 5000.0
+    assert pt["return_pct"] == 5.0
+
+def test_dashboard_chart_asset_filter_preference(db):
+    from app.api.auth import update_preferences, get_preferences
+    from app.schemas import UserPreferencesUpdate
+
+    user = User(
+        email="pref_test@example.com",
+        username="pref_test",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+        preferences={},
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    # Update preference to "portfolio"
+    update_payload = UserPreferencesUpdate(
+        preferences={"dashboard": {"chart_asset_filter": "portfolio"}}
+    )
+    res = update_preferences(payload=update_payload, db=db, current_user=user)
+    assert res.preferences["dashboard"]["chart_asset_filter"] == "portfolio"
+
+    # Read preference back
+    read_res = get_preferences(current_user=user)
+    assert read_res.preferences["dashboard"]["chart_asset_filter"] == "portfolio"
+
+    # Update preference to "trades"
+    update_payload_2 = UserPreferencesUpdate(
+        preferences={"dashboard": {"chart_asset_filter": "trades"}}
+    )
+    res_2 = update_preferences(payload=update_payload_2, db=db, current_user=user)
+    assert res_2.preferences["dashboard"]["chart_asset_filter"] == "trades"
+
+def test_dashboard_portfolio_history_forward_fills_stocks_on_weekends_and_market_holidays(db):
+    user = User(
+        email="weekend_test@example.com",
+        username="weekend_test",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    acc_stocks = Account(name="Stocks", user_id=user.id, base_currency="EUR")
+    acc_etf = Account(name="ETF", user_id=user.id, base_currency="EUR")
+    db.add_all([acc_stocks, acc_etf])
+    db.commit()
+    db.refresh(acc_stocks)
+    db.refresh(acc_etf)
+
+    # Open trade created on Friday 2026-08-07
+    trade = Trade(
+        user_id=user.id,
+        account_id=acc_stocks.id,
+        symbol="SAN",
+        market="BME",
+        status="open",
+        side="long",
+        instrument_type="stock",
+    )
+    db.add(trade)
+    db.commit()
+    db.refresh(trade)
+
+    execution = TradeExecution(
+        trade_id=trade.id,
+        action="BUY",
+        executed_at=datetime(2026, 8, 7, 10, 0, tzinfo=timezone.utc),
+        quantity=Decimal("100"),
+        price=Decimal("10"),
+        fee=Decimal("0"),
+        currency="EUR",
+    )
+    db.add(execution)
+
+    # Friday 2026-08-07: stock snapshot
+    pds_fri = PositionDailySnapshot(
+        account_id=acc_stocks.id,
+        symbol="SAN",
+        snapshot_date=date(2026, 8, 7),
+        position_qty=Decimal("100"),
+        close_price=Decimal("10.5"),
+        market_value=Decimal("1050"),
+        realized_pnl=Decimal("0"),
+        unrealized_pnl=Decimal("50"),
+    )
+    # Friday 2026-08-07: ETF snapshot
+    ps_fri = PortfolioSnapshot(
+        account_id=acc_etf.id,
+        snapshot_date=date(2026, 8, 7),
+        total_value=Decimal("5000"),
+        total_cost=Decimal("5000"),
+        total_return=Decimal("0"),
+        total_return_pct=Decimal("0"),
+    )
+    # Saturday 2026-08-08: ETF snapshot recorded, but stock market was closed (no PDS)
+    ps_sat = PortfolioSnapshot(
+        account_id=acc_etf.id,
+        snapshot_date=date(2026, 8, 8),
+        total_value=Decimal("5000"),
+        total_cost=Decimal("5000"),
+        total_return=Decimal("0"),
+        total_return_pct=Decimal("0"),
+    )
+    # Sunday 2026-08-09: ETF snapshot recorded, but stock market was closed (no PDS)
+    ps_sun = PortfolioSnapshot(
+        account_id=acc_etf.id,
+        snapshot_date=date(2026, 8, 9),
+        total_value=Decimal("5000"),
+        total_cost=Decimal("5000"),
+        total_return=Decimal("0"),
+        total_return_pct=Decimal("0"),
+    )
+    db.add_all([pds_fri, ps_fri, ps_sat, ps_sun])
+    db.commit()
+
+    kpis = dashboard_kpis(db=db, current_user=user)
+    history = kpis["portfolio_history"]
+
+    fri_pt = next(p for p in history if p["date"] == "2026-08-07")
+    sat_pt = next(p for p in history if p["date"] == "2026-08-08")
+    sun_pt = next(p for p in history if p["date"] == "2026-08-09")
+
+    # Friday: 1050 value, 1000 cost
+    assert fri_pt["trades_value"] == 1050.0
+    assert fri_pt["trades_cost"] == 1000.0
+    assert fri_pt["value"] == 6050.0
+
+    # Saturday (weekend): must NOT drop to 0, should forward-fill Friday's value
+    assert sat_pt["trades_value"] == 1050.0
+    assert sat_pt["trades_cost"] == 1000.0
+    assert sat_pt["value"] == 6050.0
+
+    # Sunday (weekend): must NOT drop to 0, should forward-fill Friday's value
+    assert sun_pt["trades_value"] == 1050.0
+    assert sun_pt["trades_cost"] == 1000.0
+    assert sun_pt["value"] == 6050.0
+
+def test_portfolio_history_does_not_double_count_today_holdings(db, monkeypatch):
+    from app.api.portfolio import portfolio_history
+    from app.models import Asset, Holding
+
+    user = User(
+        email="today_holdings@example.com",
+        username="today_holdings",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    acc = Account(name="Investments", user_id=user.id, base_currency="EUR")
+    asset = Asset(user_id=user.id, symbol="SWDA.MI", name="MSCI World", instrument_type="etf")
+    db.add_all([acc, asset])
+    db.commit()
+    db.refresh(acc)
+    db.refresh(asset)
+
+    # Holding entered TODAY with cost 100 * 50 = 5000
+    today = date.today()
+    h = Holding(
+        user_id=user.id,
+        account_id=acc.id,
+        asset_id=asset.id,
+        quantity=Decimal("100"),
+        avg_cost=Decimal("50"),
+        entry_date=today,
+    )
+    db.add(h)
+    db.commit()
+
+    monkeypatch.setattr(
+        "app.services.portfolio.get_current_price",
+        lambda *_args, **_kwargs: Decimal("55"),
+    )
+
+    history = portfolio_history(db=db, current_user=user)
+    today_str = today.isoformat()
+    today_pt = next(p for p in history if p.date == today_str)
+
+    # Cost should be 5000.0, NOT double-counted to 10000.0
+    assert today_pt.cost == 5000.0
+    # Value should be 100 * 55 = 5500.0, NOT 5500 + 5000 = 10500.0
+    assert today_pt.value == 5500.0

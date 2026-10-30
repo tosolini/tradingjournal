@@ -17,16 +17,6 @@ def create_holding(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    existing = db.execute(
-        select(Holding).where(
-            Holding.user_id == current_user.id,
-            Holding.account_id == payload.account_id,
-            Holding.asset_id == payload.asset_id,
-        )
-    ).scalar_one_or_none()
-    if existing:
-        raise HTTPException(status_code=409, detail="Holding already exists for this account and asset")
-
     holding = Holding(
         user_id=current_user.id,
         account_id=payload.account_id,
@@ -47,7 +37,7 @@ def create_holding(
 @router.get("", response_model=list[HoldingResponse])
 @router.get("/", response_model=list[HoldingResponse], include_in_schema=False)
 def list_holdings(
-    account_id: int | None = Query(None),
+    account_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

@@ -621,13 +621,17 @@ def import_data(
                     raise ValueError(f"Asset '{asset_symbol}' not found for holding")
                 item["asset_id"] = ast_id
 
-            # Upsert by (account_id, asset_id) unique constraint
-            existing = db.execute(
-                select(Holding).where(
-                    Holding.account_id == item["account_id"],
-                    Holding.asset_id == item["asset_id"],
-                )
-            ).scalars().first()
+            # Upsert by account_id, asset_id, entry_date, and avg_cost
+            stmt = select(Holding).where(
+                Holding.user_id == user_id,
+                Holding.account_id == item["account_id"],
+                Holding.asset_id == item["asset_id"],
+            )
+            if "entry_date" in item and item["entry_date"] is not None:
+                stmt = stmt.where(Holding.entry_date == item["entry_date"])
+            if "avg_cost" in item and item["avg_cost"] is not None:
+                stmt = stmt.where(Holding.avg_cost == Decimal(str(item["avg_cost"])))
+            existing = db.execute(stmt).scalars().first()
             if existing:
                 for k, v in item.items():
                     if k not in ("user_id", "account_id", "asset_id"):

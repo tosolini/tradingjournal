@@ -541,6 +541,12 @@ export type PortfolioHistoryPoint = {
   value: number;
   cost: number;
   return_pct: number;
+  holdings_value?: number;
+  holdings_cost?: number;
+  holdings_return_pct?: number;
+  trades_value?: number;
+  trades_cost?: number;
+  trades_return_pct?: number;
 };
 
 export async function fetchTradeImageBlobUrl(imageId: number, variant: "original" | "annotated" = "original") {

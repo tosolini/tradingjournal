@@ -16,29 +16,7 @@ import {
   HoldingSingleDetail,
 } from "../lib/api";
 import { HoldingEditFormModal } from "./PortfolioPage";
-
-function asNumber(value: string | number | null | undefined): number {
-  if (value === undefined || value === null) return 0;
-  if (typeof value === "number") return value;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatMoney(value: string | number | null | undefined, currency?: string): string {
-  const n = asNumber(value);
-  const ccy = (currency || "EUR").trim().toUpperCase();
-  try {
-    return new Intl.NumberFormat("it-IT", { style: "currency", currency: ccy }).format(n);
-  } catch {
-    return `${n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${ccy}`;
-  }
-}
-
-function formatPct(value: string | number | null | undefined, decimals = 2): string {
-  const n = asNumber(value);
-  return `${n >= 0 ? "+" : ""}${n.toFixed(decimals)}%`;
-}
-
+import { formatMoney, formatNumber, formatPct, getNumberLocale, parseLocaleNumber as asNumber } from "../lib/numbers";
 function colorForPct(value: string | number | null | undefined): string {
   const n = asNumber(value);
   if (n > 0) return "text-green-400 dark:text-green-700";
@@ -46,18 +24,18 @@ function colorForPct(value: string | number | null | undefined): string {
   return "text-slate-300 dark:text-slate-900";
 }
 
-function formatDate(dateStr: string | null | undefined): string {
+function formatDate(dateStr: string | null | undefined, locale = "it-IT"): string {
   if (!dateStr) return "—";
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleDateString("it-IT", { year: "numeric", month: "short", day: "numeric" });
+    return d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
   } catch {
     return dateStr;
   }
 }
 
-function PriceSpreadChart({ history }: { history: HoldingPriceHistory }) {
+function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPriceHistory; locale?: string }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -169,7 +147,7 @@ function PriceSpreadChart({ history }: { history: HoldingPriceHistory }) {
             <span className="h-2 w-2 rounded-full bg-teal-400 dark:bg-teal-600" />
             <span className="text-slate-300 dark:text-slate-800">Mercato:</span>
             <span className="font-mono font-semibold text-teal-300 dark:text-teal-900">
-              {currentP.toFixed(2)}%
+              {formatNumber(currentP, { minDecimals: 2, maxDecimals: 2, locale })}%
             </span>
           </div>
 
@@ -177,7 +155,7 @@ function PriceSpreadChart({ history }: { history: HoldingPriceHistory }) {
             <span className="h-2 w-2 rounded-full bg-slate-400" />
             <span className="text-slate-300 dark:text-slate-800">Nominale:</span>
             <span className="font-mono font-semibold text-slate-200 dark:text-slate-900">
-              {nominalP.toFixed(2)}%
+              {formatNumber(nominalP, { minDecimals: 2, maxDecimals: 2, locale })}%
             </span>
           </div>
 
@@ -185,14 +163,14 @@ function PriceSpreadChart({ history }: { history: HoldingPriceHistory }) {
             <span className="h-2 w-2 rounded-full bg-amber-400" />
             <span className="text-slate-300 dark:text-slate-800">Carico:</span>
             <span className="font-mono font-semibold text-amber-300 dark:text-amber-900">
-              {costP.toFixed(2)}%
+              {formatNumber(costP, { minDecimals: 2, maxDecimals: 2, locale })}%
             </span>
           </div>
 
           <div className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-850 px-2.5 py-1 dark:border-slate-300 dark:bg-slate-50">
             <span className="text-slate-400 dark:text-slate-700">Scostamento Nominale:</span>
             <span className={`font-mono font-semibold ${colorForPct(spreadToNominal)}`}>
-              {formatPct(spreadToNominal)}
+              {formatPct(spreadToNominal, 2, locale)}
             </span>
           </div>
         </div>
@@ -218,7 +196,8 @@ function PriceSpreadChart({ history }: { history: HoldingPriceHistory }) {
 export function HoldingDetailPage() {
   const { holdingId } = useParams<{ holdingId: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = getNumberLocale(i18n.resolvedLanguage);
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -457,11 +436,11 @@ export function HoldingDetailPage() {
             {isBond ? "Prezzo di Carico (% base 100)" : "Prezzo Medio d'Acquisto"}
           </div>
           <div className="mt-1.5 text-xl font-bold font-mono text-amber-300 dark:text-amber-800">
-            {isBond ? `${asNumber(holding.avg_cost).toFixed(2)}%` : formatMoney(holding.avg_cost, holding.asset_currency)}
+            {isBond ? `${formatNumber(holding.avg_cost, { minDecimals: 2, maxDecimals: 2, locale })}%` : formatMoney(holding.avg_cost, holding.asset_currency, locale)}
           </div>
           {isBond && asNumber(holding.accrued_interest_in) > 0 && (
             <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-              Rateo all'acquisto: +{asNumber(holding.accrued_interest_in).toFixed(4)}%
+              Rateo all'acquisto: +{formatNumber(holding.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%
             </div>
           )}
         </div>
@@ -471,11 +450,11 @@ export function HoldingDetailPage() {
             {isBond ? "Prezzo Secco Attuale" : "Prezzo di Mercato Live"}
           </div>
           <div className="mt-1.5 text-xl font-bold font-mono text-teal-300 dark:text-teal-800">
-            {isBond ? `${asNumber(holding.current_price).toFixed(2)}%` : formatMoney(holding.current_price, holding.asset_currency)}
+            {isBond ? `${formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}%` : formatMoney(holding.current_price, holding.asset_currency, locale)}
           </div>
           {isBond && holding.dirty_price && (
             <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-              Prezzo Tel Quel: <span className="font-mono font-medium text-slate-200 dark:text-slate-800">{asNumber(holding.dirty_price).toFixed(2)}%</span>
+              Prezzo Tel Quel: <span className="font-mono font-medium text-slate-200 dark:text-slate-800">{formatNumber(holding.dirty_price, { minDecimals: 2, maxDecimals: 2, locale })}%</span>
             </div>
           )}
         </div>
@@ -563,9 +542,9 @@ export function HoldingDetailPage() {
             <div className="flex justify-between text-xs text-slate-400 dark:text-slate-600 mb-2">
               <span>Acquisto ({formatDate(holding.entry_date)})</span>
               <span className="font-mono font-semibold text-teal-300 dark:text-teal-800">
-                {timelineProgress.pct.toFixed(1)}% del ciclo completato
+                {formatNumber(timelineProgress.pct, { minDecimals: 1, maxDecimals: 1, locale })}% del ciclo completato
               </span>
-              <span>Scadenza ({formatDate(holding.bond_detail?.maturity_date || holding.exit_date)})</span>
+              <span>Scadenza ({formatDate(holding.bond_detail?.maturity_date || holding.exit_date, locale)})</span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800 dark:bg-slate-200">
               <div
@@ -601,7 +580,7 @@ export function HoldingDetailPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 dark:text-slate-600">Tasso Cedolare Nominale Annuo:</span>
                   <span className="font-mono font-bold text-lg text-slate-100 dark:text-slate-900">
-                    {asNumber(holding.nominal_yield).toFixed(2)}%
+                    {formatNumber(holding.nominal_yield, { minDecimals: 2, maxDecimals: 2, locale })}%
                   </span>
                 </div>
 
@@ -621,7 +600,7 @@ export function HoldingDetailPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 dark:text-slate-600">Aliquota Fiscale Applicata:</span>
                   <span className="font-mono text-slate-200 dark:text-slate-800">
-                    {asNumber(holding.bond_detail?.tax_rate).toFixed(2)}%
+                    {formatNumber(holding.bond_detail?.tax_rate, { minDecimals: 2, maxDecimals: 2, locale })}%
                   </span>
                 </div>
 
@@ -629,7 +608,7 @@ export function HoldingDetailPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-400 dark:text-slate-600">Premio Fedeltà Finale (CUM):</span>
                     <span className="font-mono font-semibold text-teal-400 dark:text-teal-700">
-                      +{asNumber(holding.bond_detail?.final_bonus_rate).toFixed(2)}%
+                      +{formatNumber(holding.bond_detail?.final_bonus_rate, { minDecimals: 2, maxDecimals: 2, locale })}%
                     </span>
                   </div>
                 )}
@@ -644,7 +623,7 @@ export function HoldingDetailPage() {
                       {holding.bond_detail.step_up_schedule.map((step, idx) => (
                         <div key={idx} className="flex justify-between bg-slate-800/60 dark:bg-slate-100 p-1.5 rounded">
                           <span className="text-slate-400">Anni {step.from_year}–{step.to_year}:</span>
-                          <span className="font-mono font-bold text-teal-300 dark:text-teal-800">{asNumber(step.rate).toFixed(2)}%</span>
+                          <span className="font-mono font-bold text-teal-300 dark:text-teal-800">{formatNumber(step.rate, { minDecimals: 2, maxDecimals: 2, locale })}%</span>
                         </div>
                       ))}
                     </div>
@@ -665,7 +644,7 @@ export function HoldingDetailPage() {
                   </p>
                 </div>
                 <span className="rounded-lg bg-teal-500/20 px-2.5 py-1 text-xs font-mono font-semibold text-teal-300 dark:text-teal-900">
-                  Prezzo: {asNumber(holding.current_price).toFixed(2)}%
+                  Prezzo: {formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}%
                 </span>
               </div>
 
@@ -673,35 +652,35 @@ export function HoldingDetailPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 dark:text-slate-600">Rendimento a Scadenza (YTM Netto):</span>
                   <span className="font-mono font-bold text-lg text-green-400 dark:text-green-700">
-                    {formatPct(holding.ytm_net)}
+                    {formatPct(holding.ytm_net, 2, locale)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 dark:text-slate-600">Rendimento Lordo (YTM Lordo):</span>
                   <span className="font-mono font-semibold text-slate-100 dark:text-slate-900">
-                    {formatPct(holding.ytm_gross)}
+                    {formatPct(holding.ytm_gross, 2, locale)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 dark:text-slate-600">Tasso Immediato (Current Yield):</span>
                   <span className="font-mono text-slate-200 dark:text-slate-800">
-                    {formatPct(holding.current_yield)}
+                    {formatPct(holding.current_yield, 2, locale)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 dark:text-slate-600">Rateo Maturato a oggi (% base 100):</span>
                   <span className="font-mono text-slate-200 dark:text-slate-800">
-                    +{asNumber(holding.accrued_interest).toFixed(4)}%
+                    +{formatNumber(holding.accrued_interest, { minDecimals: 4, maxDecimals: 4, locale })}%
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 dark:text-slate-600">Prezzo Tel Quel (Corso Secco + Rateo):</span>
                   <span className="font-mono font-semibold text-teal-300 dark:text-teal-800">
-                    {asNumber(holding.dirty_price).toFixed(2)}%
+                    {formatNumber(holding.dirty_price, { minDecimals: 2, maxDecimals: 2, locale })}%
                   </span>
                 </div>
               </div>
@@ -726,14 +705,14 @@ export function HoldingDetailPage() {
                   <p className="mt-1 text-xs text-slate-300 dark:text-slate-700 leading-relaxed">
                     {asNumber(holding.current_price) < 100 ? (
                       <>
-                        Il titolo quota attualmente <strong>sotto la pari</strong> ({asNumber(holding.current_price).toFixed(2)}% &lt; 100,00%).
-                        Il rimborso a 100 alla scadenza garantisce un <strong>capital gain aggiuntivo</strong> di +{(100 - asNumber(holding.current_price)).toFixed(2)}%
+                        Il titolo quota attualmente <strong>sotto la pari</strong> ({formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}% &lt; 100,00%).
+                        Il rimborso a 100 alla scadenza garantisce un <strong>capital gain aggiuntivo</strong> di +{formatNumber(100 - asNumber(holding.current_price), { minDecimals: 2, maxDecimals: 2, locale })}%
                         che eleva il rendimento netto a scadenza (<strong>{formatPct(holding.ytm_net)}</strong>) rispetto alla cedola nominale.
                       </>
                     ) : asNumber(holding.current_price) > 100 ? (
                       <>
-                        Il titolo quota attualmente <strong>sopra la pari</strong> ({asNumber(holding.current_price).toFixed(2)}% &gt; 100,00%).
-                        Il rimborso a 100 alla scadenza comporta una riduzione in conto capitale di -{(asNumber(holding.current_price) - 100).toFixed(2)}%,
+                        Il titolo quota attualmente <strong>sopra la pari</strong> ({formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}% &gt; 100,00%).
+                        Il rimborso a 100 alla scadenza comporta una riduzione in conto capitale di -{formatNumber(asNumber(holding.current_price) - 100, { minDecimals: 2, maxDecimals: 2, locale })}%,
                         portando il rendimento effettivo a scadenza (<strong>{formatPct(holding.ytm_net)}</strong>) al di sotto della cedola nominale.
                       </>
                     ) : (
@@ -770,7 +749,7 @@ export function HoldingDetailPage() {
                 Future Cedole & Flussi di Cassa del Titolo
               </h2>
               <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
-                Scadenzario dei flussi finanziari futuri calcolati esclusivamente per questa posizione ({Number(holding.quantity).toLocaleString()} € nominali).
+                Scadenzario dei flussi finanziari futuri calcolati esclusivamente per questa posizione ({Number(holding.quantity).toLocaleString(locale)} € nominali).
               </p>
             </div>
 
@@ -835,16 +814,16 @@ export function HoldingDetailPage() {
                         )}
                       </td>
                       <td className="p-3 text-right font-mono text-slate-300 dark:text-slate-800">
-                        {isRedemption ? "100.00%" : `${asNumber(item.rate).toFixed(2)}%`}
+                        {isRedemption ? (locale.startsWith("it") ? "100,00%" : "100.00%") : `${formatNumber(item.rate, { minDecimals: 2, maxDecimals: 2, locale })}%`}
                       </td>
                       <td className="p-3 text-right font-mono text-slate-300 dark:text-slate-800">
-                        {formatMoney(item.gross_amount, holding.asset_currency)}
+                        {formatMoney(item.gross_amount, holding.asset_currency, locale)}
                       </td>
                       <td className="p-3 text-right font-mono text-slate-400 dark:text-slate-600 text-xs">
-                        {asNumber(item.tax_amount) > 0 ? `-${formatMoney(item.tax_amount, holding.asset_currency)}` : "—"}
+                        {asNumber(item.tax_amount) > 0 ? `-${formatMoney(item.tax_amount, holding.asset_currency, locale)}` : "—"}
                       </td>
                       <td className="p-3 text-right font-mono font-bold text-teal-300 dark:text-teal-900">
-                        {formatMoney(item.net_amount, holding.asset_currency)}
+                        {formatMoney(item.net_amount, holding.asset_currency, locale)}
                       </td>
                     </tr>
                   );
