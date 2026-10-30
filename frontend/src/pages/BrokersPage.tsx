@@ -7,10 +7,11 @@ import { useTranslation } from "react-i18next";
 import { ApiError, Broker, Exchange, FeeMode, api, exchangesApi } from "../lib/api";
 import { BROKER_PRESETS, BrokerPresetConfig } from "../lib/fees";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { formatNumber, getNumberLocale } from "../lib/numbers";
 
 const emptyToNullNumber = z.preprocess((val) => {
   if (val === "" || val === null || val === undefined) return null;
-  const num = Number(val);
+  const num = Number(String(val).replace(",", "."));
   return Number.isNaN(num) ? val : num;
 }, z.number().min(0).nullable().optional());
 
@@ -100,7 +101,8 @@ function DownloadIcon() {
 }
 
 export function BrokersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = getNumberLocale(i18n.resolvedLanguage);
   const qc = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<"brokers" | "markets">("brokers");
@@ -501,13 +503,13 @@ export function BrokersPage() {
   const renderFeeDescription = (b: Broker) => {
     switch (b.fee_mode) {
       case "fixed":
-        return `Fissa ${Number(b.fee_value || 0).toFixed(2)} ${b.fee_currency || "EUR"}`;
+        return `Fissa ${formatNumber(b.fee_value || 0, { minDecimals: 2, maxDecimals: 2, locale })} ${b.fee_currency || "EUR"}`;
       case "percent":
-        return `${Number(b.fee_value || 0).toFixed(2)}%`;
+        return `${formatNumber(b.fee_value || 0, { minDecimals: 2, maxDecimals: 2, locale })}%`;
       case "percent_min_max":
-        return `${Number(b.fee_value || 0).toFixed(2)}% (min ${Number(b.fee_min || 0).toFixed(2)} / max ${Number(b.fee_max || 0).toFixed(2)} ${b.fee_currency || "EUR"})`;
+        return `${formatNumber(b.fee_value || 0, { minDecimals: 2, maxDecimals: 2, locale })}% (min ${formatNumber(b.fee_min || 0, { minDecimals: 2, maxDecimals: 2, locale })} / max ${formatNumber(b.fee_max || 0, { minDecimals: 2, maxDecimals: 2, locale })} ${b.fee_currency || "EUR"})`;
       case "under_30":
-        return `Under 30: ${Number(b.fee_value || 2.95).toFixed(2)} € / ${Number(b.fee_us_value || 3.95).toFixed(2)} $ USA`;
+        return `Under 30: ${formatNumber(b.fee_value || 2.95, { minDecimals: 2, maxDecimals: 2, locale })} € / ${formatNumber(b.fee_us_value || 3.95, { minDecimals: 2, maxDecimals: 2, locale })} $ USA`;
       case "tiered_volume":
         return `A fasce mensili ${b.fee_tier_override ? `(Fascia ${b.fee_tier_override} fissa)` : "(Auto volume)"}`;
       default:
@@ -828,7 +830,7 @@ export function BrokersPage() {
                             />
                           ) : Number(broker.monthly_fee || 0) > 0 ? (
                             <span className="font-semibold text-amber-400">
-                              {Number(broker.monthly_fee).toFixed(2)} €/m
+                              {formatNumber(broker.monthly_fee, { minDecimals: 2, maxDecimals: 2, locale })} €/m
                             </span>
                           ) : (
                             <span className="text-slate-400">0,00 €</span>
@@ -868,8 +870,8 @@ export function BrokersPage() {
                                 {broker.capital_gain_mode}
                               </span>
                               <div className="flex gap-1.5">
-                                <span className="text-slate-300 font-medium">Ord: {Number(broker.capital_gain_rate || 26).toFixed(1)}%</span>
-                                <span className="text-emerald-400 font-medium">TdS: {Number(broker.capital_gain_rate_gov || 12.5).toFixed(1)}%</span>
+                                <span className="text-slate-300 font-medium">Ord: {formatNumber(broker.capital_gain_rate || 26, { minDecimals: 1, maxDecimals: 1, locale })}%</span>
+                                <span className="text-emerald-400 font-medium">TdS: {formatNumber(broker.capital_gain_rate_gov || 12.5, { minDecimals: 1, maxDecimals: 1, locale })}%</span>
                               </div>
                             </div>
                           )}

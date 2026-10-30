@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, RecentExecution, Trade, api } from "../lib/api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { useToast } from "../contexts/ToastContext";
+import { formatNumber, getNumberLocale } from "../lib/numbers";
 import {
   EditIcon,
   EyeIcon as ViewIcon,
@@ -24,31 +25,31 @@ function asNumber(value: string | number | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function formatMetric(value: string | number | undefined): string {
+function formatMetric(value: string | number | undefined, locale = "it-IT"): string {
   if (value === undefined) {
     return "-";
   }
   const n = asNumber(value);
-  return n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatMoney(value: string | number | undefined, currency?: string): string {
+function formatMoney(value: string | number | undefined, currency?: string, locale = "it-IT"): string {
   if (value === undefined) {
     return "-";
   }
   const n = asNumber(value);
   const normalized = (currency || "").trim().toUpperCase();
   if (!normalized) {
-    return formatMetric(n);
+    return formatMetric(n, locale);
   }
 
   try {
-    return new Intl.NumberFormat("it-IT", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: normalized,
     }).format(n);
   } catch {
-    return `${formatMetric(n)} ${normalized}`;
+    return `${formatMetric(n, locale)} ${normalized}`;
   }
 }
 
@@ -240,7 +241,8 @@ function getTradeSortValue(trade: Trade, key: SortableTradeColumnKey): number | 
 }
 
 export function TradesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = getNumberLocale(i18n.resolvedLanguage);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
@@ -999,13 +1001,13 @@ export function TradesPage() {
                           : "text-red-400 dark:text-red-600"
                     }`}
                   >
-                    {formatMetric(trade.return_pct)}%
+                    {formatMetric(trade.return_pct, locale)}%
                   </td>
                 ) : null}
-                {visibleOptionalColumns.tpPct ? <td className="px-3 py-2.5 text-emerald-400 dark:text-emerald-700 tabular-nums">{tpPct === null ? "-" : `${tpPct.toFixed(2)}%`}</td> : null}
-                {visibleOptionalColumns.slPct ? <td className="px-3 py-2.5 text-red-400 dark:text-red-600 tabular-nums">{slPct === null ? "-" : `${slPct.toFixed(2)}%`}</td> : null}
-                {visibleOptionalColumns.tpAbs ? <td className="px-3 py-2.5 text-emerald-400 dark:text-emerald-700 tabular-nums">{tpAbs === null ? "-" : formatMoney(tpAbs, trade.account_currency)}</td> : null}
-                {visibleOptionalColumns.slAbs ? <td className="px-3 py-2.5 text-red-400 dark:text-red-600 tabular-nums">{slAbs === null ? "-" : formatMoney(slAbs, trade.account_currency)}</td> : null}
+                {visibleOptionalColumns.tpPct ? <td className="px-3 py-2.5 text-emerald-400 dark:text-emerald-700 tabular-nums">{tpPct === null ? "-" : `${formatNumber(tpPct, { minDecimals: 2, maxDecimals: 2, locale })}%`}</td> : null}
+                {visibleOptionalColumns.slPct ? <td className="px-3 py-2.5 text-red-400 dark:text-red-600 tabular-nums">{slPct === null ? "-" : `${formatNumber(slPct, { minDecimals: 2, maxDecimals: 2, locale })}%`}</td> : null}
+                {visibleOptionalColumns.tpAbs ? <td className="px-3 py-2.5 text-emerald-400 dark:text-emerald-700 tabular-nums">{tpAbs === null ? "-" : formatMoney(tpAbs, trade.account_currency, locale)}</td> : null}
+                {visibleOptionalColumns.slAbs ? <td className="px-3 py-2.5 text-red-400 dark:text-red-600 tabular-nums">{slAbs === null ? "-" : formatMoney(slAbs, trade.account_currency, locale)}</td> : null}
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-1.5">
                     <button

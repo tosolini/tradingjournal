@@ -5,36 +5,19 @@ import { z } from "zod";
 import { zodResolverTyped } from "../lib/zod-resolver";
 import { useTranslation } from "react-i18next";
 import { Account, ApiError, Broker, CashLedgerEntry, api, createLedgerEntry, deleteLedgerEntry, fetchLedgerEntries } from "../lib/api";
+import { formatMoney as formatMoneyUtil, getNumberLocale, parseLocaleNumber as asNumber } from "../lib/numbers";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { QuickBrokerModal } from "../components/QuickBrokerModal";
 
-function asNumber(value: string | number | undefined): number {
-  if (value === undefined) return 0;
-  if (typeof value === "number") return value;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
 
-function formatMoney(value: string | number | undefined, currency?: string): string {
-  const amount = Number(value ?? 0);
-  if (!Number.isFinite(amount)) {
-    return "-";
-  }
-  const normalized = (currency || "").trim().toUpperCase();
-  if (!normalized) {
-    return amount.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  try {
-    return new Intl.NumberFormat("it-IT", { style: "currency", currency: normalized }).format(amount);
-  } catch {
-    return `${amount.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${normalized}`;
-  }
+function formatMoney(value: string | number | undefined, currency?: string, locale = "it-IT"): string {
+  return formatMoneyUtil(value, currency, locale);
 }
 
 const accountSchema = z.object({
   name: z.string().min(2, "Inserisci un nome account valido"),
   base_currency: z.string().min(3).max(8),
-  cash_balance: z.coerce.number().min(0),
+  cash_balance: z.preprocess((v) => (typeof v === "string" ? v.replace(",", ".") : v), z.coerce.number().min(0)),
   broker_id: z.number().int().positive().nullable().optional(),
 });
 
@@ -303,7 +286,8 @@ function LedgerSection({ accounts }: { accounts: Account[] }) {
 }
 
 export function AccountsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = getNumberLocale(i18n.resolvedLanguage);
   const qc = useQueryClient();
   const [rowError, setRowError] = useState<string | null>(null);
   const [rowSuccess, setRowSuccess] = useState<string | null>(null);

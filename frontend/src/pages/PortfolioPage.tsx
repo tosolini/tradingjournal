@@ -25,7 +25,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import { AssetFormModal } from "./AssetsPage";
 import { QuickAccountModal } from "../components/QuickAccountModal";
-import { cleanNumberInput, formatMoney, formatPct, getNumberLocale, parseLocaleNumber, parseLocaleNumber as asNumber } from "../lib/numbers";
+import { cleanNumberInput, formatMoney, formatNumber, formatPct, formatPrice, formatQuantity, getNumberLocale, parseLocaleNumber, parseLocaleNumber as asNumber } from "../lib/numbers";
 
 function EditIcon() {
   return (
@@ -321,7 +321,8 @@ function BondRateoInput({
   accruedInterestIn: string;
   onChangeAccruedInterestIn: (val: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = getNumberLocale(i18n.resolvedLanguage);
   const [mode, setMode] = useState<"pct" | "eur" | "total">("pct");
   const [localEur, setLocalEur] = useState("");
   const [localTotal, setLocalTotal] = useState("");
@@ -501,19 +502,19 @@ function BondRateoInput({
           <div className="flex justify-between text-slate-400 dark:text-slate-600">
             <span>{t("portfolio.clean_capital_value", "Controvalore Corso Secco:")}</span>
             <span className="font-mono text-slate-200 dark:text-slate-800">
-              {formatMoney(cleanCapital)} <span className="text-[11px] text-slate-400">({cleanPrice.toFixed(2)}%)</span>
+              {formatMoney(cleanCapital, undefined, locale)} <span className="text-[11px] text-slate-400">({formatNumber(cleanPrice, { minDecimals: 2, maxDecimals: 2, locale })}%)</span>
             </span>
           </div>
           <div className="flex justify-between text-teal-300 dark:text-teal-800 font-medium">
             <span>{t("portfolio.accrued_amount_label", "Rateo all'acquisto:")}</span>
             <span className="font-mono">
-              +{formatMoney(accruedEur)} <span className="text-[11px]">(+{currentAccruedPct.toFixed(4)}%)</span>
+              +{formatMoney(accruedEur, undefined, locale)} <span className="text-[11px]">(+{formatNumber(currentAccruedPct, { minDecimals: 4, maxDecimals: 4, locale })}%)</span>
             </span>
           </div>
           <div className="border-t border-slate-700/50 dark:border-slate-200 pt-1 flex justify-between font-semibold text-slate-200 dark:text-slate-900">
             <span>{t("portfolio.dirty_total_value", "Controvalore Tel Quel (Totale):")}</span>
             <span className="font-mono text-teal-300 dark:text-teal-900">
-              {formatMoney(dirtyTotal)} <span className="text-[11px] font-normal text-slate-400">({(cleanPrice + currentAccruedPct).toFixed(4)}%)</span>
+              {formatMoney(dirtyTotal, undefined, locale)} <span className="text-[11px] font-normal text-slate-400">({formatNumber(cleanPrice + currentAccruedPct, { minDecimals: 4, maxDecimals: 4, locale })}%)</span>
             </span>
           </div>
         </div>
@@ -1003,16 +1004,16 @@ export function PortfolioPage() {
   const totalReturnPct = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
 
   const kpiCards = [
-    { label: t("portfolio.kpi_total_value"), value: formatMoney(totalValue) },
-    { label: t("portfolio.kpi_total_cost"), value: formatMoney(totalCost) },
+    { label: t("portfolio.kpi_total_value"), value: formatMoney(totalValue, undefined, locale) },
+    { label: t("portfolio.kpi_total_cost"), value: formatMoney(totalCost, undefined, locale) },
     {
       label: t("portfolio.kpi_total_return"),
-      value: formatMoney(totalReturn),
+      value: formatMoney(totalReturn, undefined, locale),
       color: colorForPct(totalReturn),
     },
     {
       label: t("portfolio.kpi_return_pct"),
-      value: formatPct(totalReturnPct),
+      value: formatPct(totalReturnPct, 2, locale),
       color: colorForPct(totalReturnPct),
     },
   ];
@@ -1155,10 +1156,10 @@ export function PortfolioPage() {
                           <td className="p-3 text-slate-300 dark:text-slate-900">{h.asset_name}</td>
                           <td className="p-3 text-slate-400 dark:text-slate-900 uppercase text-xs">{h.instrument_type}</td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                            {isBond ? Number(h.quantity).toLocaleString() : Number(h.quantity).toFixed(4)}
+                            {formatQuantity(h.quantity, isBond, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                            {isBond ? `${Number(h.avg_cost).toFixed(2)}%` : formatMoney(h.avg_cost)}
+                            {formatPrice(h.avg_cost, isBond, h.asset_currency, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-300 dark:text-slate-900 text-xs">{h.entry_date}</td>
                           <td className="p-3 text-right text-slate-300 dark:text-slate-900 text-xs">{h.exit_date ?? "—"}</td>
@@ -1166,14 +1167,14 @@ export function PortfolioPage() {
                             {h.hold_duration_days != null ? `${h.hold_duration_days}d` : "—"}
                           </td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                            {isBond ? `${Number(h.current_price).toFixed(2)}%` : formatMoney(h.current_price)}
+                            {formatPrice(h.current_price, isBond, h.asset_currency, locale)}
                           </td>
-                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-medium">{formatMoney(h.market_value)}</td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-medium">{formatMoney(h.market_value, h.asset_currency, locale)}</td>
                           <td className={`p-3 text-right ${colorForPct(h.return_value)}`}>
-                            {formatMoney(h.return_value)}
+                            {formatMoney(h.return_value, h.asset_currency, locale)}
                           </td>
                           <td className={`p-3 text-right ${colorForPct(h.return_pct)}`}>
-                            {formatPct(h.return_pct)}
+                            {formatPct(h.return_pct, 2, locale)}
                           </td>
                           <td className="p-3 text-right">
                             <div className="flex justify-end gap-1.5">
@@ -1249,10 +1250,10 @@ export function PortfolioPage() {
                           <td className="p-3 text-slate-300 dark:text-slate-900">{g.asset_name}</td>
                           <td className="p-3 text-slate-400 dark:text-slate-900 uppercase text-xs">{g.instrument_type}</td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
-                            {isBond ? Number(g.totalQuantity).toLocaleString() : Number(g.totalQuantity).toFixed(4)}
+                            {formatQuantity(g.totalQuantity, isBond, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold" title={t("portfolio.weighted_avg", "Media ponderata")}>
-                            {isBond ? `${Number(g.avgCost).toFixed(2)}%` : formatMoney(g.avgCost)}
+                            {formatPrice(g.avgCost, isBond, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-400 dark:text-slate-600 text-xs">
                             {g.tranches[0].entry_date}..
@@ -1260,14 +1261,14 @@ export function PortfolioPage() {
                           <td className="p-3 text-right text-slate-400 dark:text-slate-600 text-xs">—</td>
                           <td className="p-3 text-right text-slate-400 dark:text-slate-600 text-xs">—</td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                            {isBond ? `${Number(g.currentPrice).toFixed(2)}%` : formatMoney(g.currentPrice)}
+                            {formatPrice(g.currentPrice, isBond, undefined, locale)}
                           </td>
-                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-bold">{formatMoney(g.marketValue)}</td>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-bold">{formatMoney(g.marketValue, undefined, locale)}</td>
                           <td className={`p-3 text-right font-semibold ${colorForPct(g.returnValue)}`}>
-                            {formatMoney(g.returnValue)}
+                            {formatMoney(g.returnValue, undefined, locale)}
                           </td>
                           <td className={`p-3 text-right font-semibold ${colorForPct(g.returnPct)}`}>
-                            {formatPct(g.returnPct)}
+                            {formatPct(g.returnPct, 2, locale)}
                           </td>
                           <td className="p-3 text-right">
                             <div className="flex justify-end gap-1.5">
@@ -1306,10 +1307,10 @@ export function PortfolioPage() {
                               <td className="p-2.5 text-slate-400 dark:text-slate-600 truncate max-w-[200px]">{tItem.asset_name}</td>
                               <td className="p-2.5 text-slate-400 dark:text-slate-600 uppercase text-[10px]">{tItem.instrument_type}</td>
                               <td className="p-2.5 text-right font-mono">
-                                {isBond ? Number(tItem.quantity).toLocaleString() : Number(tItem.quantity).toFixed(4)}
+                                {formatQuantity(tItem.quantity, isBond, locale)}
                               </td>
                               <td className="p-2.5 text-right font-mono">
-                                {isBond ? `${Number(tItem.avg_cost).toFixed(2)}%` : formatMoney(tItem.avg_cost)}
+                                {formatPrice(tItem.avg_cost, isBond, tItem.asset_currency, locale)}
                               </td>
                               <td className="p-2.5 text-right text-slate-400 dark:text-slate-600">{tItem.entry_date}</td>
                               <td className="p-2.5 text-right text-slate-400 dark:text-slate-600">{tItem.exit_date ?? "—"}</td>
@@ -1317,14 +1318,14 @@ export function PortfolioPage() {
                                 {tItem.hold_duration_days != null ? `${tItem.hold_duration_days}d` : "—"}
                               </td>
                               <td className="p-2.5 text-right font-mono text-slate-400 dark:text-slate-600">
-                                {isBond ? `${Number(tItem.current_price).toFixed(2)}%` : formatMoney(tItem.current_price)}
+                                {formatPrice(tItem.current_price, isBond, tItem.asset_currency, locale)}
                               </td>
-                              <td className="p-2.5 text-right font-mono font-medium">{formatMoney(tItem.market_value)}</td>
+                              <td className="p-2.5 text-right font-mono font-medium">{formatMoney(tItem.market_value, tItem.asset_currency, locale)}</td>
                               <td className={`p-2.5 text-right font-mono ${colorForPct(tItem.return_value)}`}>
-                                {formatMoney(tItem.return_value)}
+                                {formatMoney(tItem.return_value, tItem.asset_currency, locale)}
                               </td>
                               <td className={`p-2.5 text-right font-mono ${colorForPct(tItem.return_pct)}`}>
-                                {formatPct(tItem.return_pct)}
+                                {formatPct(tItem.return_pct, 2, locale)}
                               </td>
                               <td className="p-2.5 text-right">
                                 <div className="flex justify-end gap-1.5">
@@ -1362,25 +1363,25 @@ export function PortfolioPage() {
             <article className="card p-4">
               <div className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.bonds_total_nominal")}</div>
               <div className="mt-2 text-2xl font-semibold text-teal-200 dark:text-teal-900">
-                {formatMoney(bondMetrics?.total_nominal)}
+                {formatMoney(bondMetrics?.total_nominal, undefined, locale)}
               </div>
             </article>
             <article className="card p-4">
               <div className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.bonds_market_value")}</div>
               <div className="mt-2 text-2xl font-semibold text-teal-200 dark:text-teal-900">
-                {formatMoney(bondMetrics?.total_market_value)}
+                {formatMoney(bondMetrics?.total_market_value, undefined, locale)}
               </div>
             </article>
             <article className="card p-4">
               <div className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.bonds_weighted_ytm")}</div>
               <div className="mt-2 text-2xl font-semibold text-green-400 dark:text-green-700">
-                {formatPct(bondMetrics?.weighted_ytm_net)}
+                {formatPct(bondMetrics?.weighted_ytm_net, 2, locale)}
               </div>
             </article>
             <article className="card p-4">
               <div className="text-sm text-slate-400 dark:text-slate-900">{t("portfolio.bonds_annual_income")}</div>
               <div className="mt-2 text-2xl font-semibold text-teal-200 dark:text-teal-900">
-                {formatMoney(bondMetrics?.estimated_annual_income_net)}
+                {formatMoney(bondMetrics?.estimated_annual_income_net, undefined, locale)}
               </div>
             </article>
           </section>
@@ -1440,22 +1441,22 @@ export function PortfolioPage() {
                             {Number(h.quantity).toLocaleString()} €
                           </td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono">
-                            {Number(h.current_price).toFixed(2)}%
+                            {formatPrice(h.current_price, true, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono text-xs">
-                            +{Number(h.accrued_interest ?? 0).toFixed(4)}%
+                            +{formatNumber(h.accrued_interest ?? 0, { minDecimals: 4, maxDecimals: 4, locale })}%
                           </td>
                           <td className="p-3 text-right text-teal-300 dark:text-teal-800 font-mono font-medium">
-                            {Number(h.dirty_price ?? h.current_price).toFixed(2)}%
+                            {formatPrice(h.dirty_price ?? h.current_price, true, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
-                            {formatMoney(h.market_value)}
+                            {formatMoney(h.market_value, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-green-400 dark:text-green-700 font-mono font-medium">
-                            {formatPct(h.ytm_net)}
+                            {formatPct(h.ytm_net, 2, locale)}
                           </td>
                           <td className={`p-3 text-right ${colorForPct(h.return_value)} font-mono`}>
-                            {formatMoney(h.return_value)} ({formatPct(h.return_pct)})
+                            {formatMoney(h.return_value, undefined, locale)} ({formatPct(h.return_pct, 2, locale)})
                           </td>
                           <td className="p-3 text-right">
                             <div className="flex justify-end gap-1.5">
@@ -1530,25 +1531,25 @@ export function PortfolioPage() {
                           </td>
                           <td className="p-3 text-slate-300 dark:text-slate-900">{g.asset_name}</td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
-                            {Number(g.totalQuantity).toLocaleString()} €
+                            {Number(g.totalQuantity).toLocaleString(locale)} €
                           </td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold" title={t("portfolio.weighted_avg", "Media ponderata")}>
-                            {Number(g.avgCost).toFixed(2)}%
+                            {formatPrice(g.avgCost, true, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono text-xs">
-                            +{Number(g.accruedInterest ?? 0).toFixed(4)}%
+                            +{formatNumber(g.accruedInterest ?? 0, { minDecimals: 4, maxDecimals: 4, locale })}%
                           </td>
                           <td className="p-3 text-right text-teal-300 dark:text-teal-800 font-mono font-semibold">
-                            {Number(g.dirtyPrice ?? g.currentPrice).toFixed(2)}%
+                            {formatPrice(g.dirtyPrice ?? g.currentPrice, true, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-bold">
-                            {formatMoney(g.marketValue)}
+                            {formatMoney(g.marketValue, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-green-400 dark:text-green-700 font-mono font-semibold">
-                            {formatPct(g.weightedYtmNet)}
+                            {formatPct(g.weightedYtmNet, 2, locale)}
                           </td>
                           <td className={`p-3 text-right ${colorForPct(g.returnValue)} font-mono font-semibold`}>
-                            {formatMoney(g.returnValue)} ({formatPct(g.returnPct)})
+                            {formatMoney(g.returnValue, undefined, locale)} ({formatPct(g.returnPct, 2, locale)})
                           </td>
                           <td className="p-3 text-right">
                             <div className="flex justify-end gap-1.5">
@@ -1585,28 +1586,28 @@ export function PortfolioPage() {
                                 )}
                               </td>
                               <td className="p-2.5 text-slate-400 dark:text-slate-600 truncate max-w-[200px]">
-                                {tItem.entry_date} {asNumber(tItem.accrued_interest_in) > 0 ? `(Rateo: +${Number(tItem.accrued_interest_in).toFixed(2)}%)` : ""}
+                                {tItem.entry_date} {asNumber(tItem.accrued_interest_in) > 0 ? `(Rateo: +${formatNumber(tItem.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%)` : ""}
                               </td>
                               <td className="p-2.5 text-right font-mono">
-                                {Number(tItem.quantity).toLocaleString()} €
+                                {Number(tItem.quantity).toLocaleString(locale)} €
                               </td>
                               <td className="p-2.5 text-right font-mono text-slate-400 dark:text-slate-600" title="Prezzo di carico (clean)">
-                                {Number(tItem.avg_cost).toFixed(2)}%
+                                {formatPrice(tItem.avg_cost, true, undefined, locale)}
                               </td>
                               <td className="p-2.5 text-right text-slate-400 dark:text-slate-600 font-mono text-[11px]">
-                                +{Number(tItem.accrued_interest ?? 0).toFixed(4)}%
+                                +{formatNumber(tItem.accrued_interest ?? 0, { minDecimals: 4, maxDecimals: 4, locale })}%
                               </td>
                               <td className="p-2.5 text-right text-slate-300 dark:text-slate-700 font-mono">
-                                {Number(tItem.dirty_price ?? tItem.current_price).toFixed(2)}%
+                                {formatPrice(tItem.dirty_price ?? tItem.current_price, true, undefined, locale)}
                               </td>
                               <td className="p-2.5 text-right font-mono font-medium">
-                                {formatMoney(tItem.market_value)}
+                                {formatMoney(tItem.market_value, undefined, locale)}
                               </td>
                               <td className="p-2.5 text-right text-green-400 dark:text-green-700 font-mono">
-                                {formatPct(tItem.ytm_net)}
+                                {formatPct(tItem.ytm_net, 2, locale)}
                               </td>
                               <td className={`p-2.5 text-right font-mono ${colorForPct(tItem.return_value)}`}>
-                                {formatMoney(tItem.return_value)} ({formatPct(tItem.return_pct)})
+                                {formatMoney(tItem.return_value, undefined, locale)} ({formatPct(tItem.return_pct, 2, locale)})
                               </td>
                               <td className="p-2.5 text-right">
                                 <div className="flex justify-end gap-1.5">
@@ -1695,16 +1696,16 @@ export function PortfolioPage() {
                           </span>
                         </td>
                         <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono text-xs">
-                          {Number(item.rate).toFixed(2)}%
+                          {formatNumber(item.rate, { minDecimals: 2, maxDecimals: 2, locale })}%
                         </td>
                         <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono">
-                          {formatMoney(item.gross_amount)}
+                          {formatMoney(item.gross_amount, undefined, locale)}
                         </td>
                         <td className="p-3 text-right text-slate-400 dark:text-slate-500 font-mono text-xs">
-                          {formatMoney(item.tax_amount)}
+                          {formatMoney(item.tax_amount, undefined, locale)}
                         </td>
                         <td className="p-3 text-right font-mono font-semibold text-green-400 dark:text-green-700">
-                          {formatMoney(item.net_amount)}
+                          {formatMoney(item.net_amount, undefined, locale)}
                         </td>
                       </tr>
                     );

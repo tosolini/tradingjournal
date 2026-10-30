@@ -12,7 +12,7 @@ function asNumber(value: string | number | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function formatMoney(value: string | number | undefined, currency?: string, locale = "en-US"): string {
+function formatMoney(value: string | number | undefined, currency?: string, locale = "it-IT"): string {
   const n = asNumber(value);
   const normalized = (currency || "").trim().toUpperCase();
   if (!normalized) return n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -26,15 +26,16 @@ function formatMoney(value: string | number | undefined, currency?: string, loca
   }
 }
 
-function formatSignedMoney(value: string | number | undefined, currency?: string, locale = "en-US"): string {
+function formatSignedMoney(value: string | number | undefined, currency?: string, locale = "it-IT"): string {
   const n = asNumber(value);
   const sign = n < 0 ? "-" : n > 0 ? "+" : "";
   return `${sign}${formatMoney(Math.abs(n), currency, locale)}`;
 }
 
-function formatPct(value: string | number | undefined): string {
+function formatPct(value: string | number | undefined, locale = "it-IT"): string {
   const n = asNumber(value);
-  return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+  const formatted = Math.abs(n).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${n >= 0 ? "+" : "-"}${formatted}%`;
 }
 
 function pnlTone(n: number): string {
@@ -362,7 +363,7 @@ function EquityChartPanel({
             >
               <span className="font-medium text-slate-300 dark:text-slate-600">{t("dashboard.theoretical_gain")}:</span>
               <span className="font-bold">
-                {formatSignedMoney(activeDelta, currency, locale)} ({formatPct(activeDeltaPct)})
+                {formatSignedMoney(activeDelta, currency, locale)} ({formatPct(activeDeltaPct, locale)})
               </span>
             </div>
           </div>
