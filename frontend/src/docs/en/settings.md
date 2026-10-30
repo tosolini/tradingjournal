@@ -70,6 +70,16 @@ Sets the time (default `23:55`) at which the backend runs the **daily snapshot j
 
 The job runs once per day, in the server timezone configured via `APP_TIMEZONE`. In this section you can also run manual recomputes to backfill a date.
 
+
+## Dashboard Chart
+
+Customize the default behavior for the equity curve chart in your Dashboard:
+
+- **Default chart visualization**: select which view to automatically display when opening the Dashboard:
+  - **Combined (Portfolio & Equities)** — displays the combined total of all holdings and stock trades (default)
+  - **Portfolio (ETFs & Bonds)** — isolates long-term investment holdings and funds
+  - **Equities (Stocks & Trading)** — isolates open stock trading positions and allocated trading capital
+- Click **Save preferences** to store your choice in your user profile.
 ## Session
 
 - **Logout** — ends the current session and returns to the login page

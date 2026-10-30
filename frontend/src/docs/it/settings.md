@@ -70,6 +70,16 @@ Imposta l'orario (default `23:55`) in cui il backend esegue il **job di snapshot
 
 Il job viene eseguito una volta al giorno, nel fuso orario del server configurato con `APP_TIMEZONE`. In questa sezione puoi anche eseguire ricalcoli manuali per popolare una data.
 
+
+## Grafico Dashboard
+
+Personalizza la visualizzazione predefinita del grafico del patrimonio nella Dashboard:
+
+- **Visualizzazione di default del grafico**: scegli quale filtro applicare automaticamente all'apertura della Dashboard tra:
+  - **Cumulato (Portafoglio e Azionario)** — visualizza la somma complessiva di tutti gli investimenti e dei trade azionari (predefinito)
+  - **Portafoglio (ETF e Obbligazioni)** — mostra unicamente gli asset e le posizioni di portafoglio a lungo termine
+  - **Azionario (Azioni e Trading)** — mostra unicamente le posizioni azionarie aperte e il capitale impiegato nel trading
+- Clicca **Salva preferenze** per registrare l'impostazione nel tuo profilo utente.
 ## Sessione
 
 - **Logout** — termina la sessione corrente e torna alla pagina di login

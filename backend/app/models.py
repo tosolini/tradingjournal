@@ -278,10 +278,6 @@ class BondDetail(TimestampMixin, Base):
 
 class Holding(TimestampMixin, Base):
     __tablename__ = "holdings"
-    __table_args__ = (
-        UniqueConstraint("account_id", "asset_id", name="uq_holding_account_asset"),
-    )
-
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), index=True)

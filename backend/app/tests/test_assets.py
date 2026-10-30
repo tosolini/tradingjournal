@@ -134,3 +134,78 @@ def test_delete_asset_cascades_to_holdings(db):
 
     remaining_holdings = db.execute(select(Holding).where(Holding.user_id == user.id)).scalars().all()
     assert len(remaining_holdings) == 0
+
+
+def test_multiple_holdings_for_same_asset_allowed(db):
+    from app.models import Account
+    from app.api.holdings import create_holding, list_holdings
+    from app.schemas import HoldingCreate
+    from app.services.portfolio import get_holding_details, get_portfolio_summary
+    from datetime import date
+    from decimal import Decimal
+
+    user = User(
+        email="multiholding@example.com",
+        username="multiholding",
+        hashed_password=hash_password("Pass123!"),
+        role="user",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    account = Account(name="PAC Account", user_id=user.id, base_currency="EUR")
+    db.add(account)
+    db.commit()
+    db.refresh(account)
+
+    asset = create_asset(
+        payload=AssetCreate(symbol="VWCE", name="Vanguard FTSE All-World", instrument_type="etf"),
+        db=db,
+        current_user=user,
+    )
+
+    # 1. First tranche: 10 units @ 100 on 2026-01-01
+    h1 = create_holding(
+        payload=HoldingCreate(
+            account_id=account.id,
+            asset_id=asset.id,
+            quantity=Decimal("10"),
+            avg_cost=Decimal("100.00"),
+            entry_date=date(2026, 1, 1),
+        ),
+        db=db,
+        current_user=user,
+    )
+    assert h1.id is not None
+
+    # 2. Second tranche for the SAME asset & account: 20 units @ 110 on 2026-02-01
+    h2 = create_holding(
+        payload=HoldingCreate(
+            account_id=account.id,
+            asset_id=asset.id,
+            quantity=Decimal("20"),
+            avg_cost=Decimal("110.00"),
+            entry_date=date(2026, 2, 1),
+        ),
+        db=db,
+        current_user=user,
+    )
+    assert h2.id is not None
+    assert h2.id != h1.id
+
+    # 3. List holdings returns both
+    all_holdings = list_holdings(account_id=None, db=db, current_user=user)
+    assert len(all_holdings) == 2
+    assert {h.quantity for h in all_holdings} == {Decimal("10"), Decimal("20")}
+
+    # 4. Holding details returns both with accurate cost basis
+    details = get_holding_details(db, user_id=user.id)
+    assert len(details) == 2
+
+    # 5. Portfolio summary aggregates both tranches
+    summaries = get_portfolio_summary(db, user_id=user.id)
+    assert len(summaries) == 1
+    # total cost = 10*100 + 20*110 = 1000 + 2200 = 3200
+    assert summaries[0].total_cost == Decimal("3200.00")
+    assert summaries[0].holdings_count == 2

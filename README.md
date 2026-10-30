@@ -9,7 +9,7 @@ This project is a personal trading journal application designed to help traders 
 - **Trade entry wizard** (6 steps) or a compact quick-trade form, with a live **Risk/Reward (R:R) calculator gauge**
 - **Command Palette (`Cmd+K` / `Ctrl+K`)** for universal keyboard navigation, quick trade entry, note creation, live ticker search and theme/language switching
 - Weighted-average PnL calculations with fee- and tax-aware net values
-- **Dashboard** with hero KPIs (including **Current Week PnL**), equity curve, periodic PnL bar chart (**Monthly and Weekly toggle** with interactive hover tooltips), **Expectancy & Payoff (W/L) statistics**, **Best vs Worst Trade** comparison card, asset allocation and top trades
+- **Dashboard** with hero KPIs (including **Current Week PnL**), equity curve with **asset filtering** (Combined / Portfolio / Equities), weekend/closure normalization, customizable default chart visualization, periodic PnL bar chart (**Monthly and Weekly toggle** with interactive hover tooltips), **Expectancy & Payoff (W/L) statistics**, **Best vs Worst Trade** comparison card, asset allocation and top trades
 - **Unified Trading Calendar** with color-coded daily PnL badges, **Weekly Summary column** (Weekly PnL, W/L days ratio, trade count), monthly KPI summary banner, day-detail drawer, and markets Gantt chart
 - **Trades management** with client-side pagination, quick date presets (`All`, `Today`, `7d`, `This Month`, `YTD`), outcome filters (`Win`, `Loss`), column visibility toggles, and instant quick-close
 - **Performance** page with portfolio value evolution, daily PnL and a color-coded monthly calendar
@@ -35,8 +35,8 @@ The entire project is meant to be used on localhost or private networks. **Do no
 
 ## Current version
 
-- Backend: `0.1.9` (`backend/pyproject.toml`)
-- Frontend: `0.1.9` (`frontend/package.json`)
+- Backend: `0.2.0` (`backend/pyproject.toml`)
+- Frontend: `0.2.0` (`frontend/package.json`)
 
 More details on change log and versioning strategy in the [changelog.md](changelog.md) file.
 

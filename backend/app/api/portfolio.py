@@ -87,11 +87,13 @@ def portfolio_history(
         holdings = db.execute(holdings_query).scalars().all()
         for h in holdings:
             e_str = h.entry_date.isoformat()
+            is_bond = (h.asset.instrument_type or "").lower() in ("bond", "government_bond")
+            cost = (h.quantity * (h.avg_cost + (h.accrued_interest_in or Decimal("0")))) / Decimal("100") if is_bond else h.quantity * h.avg_cost
             if e_str not in by_date:
-                is_bond = (h.asset.instrument_type or "").lower() in ("bond", "government_bond")
-                cost = (h.quantity * (h.avg_cost + (h.accrued_interest_in or Decimal("0")))) / Decimal("100") if is_bond else h.quantity * h.avg_cost
                 by_date[e_str] = {"value": cost, "cost": cost}
-
+            else:
+                by_date[e_str]["value"] += cost
+                by_date[e_str]["cost"] += cost
     points: list[PortfolioHistoryPoint] = []
     for d_str in sorted(by_date.keys()):
         val = by_date[d_str]["value"]

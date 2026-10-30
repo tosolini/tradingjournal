@@ -287,6 +287,38 @@ def dashboard_kpis(
     all_dates = sorted(
         set([d for _, d in ps_by_acc_date.keys()] + [d for _, d in pds_by_acc_date.keys()])
     )
+    ps_dates = set(dt for _, dt in ps_by_acc_date.keys())
+    pds_dates = set(dt for _, dt in pds_by_acc_date.keys())
+
+    holding_details = get_holding_details(db, current_user.id)
+    acc_holding_intervals: dict[int, list[tuple[date, date | None]]] = defaultdict(list)
+    for h in holding_details:
+        acc_holding_intervals[h.account_id].append((h.entry_date, h.exit_date))
+
+    def had_open_holdings_on_date(acc_id: int, d: date) -> bool:
+        for entry_d, exit_d in acc_holding_intervals.get(acc_id, []):
+            if entry_d <= d and (exit_d is None or exit_d >= d):
+                return True
+        return False
+
+    acc_open_intervals: dict[int, list[tuple[date, date | None]]] = defaultdict(list)
+    for t in trades:
+        t_execs = executions_by_trade.get(t.id, [])
+        if not t_execs:
+            continue
+        entry_d = min(e.executed_at.date() for e in t_execs)
+        closed_d = (
+            t.closed_at.date()
+            if t.closed_at
+            else max(e.executed_at.date() for e in t_execs)
+        ) if t.status == "close" else None
+        acc_open_intervals[t.account_id].append((entry_d, closed_d))
+
+    def had_open_trades_on_date(acc_id: int, d: date) -> bool:
+        for entry_d, closed_d in acc_open_intervals.get(acc_id, []):
+            if entry_d <= d and (closed_d is None or closed_d >= d):
+                return True
+        return False
 
     by_date: dict[date, dict[str, Decimal]] = {}
     last_ps = {acc_id: (Decimal("0"), Decimal("0")) for acc_id in account_ids}
@@ -297,27 +329,53 @@ def dashboard_kpis(
             if (acc_id, d) in ps_by_acc_date:
                 last_ps[acc_id] = ps_by_acc_date[(acc_id, d)]
             else:
-                last_ps[acc_id] = (Decimal("0"), Decimal("0"))
+                if acc_holding_intervals.get(acc_id):
+                    if had_open_holdings_on_date(acc_id, d):
+                        pass
+                    else:
+                        last_ps[acc_id] = (Decimal("0"), Decimal("0"))
+                elif d not in ps_dates:
+                    pass
+                else:
+                    last_ps[acc_id] = (Decimal("0"), Decimal("0"))
+
             if (acc_id, d) in pds_by_acc_date:
                 pds_item = pds_by_acc_date[(acc_id, d)]
                 last_pds[acc_id] = (pds_item["val"], pds_item["cost"])
             else:
-                last_pds[acc_id] = (Decimal("0"), Decimal("0"))
-
-        tot_val = sum(last_ps[a][0] + last_pds[a][0] for a in account_ids)
-        tot_cost = sum(last_ps[a][1] + last_pds[a][1] for a in account_ids)
-        by_date[d] = {"value": tot_val, "cost": tot_cost}
-
+                if acc_open_intervals.get(acc_id):
+                    if had_open_trades_on_date(acc_id, d):
+                        pass
+                    else:
+                        last_pds[acc_id] = (Decimal("0"), Decimal("0"))
+                elif d not in pds_dates:
+                    pass
+                else:
+                    last_pds[acc_id] = (Decimal("0"), Decimal("0"))
+        holdings_val = sum(last_ps[a][0] for a in account_ids)
+        holdings_cost = sum(last_ps[a][1] for a in account_ids)
+        trades_val = sum(last_pds[a][0] for a in account_ids)
+        trades_cost = sum(last_pds[a][1] for a in account_ids)
+        tot_val = holdings_val + trades_val
+        tot_cost = holdings_cost + trades_cost
+        by_date[d] = {
+            "value": tot_val,
+            "cost": tot_cost,
+            "holdings_value": holdings_val,
+            "holdings_cost": holdings_cost,
+            "trades_value": trades_val,
+            "trades_cost": trades_cost,
+        }
     # 3. Live current day mark-to-market and nominal cost basis
-    holding_details = get_holding_details(db, current_user.id)
     live_holdings_val = sum((h.market_value for h in holding_details), Decimal("0"))
     live_holdings_cost = sum((h.avg_cost * h.quantity for h in holding_details), Decimal("0"))
 
     live_trades_val = Decimal("0")
     live_trades_cost = Decimal("0")
     earliest_open_date: date | None = None
+    earliest_holdings_date: date | None = None
+    earliest_trades_date: date | None = None
     live_quotes: dict[tuple[str, str | None], Decimal | None] = {}
-
     for trade in trades:
         if trade.status == "open":
             t_execs = executions_by_trade.get(trade.id, [])
@@ -335,19 +393,28 @@ def dashboard_kpis(
                     live_trades_cost += t_pnl.average_entry_price * abs(t_pnl.position_qty)
                     for ex in t_execs:
                         ex_date = ex.executed_at.date()
+                        if earliest_trades_date is None or ex_date < earliest_trades_date:
+                            earliest_trades_date = ex_date
                         if earliest_open_date is None or ex_date < earliest_open_date:
                             earliest_open_date = ex_date
-
     for h in holding_details:
+        if earliest_holdings_date is None or h.entry_date < earliest_holdings_date:
+            earliest_holdings_date = h.entry_date
         if earliest_open_date is None or h.entry_date < earliest_open_date:
             earliest_open_date = h.entry_date
-
     today = date.today()
     live_total_val = live_holdings_val + live_trades_val
     live_total_cost = live_holdings_cost + live_trades_cost
 
     if live_total_cost > Decimal("0") or live_total_val > Decimal("0") or not by_date:
-        by_date[today] = {"value": live_total_val, "cost": live_total_cost}
+        by_date[today] = {
+            "value": live_total_val,
+            "cost": live_total_cost,
+            "holdings_value": live_holdings_val,
+            "holdings_cost": live_holdings_cost,
+            "trades_value": live_trades_val,
+            "trades_cost": live_trades_cost,
+        }
 
     # Ensure at least 2 points if active positions exist so the chart can draw
     if len(by_date) == 1 and live_total_cost > Decimal("0"):
@@ -357,19 +424,93 @@ def dashboard_kpis(
             else (today - timedelta(days=1))
         )
         if start_date not in by_date:
-            by_date[start_date] = {"value": live_total_cost, "cost": live_total_cost}
+            by_date[start_date] = {
+                "value": live_total_cost,
+                "cost": live_total_cost,
+                "holdings_value": live_holdings_cost,
+                "holdings_cost": live_holdings_cost,
+                "trades_value": live_trades_cost,
+                "trades_cost": live_trades_cost,
+            }
+
+    # Ensure at least 2 points for category-specific series if active positions exist
+    active_trade_points = sum(
+        1
+        for item in by_date.values()
+        if item.get("trades_cost", Decimal("0")) > Decimal("0")
+        or item.get("trades_value", Decimal("0")) > Decimal("0")
+    )
+    if active_trade_points == 1 and (live_trades_cost > Decimal("0") or live_trades_val > Decimal("0")):
+        t_start = (
+            earliest_trades_date
+            if earliest_trades_date and earliest_trades_date < today
+            else (today - timedelta(days=1))
+        )
+        if t_start in by_date:
+            by_date[t_start]["trades_value"] = live_trades_cost
+            by_date[t_start]["trades_cost"] = live_trades_cost
+        else:
+            by_date[t_start] = {
+                "value": live_trades_cost,
+                "cost": live_trades_cost,
+                "holdings_value": Decimal("0"),
+                "holdings_cost": Decimal("0"),
+                "trades_value": live_trades_cost,
+                "trades_cost": live_trades_cost,
+            }
+
+    active_holding_points = sum(
+        1
+        for item in by_date.values()
+        if item.get("holdings_cost", Decimal("0")) > Decimal("0")
+        or item.get("holdings_value", Decimal("0")) > Decimal("0")
+    )
+    if active_holding_points == 1 and (live_holdings_cost > Decimal("0") or live_holdings_val > Decimal("0")):
+        h_start = (
+            earliest_holdings_date
+            if earliest_holdings_date and earliest_holdings_date < today
+            else (today - timedelta(days=1))
+        )
+        if h_start in by_date:
+            by_date[h_start]["holdings_value"] = live_holdings_cost
+            by_date[h_start]["holdings_cost"] = live_holdings_cost
+        else:
+            by_date[h_start] = {
+                "value": live_holdings_cost,
+                "cost": live_holdings_cost,
+                "holdings_value": live_holdings_cost,
+                "holdings_cost": live_holdings_cost,
+                "trades_value": Decimal("0"),
+                "trades_cost": Decimal("0"),
+            }
 
     portfolio_history = []
     for snapshot_date in sorted(by_date):
-        value = by_date[snapshot_date]["value"]
-        cost = by_date[snapshot_date]["cost"]
+        item = by_date[snapshot_date]
+        value = item["value"]
+        cost = item["cost"]
         return_pct = (value - cost) / cost * Decimal("100") if cost else Decimal("0")
+
+        h_val = item.get("holdings_value", Decimal("0"))
+        h_cost = item.get("holdings_cost", Decimal("0"))
+        h_pct = (h_val - h_cost) / h_cost * Decimal("100") if h_cost else Decimal("0")
+
+        t_val = item.get("trades_value", Decimal("0"))
+        t_cost = item.get("trades_cost", Decimal("0"))
+        t_pct = (t_val - t_cost) / t_cost * Decimal("100") if t_cost else Decimal("0")
+
         portfolio_history.append(
             {
                 "date": snapshot_date.isoformat(),
                 "value": float(value),
                 "cost": float(cost),
                 "return_pct": float(return_pct),
+                "holdings_value": float(h_val),
+                "holdings_cost": float(h_cost),
+                "holdings_return_pct": float(h_pct),
+                "trades_value": float(t_val),
+                "trades_cost": float(t_cost),
+                "trades_return_pct": float(t_pct),
             }
         )
     by_symbol: dict[str, dict] = {}
