@@ -799,3 +799,29 @@ def test_sync_asset_and_holding_euronext(db, monkeypatch):
     assert res_holding.nominal_yield == Decimal("3.35")
     assert res_holding.bond_detail.annual_coupon_rate == Decimal("3.3500")
     assert res_holding.ytm_gross > Decimal("3.5")
+
+
+def test_sync_euronext_rejects_non_bond_asset(db):
+    from fastapi import HTTPException
+
+    from app.api.assets import sync_asset_euronext
+    from app.models import Asset, User
+
+    user = User(email="test_sync_guard@example.com", username="test_sync_guard", hashed_password="pw")
+    db.add(user)
+    db.commit()
+
+    asset = Asset(
+        user_id=user.id,
+        symbol="AAPL",
+        name="Apple Inc.",
+        instrument_type="stock",
+        currency="USD",
+    )
+    db.add(asset)
+    db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        sync_asset_euronext(asset_id=asset.id, db=db, current_user=user)
+
+    assert exc.value.status_code == 400

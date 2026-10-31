@@ -276,52 +276,54 @@ export function AssetFormModal({
         )}
 
 
-        {(
-          <div className="mb-4 rounded-lg border border-teal-500/30 bg-teal-500/10 dark:bg-teal-50 p-3 space-y-2">
-            <div className="text-xs font-semibold text-teal-300 dark:text-teal-900 flex items-center justify-between">
-              <span>
-                {t("assets.euronext_import_prefix", "Importa automaticamente da")}{" "}
-                <a
-                  href="https://live.euronext.com/en/products/bonds/mot/list"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline hover:text-teal-200 dark:hover:text-teal-700 transition-colors inline-flex items-center gap-1"
-                  title="Apri Euronext MOT"
-                >
-                  Euronext / MOT
-                  <svg viewBox="0 0 24 24" className="h-3 w-3 inline" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    <polyline points="15 3 21 3 21 9" />
-                    <line x1="10" y1="14" x2="21" y2="3" />
-                  </svg>
-                </a>
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={euronextQuery}
-                onChange={(e) => setEuronextQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleEuronextLookup();
-                  }
-                }}
-                placeholder={t("assets.euronext_import_placeholder", "Incolla URL Euronext o codice ISIN (es. IT0005611741)")}
-                className="flex-1 rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-xs text-slate-200 dark:text-slate-900 font-mono"
-              />
-              <button
-                type="button"
-                onClick={handleEuronextLookup}
-                disabled={!euronextQuery.trim() || loadingEuronext}
-                className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-50 whitespace-nowrap"
+        <div className="mb-4 rounded-lg border border-teal-500/30 bg-teal-500/10 dark:bg-teal-50 p-3 space-y-2">
+          <div className="text-xs font-semibold text-teal-300 dark:text-teal-900 flex items-center justify-between">
+            <span>
+              {t("assets.euronext_import_prefix", "Importa automaticamente da")}{" "}
+              <a
+                href="https://live.euronext.com/en/products/bonds/mot/list"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-teal-200 dark:hover:text-teal-700 transition-colors inline-flex items-center gap-1"
+                title="Apri Euronext MOT"
               >
-                {loadingEuronext ? t("assets.euronext_import_loading", "Caricamento...") : t("assets.euronext_import_btn", "Importa Live")}
-              </button>
-            </div>
+                Euronext / MOT
+                <svg viewBox="0 0 24 24" className="h-3 w-3 inline" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+            </span>
           </div>
-        )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={euronextQuery}
+              onChange={(e) => setEuronextQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleEuronextLookup();
+                }
+              }}
+              placeholder={t("assets.euronext_import_placeholder", "Incolla URL Euronext o codice ISIN (es. IT0005611741)")}
+              className="flex-1 rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-xs text-slate-200 dark:text-slate-900 font-mono"
+            />
+            <button
+              type="button"
+              onClick={handleEuronextLookup}
+              disabled={!euronextQuery.trim() || loadingEuronext}
+              className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-50 whitespace-nowrap"
+            >
+              {loadingEuronext
+                ? t("assets.euronext_import_loading", "Caricamento...")
+                : isEditing
+                  ? t("assets.euronext_apply_btn", "Compila da Euronext")
+                  : t("assets.euronext_import_btn", "Importa Live")}
+            </button>
+          </div>
+        </div>
         <div className="space-y-3">
           <div ref={symbolContainerRef} className="relative">
             <div className="flex items-center justify-between mb-1">
@@ -741,7 +743,7 @@ export function AssetsPage() {
                   <td className="px-3 py-2 text-slate-400 dark:text-slate-700">{asset.currency}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="flex justify-end gap-2">
-                      {asset.instrument_type === "bond" && (
+                      {["bond", "government_bond"].includes(asset.instrument_type) && (
                         <button
                           onClick={() => syncAssetMutation.mutate(asset.id)}
                           disabled={syncAssetMutation.isPending}

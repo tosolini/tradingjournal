@@ -213,7 +213,6 @@ def holding_sync_euronext(
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy.orm import joinedload
-    from app.models import BondDetail
 
     h = db.execute(
         select(Holding)
@@ -222,33 +221,14 @@ def holding_sync_euronext(
     ).scalars().first()
     if not h:
         raise HTTPException(status_code=404, detail="Holding not found")
+    if not h.asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
 
-    query = (h.asset.isin if h.asset else None) or (h.asset.symbol if h.asset else None)
-    if not query:
-        raise HTTPException(status_code=400, detail="Asset has no ISIN or symbol for Euronext lookup")
-
-    from app.services.euronext import fetch_euronext_bond_details
+    from app.services.euronext import EuronextSyncError, apply_euronext_bond_data
     try:
-        data = fetch_euronext_bond_details(query)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Errore Euronext: {e}")
-
-    bd_data = data.get("bond_detail")
-    if not bd_data:
-        raise HTTPException(status_code=400, detail="Nessun dato obbligazionario trovato su Euronext")
-
-    if not h.asset.bond_detail:
-        h.asset.bond_detail = BondDetail(asset_id=h.asset.id)
-
-    for k, v in bd_data.items():
-        setattr(h.asset.bond_detail, k, v)
-
-    if data.get("name") and (not h.asset.name or h.asset.name.startswith("BTP ")):
-        h.asset.name = data["name"]
-    if data.get("exchange") and not h.asset.exchange:
-        h.asset.exchange = data["exchange"]
-
-    h.asset.instrument_type = "bond"
+        apply_euronext_bond_data(h.asset)
+    except EuronextSyncError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     db.commit()
     db.refresh(h)
