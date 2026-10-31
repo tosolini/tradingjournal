@@ -185,7 +185,7 @@ Always change these values outside local development. In `production` mode the b
 - User account settings (email, username, password change)
 - Admin user management (list/create/update/delete users)
 - Persistent light/dark theme preference in frontend
-- Accounts CRUD + cash ledger (deposits/withdrawals, in/out/net totals)
+- Accounts CRUD + cash ledger (deposits/withdrawals plus automatic coupon, bond bonus, bond redemption, dividend and asset-sale entries; in/out/net totals)
 - Broker CRUD with commission (fixed/percent) and capital-gain tax (immediate/year-end) configuration
 - Exchanges CRUD + broker↔exchange linking + Directa seed
 - Trades CRUD with weighted-average metrics
@@ -195,15 +195,16 @@ Always change these values outside local development. In `production` mode the b
 - Trade image upload (PNG/JPEG/GIF/WebP) + annotated image endpoint with `nosniff` serving
 - **Trades table**: client-side pagination (10, 25, 50, 100 per page), quick date presets (`All`, `Today`, `7d`, `This Month`, `YTD`), outcome filters (`Win`, `Loss`), column visibility toggles, and instant quick-close
 - **Dashboard**:
-  - Hero KPI cards (Total PnL, Realized PnL, **Current Week PnL**, Unrealized PnL, Win Rate)
+  - Hero KPI cards (Total PnL, Realized PnL — including portfolio exits, **Current Week PnL**, Unrealized PnL, Win Rate)
   - Secondary cards: Trades count, Open positions, Capital gain tax, Minus offsets
   - Equity curve with range selector (`1M`, `3M`, `6M`, `1Y`, `ALL`)
   - Outcome donut with win/loss/breakeven and center win rate
   - **Statistiche Avanzate & Expectancy**: Expectancy per trade ($P_w \times \text{Avg Win} - P_l \times \text{Avg Loss}$), Payoff Ratio ($W/L$), Max Drawdown % from ATH peak, and Kelly Criterion sizing estimate
   - **Best vs Worst Trade comparison card**: side-by-side display of all-time best and worst trades
-  - **Periodic PnL bar chart**: toggle between **Monthly PnL** and **Weekly PnL** with interactive hover tooltips and glow highlights
-  - All-assets daily PnL (trades + holdings) with hover detail
+  - **Periodic PnL bar chart**: toggle between **Monthly PnL** and **Weekly PnL** with interactive hover tooltips and glow highlights; includes realized P&L from portfolio exits
+  - All-assets daily PnL (trades + holdings), cash-flow neutral for coupons, redemptions, dividends and sales
   - Asset allocation by holding and instrument class
+  - **Capital composition donut** with `Classes` / `Assets` toggle, total capital in the center and percentage legend
   - Top trades table
 - **Unified Trading Calendar**:
   - Color-coded daily PnL badges (`+€/-%`) inside day cells
@@ -211,13 +212,20 @@ Always change these values outside local development. In `production` mode the b
   - Monthly KPI banner: Total PnL, Win Rate %, Win/Loss days, Total Executions
   - Interactive Day Detail drawer showing notes, executions, and daily breakdown
   - Markets Gantt chart of exchange opening hours
-- Performance page: portfolio value, equity curve, daily PnL bars, color-coded monthly calendar with day detail
+- Performance page: portfolio value, equity curve with **Invested / Total wealth** toggle, daily PnL bars, color-coded monthly calendar with day detail; cumulative PnL is cash-flow neutral and includes realized P&L from portfolio exits
 - **Assets & Fixed Income Engine**:
-  - Assets registry CRUD with instrument types including ETF, stock, bond, and fund
+  - Assets registry CRUD with instrument types including ETF, stock, bond, government bond, and fund
   - Dedicated **Fixed Income / Bond Details** (`bond_type`, `maturity_date`, coupon schedules, step-up, bonus CUM)
   - Accrued interest calculations (rateo passivo on base 100) and Newton-Raphson YTM solver
   - Live Euronext bond factsheet import by ISIN or URL
-- **Portfolio**: holdings CRUD, summary, details (current price via Yahoo Finance / MOT live quote), bond cash flow calendar, and history endpoints
+- **Portfolio**:
+  - Holdings CRUD, summary, details (current price via Yahoo Finance / MOT live quote), bond cash flow calendar, and history endpoints
+  - **Multi-tranche positions** grouped by account + asset, with aggregated detail page, tranche breakdown table and per-tranche edit/delete
+  - **Exit management**: full or partial market sale, natural maturity redemption, early issuer redemption; realized capital gain/interest P&L, accrued interest, fees, estimated taxes, CUM bonus handling and cash-ledger entries
+  - **Exit history** with undo, closed positions excluded from active totals, and a dedicated **Recorded exits** tab
+  - **Bulk exit** for all active tranches of a position with a single confirmation
+  - **Automatic maturity recording** (opt-in) via the daily scheduler
+  - Purchase fees (`fee_in`) included in cost basis and exit P&L
 - **Stock Scouting & Trade Ideas**:
   - Technical setup cataloging directly from market screening (symbol, market, Long/Short, trigger price, stop loss, take profit)
   - Live proximity distance delta (% from trigger)
@@ -232,8 +240,8 @@ Always change these values outside local development. In `production` mode the b
   - **Trading discipline checklist tags** (Pre/Post-trade psychology: *Plan Followed*, *Stop Loss Respected*, *FOMO*, *Overtrading*)
   - Persisted notes filters (search/tags) in user DB preferences
 - **In-App Interactive Manual (`/help`)**: comprehensive, illustrated guides with live screenshots covering Getting Started, Dashboard, Trades, Notes & Scouting, Accounts, Tickers, Calendar & Markets, and Settings in Italian and English
-- Daily snapshots (positions + portfolio) via scheduled job (APScheduler) at a configurable time, plus manual recompute endpoints
-- Full JSON data export/import (`/api/data/export`, `/api/data/import`)
+- Daily snapshots (positions + portfolio) via scheduled job (APScheduler) at a configurable time, plus manual recompute endpoints; the same job can automatically record matured bond redemptions (opt-in)
+- Full JSON data export/import (`/api/data/export`, `/api/data/import`), including holding exits and their linked cash-ledger entries
 - Credits & Developer modal with author bio, previous Tosolini logo, and social links (GitHub, LinkedIn, Website)
 - Runtime schema compatibility checks for legacy DBs
 
@@ -247,7 +255,7 @@ Authentication entry point for local users.
 
 ### 2. Dashboard
 
-Complete operational summary: hero KPIs (including Current Week PnL), equity curve, periodic bar chart (Monthly & Weekly PnL), Expectancy & Edge metrics, Best vs Worst Trade comparison, asset allocation and top trades.
+Complete operational summary: hero KPIs (including Current Week PnL and realized P&L from portfolio exits), equity curve, periodic bar chart (Monthly & Weekly PnL), Expectancy & Edge metrics, Best vs Worst Trade comparison, asset allocation, capital composition donut and top trades.
 
 ![Dashboard screen](screen/02-dashboard.jpeg)
 
@@ -274,6 +282,10 @@ Detailed trade view with TP/SL projections, fee-aware net values, current market
 Trade list with pagination, date presets, outcome filters, status filter, toggleable columns, quick actions (view, edit, images, quick close, delete) and recent executions.
 
 ![Trades list screen](screen/06-trade-list.jpeg)
+
+### 7. Portfolio & exits
+
+Portfolio detail now aggregates all tranches of the same asset/account, shows the tranche breakdown, and lets you record full or partial market sales, natural maturity redemptions and early issuer redemptions. Each exit stores realized capital gain/interest, fees, estimated taxes, CUM handling and cash-ledger entries, with undo support and a dedicated **Recorded exits** tab. Automatic maturity recording can be enabled in Settings → Portfolio.
 
 > Portfolio, Performance, Accounts (with cash ledger) and the data export/import live under their sidebar sections — see the in-app **Help** manual for the full guide.
 
@@ -325,6 +337,12 @@ All endpoints require a Bearer JWT (`POST /api/auth/login`) except `/health`, `/
   - `GET /api/holdings/`
   - `PATCH /api/holdings/{holding_id}`
   - `DELETE /api/holdings/{holding_id}`
+  - `POST /api/holdings/{holding_id}/exits/preview`
+  - `POST /api/holdings/{holding_id}/exits`
+  - `POST /api/holdings/{holding_id}/exits/bulk/preview`
+  - `POST /api/holdings/{holding_id}/exits/bulk`
+  - `GET /api/holdings/{holding_id}/exits`
+  - `DELETE /api/holdings/exits/{exit_id}`
 
 - Brokers and exchanges
   - `POST /api/brokers`, `GET /api/brokers`, `PATCH /api/brokers/{broker_id}`, `DELETE /api/brokers/{broker_id}`
@@ -359,6 +377,11 @@ All endpoints require a Bearer JWT (`POST /api/auth/login`) except `/health`, `/
   - `GET /api/portfolio/details`
   - `GET /api/portfolio/summary`
   - `GET /api/portfolio/history`
+  - `GET /api/portfolio/exits`
+  - `GET /api/portfolio/holdings/{holding_id}`
+  - `GET /api/portfolio/holdings/{holding_id}/price-history`
+  - `GET /api/portfolio/holdings/{holding_id}/calendar`
+  - `POST /api/portfolio/holdings/{holding_id}/sync-euronext`
 
 - Tickers
   - `POST /api/tickers/import`

@@ -40,6 +40,11 @@ def db():
         conn.execute(text("ALTER TABLE brokers ADD COLUMN IF NOT EXISTS capital_gain_rate_gov NUMERIC(5, 2) NOT NULL DEFAULT 12.50;"))
         conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS accrued_interest_in NUMERIC(18, 6) NOT NULL DEFAULT 0;"))
         conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS eligible_for_bonus BOOLEAN NOT NULL DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS fee_in NUMERIC(18, 6) NOT NULL DEFAULT 0;"))
+        conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS closed_at DATE;"))
+        conn.execute(text("ALTER TABLE holding_exits ADD COLUMN IF NOT EXISTS capital_gain_tax NUMERIC(18, 2) NOT NULL DEFAULT 0;"))
+        conn.execute(text("ALTER TABLE holding_exits ADD COLUMN IF NOT EXISTS interest_tax NUMERIC(18, 2) NOT NULL DEFAULT 0;"))
+        conn.execute(text("ALTER TABLE cash_ledger_entries ADD COLUMN IF NOT EXISTS holding_exit_id INTEGER REFERENCES holding_exits(id) ON DELETE CASCADE;"))
         conn.execute(text("ALTER TABLE holdings DROP CONSTRAINT IF EXISTS uq_holding_account_asset;"))
     session = TestingSession()
     yield session

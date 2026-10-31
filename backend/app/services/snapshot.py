@@ -9,8 +9,13 @@ from app.services.pnl import compute_weighted_average_pnl
 from app.services.price_provider import get_close_price
 
 
-def recompute_daily_snapshots(db: Session, snapshot_date: date) -> int:
-    trades = db.execute(select(Trade).where(Trade.status == "open")).scalars().all()
+def recompute_daily_snapshots(
+    db: Session, snapshot_date: date, user_id: int | None = None
+) -> int:
+    trades_query = select(Trade).where(Trade.status == "open")
+    if user_id is not None:
+        trades_query = trades_query.where(Trade.user_id == user_id)
+    trades = db.execute(trades_query).scalars().all()
 
     grouped: dict[tuple[int, str], dict[str, Decimal]] = {}
     for trade in trades:

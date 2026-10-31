@@ -56,7 +56,7 @@ The language is auto-detected from the browser and can be changed here; the in-a
 
 ## Data Export / Import
 
-- **Export all** — downloads a complete JSON backup (`tradejournal-export-<date>.json`) of all your data: exchanges, brokers, accounts, tickers, trades, executions, trade images, daily notes, assets, holdings, daily snapshots, cash ledger and portfolio snapshots
+- **Export all** — downloads a complete JSON backup (`tradejournal-export-<date>.json`) of all your data: exchanges, brokers, accounts, tickers, trades, executions, trade images, daily notes, assets, holdings, portfolio exits, daily snapshots, cash ledger and portfolio snapshots
 - **Import all** — restores a JSON backup created with Export
 
 > ⚠️ Import is **additive/upsert**: matching records are updated by their natural keys, new ones are created; nothing is deleted by an import.
@@ -70,6 +70,8 @@ Sets the time (default `23:55`) at which the backend runs the **daily snapshot j
 
 The job runs once per day, in the server timezone configured via `APP_TIMEZONE`. In this section you can also run manual recomputes to backfill a date.
 
+The same job also runs **automatic maturity redemption recording** for bonds when the related preference is enabled (see the Portfolio section).
+
 
 ## Dashboard Chart
 
@@ -80,6 +82,19 @@ Customize the default behavior for the equity curve chart in your Dashboard:
   - **Portfolio (ETFs & Bonds)** — isolates long-term investment holdings and funds
   - **Equities (Stocks & Trading)** — isolates open stock trading positions and allocated trading capital
 - Click **Save preferences** to store your choice in your user profile.
+
+## Portfolio
+
+Manage automatic portfolio position behavior:
+
+- **Automatically record maturity redemptions** — when enabled, the daily job closes matured bonds and records:
+  - principal redemption at 100;
+  - final coupon;
+  - CUM loyalty bonus, when applicable;
+  - estimated taxes and cash-ledger entries.
+
+The operation is idempotent and runs only once per tranche. The preference is disabled by default; you can still record the redemption manually from the position detail.
+
 ## Session
 
 - **Logout** — ends the current session and returns to the login page

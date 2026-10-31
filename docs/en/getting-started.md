@@ -98,7 +98,7 @@ Within the **Notes** module, you can manage both **Scouting & Trade Ideas** (tra
 | **Calendar** | Unified monthly journal calendar with daily color-coded PnL badges, consolidated weekly summary column, day-detail drawer, and real-time global market Gantt timeline |
 | **Trades** | Comprehensive trade ledger featuring live Risk/Reward gauge, 6-step guided wizard, quick entry mode, table pagination, and date presets |
 | **Notes** | Stock Scouting & Trade Ideas with automated price triggers, one-click trade conversion, and Daily Journal with rich-text editor and discipline checklist |
-| **Portfolio** | Stock, ETF, and bond position tracking with live mark-to-market valuations and percentage allocation |
+| **Portfolio** | Stock, ETF, and bond position tracking with live mark-to-market, multiple tranches, full/partial exits, maturity redemptions and percentage allocation |
 | **Performance** | In-depth portfolio NAV growth, drawdown analysis, and cumulative equity curves |
 | **Assets** | Financial instruments master registry (stocks, ETFs, bonds, crypto, commodities) |
 | **Accounts** | Multi-currency trading accounts and cash ledger for cash movements |

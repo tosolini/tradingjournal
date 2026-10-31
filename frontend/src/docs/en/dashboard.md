@@ -13,7 +13,7 @@ The home page provides a comprehensive, advanced operational summary of your who
 ### Key figures (Hero KPIs)
 
 - **Total PnL** — sum of realized profit/loss and mark-to-market of open positions
-- **Realized PnL** — net profit/loss consolidated from all closed trades
+- **Realized PnL** — net profit/loss consolidated from all closed trades and recorded portfolio exits
 - **This Week PnL** — cumulative profit/loss since Monday of the current calendar week
 - **Unrealized PnL (MTM)** — real-time mark-to-market valuation of currently open positions
 - **Win Rate** — percentage of winning closed trades over total closed trades, with wins and losses counts
@@ -29,9 +29,10 @@ The home page provides a comprehensive, advanced operational summary of your who
 | **Outcome donut** | Visual breakdown of wins, losses, and breakeven trades with win rate % in the center; displays Profit Factor, average win, and average loss. |
 | **Advanced Stats & Expectancy** | - **Expectancy**: mathematical expected monetary value per closed trade: $(P_w \times \text{Avg Win}) - (P_l \times \text{Avg Loss})$, featuring a dynamic **+ Edge** (green) or **- Edge** (red) indicator.<br>- **Payoff Ratio (W/L)**: ratio of average win to average loss.<br>- **Max Drawdown %**: peak-to-trough decline from the historical all-time high portfolio value.<br>- **Kelly Criterion**: estimated optimal capital allocation fraction based on statistical edge. |
 | **Best & Worst Trades** | Side-by-side comparison card showing your all-time greatest winning trade (🏆) and deepest loss (⚠️), including symbol, direction (LONG/SHORT), return %, net PnL, and close date. |
-| **Periodic PnL Bar Chart (Month / Week)** | Interactive bar chart with a **[ Month \| Week ]** period switcher:<br>- **Month**: Realized PnL of the last 12 calendar months with trade counts.<br>- **Week**: Realized PnL aggregated by ISO week (e.g., W40, W41, W42).<br>- Interactive mouse hover tooltip highlights exact dates, signed PnL, and executions with a glowing border. |
-| **All-assets daily PnL** | Daily PnL for the last 30 days covering both trades and portfolio movements, featuring responsive hover details and cumulative total. |
+| **Periodic PnL Bar Chart (Month / Week)** | Interactive bar chart with a **[ Month \| Week ]** period switcher:<br>- **Month**: Realized PnL of the last 12 calendar months with operation counts (closed trades and portfolio exits).<br>- **Week**: Realized PnL aggregated by ISO week (e.g., W40, W41, W42).<br>- Interactive mouse hover tooltip highlights exact dates, signed PnL, and operation counts with a glowing border. |
+| **All-assets daily PnL** | Daily PnL for the last 30 days covering both trades and portfolio movements, featuring responsive hover details and cumulative total. The series is cash-flow neutral for coupons, bonuses, redemptions, dividends and sales, so proceeds are not treated as market losses. |
 | **Asset allocation** | Market value per holding with weight % progress bars and instrument class chips (Stocks, ETFs, Bonds, Funds). |
+| **Capital composition** | Donut chart next to asset allocation with total capital in the center and a legend with amounts and percentages.<br>- **Classes**: composition by instrument type (Stocks, Bonds, ETFs, Funds, Crypto).<br>- **Assets**: composition by symbol; assets beyond the top 8 are grouped into **Other**.<br>- Includes portfolio holdings and open trades. |
 | **Top trades** | Table highlighting the most significant operations: symbol, side, status, close date, return %, and net PnL. |
 
 The `Updated` timestamp reflects the date of the latest recorded portfolio snapshot. Currency formats follow your locale.
@@ -43,8 +44,10 @@ The `Updated` timestamp reflects the date of the latest recorded portfolio snaps
 In-depth analysis of portfolio capital evolution over time, powered by automated daily portfolio snapshots.
 
 - **KPIs:** Portfolio Value, Cumulative PnL, Best Day, Worst Day
-- **Equity curve** — portfolio value over time derived from daily snapshots (interactive area chart)
-- **Daily PnL bars** — last 30 days of performance with winning day percentage
+- **Equity curve** — portfolio value over time derived from daily snapshots (interactive area chart) with an **Invested / Total wealth** toggle:
+  - **Invested**: securities value;
+  - **Total wealth**: invested value + cash received from coupons, bonuses, redemptions and sales.
+- **Daily PnL bars** — last 30 days of performance with winning day percentage; daily and cumulative PnL are cash-flow neutral and include realized P&L from portfolio exits
 - **Monthly calendar grid** — color-coded days (green = profitable, red = loss); click any day to open the day drawer with total value, day PnL, and cumulative returns
 
 > ℹ️ Performance data is populated by the **daily snapshot scheduler** (see Settings → Daily Snapshots). If no historical snapshots exist yet, use the manual recompute buttons (`POST /api/snapshots/recompute` and `/api/snapshots/portfolio/recompute`) to backfill past data.
@@ -53,13 +56,40 @@ In-depth analysis of portfolio capital evolution over time, powered by automated
 
 ## Portfolio
 
-Track **ETF, bond, and fund** investments separately from active trades, with automated mark-to-market valuations.
+Track **ETF, bond, government bond and fund** investments separately from active trades, with automated mark-to-market valuations.
 
 ![Portfolio and Fixed Income Management](/docs/images/dashboard/portfolio-holdings.webp)
 *Portfolio module with Bonds & Fixed Income tab, net YTM calculations, estimated annual coupon income, and future cash flow calendar.*
 - **KPIs:** Total Value, Total Cost, Total Return, Return %
 - **Portfolio history** — valuation evolution chart over time
 - **Holdings table:** symbol, name, instrument type, quantity, average cost, entry/exit dates, hold duration, **current price** (fetched via Yahoo Finance), market value, return ($) and return %; per-row **edit** and **delete** actions
-- **Add / Edit Holding:** linked account, asset instrument, quantity, average cost, entry and exit dates
+- **Add / Edit Holding:** linked account, asset instrument, quantity, average cost, entry and exit dates, **purchase fees**
+
+### Multiple tranches
+
+The same asset can have multiple tranches in the same account. The Portfolio groups them and the detail page shows the **aggregated position**: total quantity, cost, market value, return, weighted YTM, coupons and timeline, with a separate table for each tranche.
+
+### Portfolio exits
+
+From the position detail you can record:
+
+- **Full or partial market sale**
+- **Maturity redemption** (including final coupon and CUM bonus)
+- **Early issuer redemption**
+
+The exit modal shows a preview with cost basis, capital gain/loss, interest/coupons, fees, estimated taxes, net proceeds and realized P&L. The exit:
+
+- reduces the tranche quantity and closes it when it reaches zero;
+- records realized P&L and estimated taxes;
+- automatically creates cash-ledger entries (`asset_sale`, `bond_redemption`, `coupon`, `bond_bonus`);
+- can be undone from the **Recorded exits** section.
+
+For multi-tranche positions, **Sell entire position** records an exit for every active tranche with a single confirmation. The Portfolio **Recorded exits** tab lists all closed operations.
+
+### Automatic maturity
+
+In **Settings → Portfolio** you can enable automatic maturity redemption recording. The daily job closes matured bonds, records the final coupon, CUM bonus and taxes, and updates the portfolio snapshot.
+
+Closed positions are excluded from active totals; realized P&L flows into the Dashboard and the Performance page.
 
 Holdings are automatically incorporated into daily snapshots, the equity curve, and the all-assets daily PnL panel on the Dashboard.

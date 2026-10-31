@@ -17,6 +17,126 @@ from app.schemas import (
     HoldingSingleDetailResponse,
     PortfolioSummaryResponse,
 )
+
+BOND_INSTRUMENT_TYPES = {"bond", "government_bond", "titolo_di_stato"}
+INVESTMENT_INFLOW_TYPES = {
+    "coupon",
+    "bond_bonus",
+    "bond_redemption",
+    "dividend",
+    "asset_sale",
+}
+
+
+def is_bond_instrument(instrument_type: str | None) -> bool:
+    """Return True for every instrument type valued on a 100-nominal basis."""
+    return (instrument_type or "").strip().lower() in BOND_INSTRUMENT_TYPES
+
+
+def _resolve_current_price(holding: Holding) -> Decimal:
+    fetched_price = get_current_price(holding.asset.symbol, holding.asset.exchange)
+    if fetched_price is not None and fetched_price > Decimal("0"):
+        return fetched_price
+    return holding.avg_cost
+
+
+def _weighted_average(
+    pairs: list[tuple[Decimal | None, Decimal]]
+) -> Decimal | None:
+    """Weighted average ignoring entries whose value is None."""
+    usable = [(value, weight) for value, weight in pairs if value is not None]
+    total_weight = sum((weight for _, weight in usable), Decimal("0"))
+    if not usable or total_weight == 0:
+        return None
+    return sum((value * weight for value, weight in usable), Decimal("0")) / total_weight
+
+
+def _build_holding_detail(holding: Holding, today: date) -> HoldingDetailResponse:
+    """Value a single holding (tranche) at today's price."""
+    current_price = _resolve_current_price(holding)
+    qty = holding.quantity
+    is_bond = is_bond_instrument(holding.asset.instrument_type)
+
+    if is_bond:
+        accrued = (
+            calculate_accrued_interest(holding.asset.bond_detail, today, nominal=Decimal("100"))
+            if holding.asset.bond_detail
+            else Decimal("0")
+        )
+        dirty_price = current_price + accrued
+        mkt_val = (qty * dirty_price) / Decimal("100")
+        acc_in = holding.accrued_interest_in or Decimal("0")
+        cost_basis = (qty * (holding.avg_cost + acc_in)) / Decimal("100") + (holding.fee_in or Decimal("0"))
+        ytm_g = (
+            calculate_ytm(current_price, holding.asset.bond_detail, today, eligible_for_bonus=holding.eligible_for_bonus, is_net=False)
+            if holding.asset.bond_detail
+            else None
+        )
+        ytm_n = (
+            calculate_ytm(current_price, holding.asset.bond_detail, today, eligible_for_bonus=holding.eligible_for_bonus, is_net=True)
+            if holding.asset.bond_detail
+            else None
+        )
+    else:
+        accrued = None
+        dirty_price = None
+        ytm_g = None
+        ytm_n = None
+        mkt_val = current_price * qty
+        cost_basis = holding.avg_cost * qty
+
+    ret_val = mkt_val - cost_basis
+    ret_pct = (ret_val / cost_basis * Decimal("100")) if cost_basis != 0 else Decimal("0")
+
+    if holding.exit_date:
+        hold_duration_days = (holding.exit_date - holding.entry_date).days
+    else:
+        hold_duration_days = (today - holding.entry_date).days
+
+    return HoldingDetailResponse(
+        id=holding.id,
+        account_id=holding.account_id,
+        asset_id=holding.asset_id,
+        asset_symbol=holding.asset.symbol,
+        asset_name=holding.asset.name,
+        instrument_type=holding.asset.instrument_type,
+        asset_currency=holding.asset.currency,
+        quantity=qty,
+        avg_cost=holding.avg_cost,
+        entry_date=holding.entry_date,
+        exit_date=holding.exit_date,
+        hold_duration_days=hold_duration_days,
+        current_price=current_price,
+        market_value=mkt_val,
+        return_value=ret_val,
+        return_pct=ret_pct,
+        accrued_interest_in=holding.accrued_interest_in or Decimal("0"),
+        eligible_for_bonus=holding.eligible_for_bonus,
+        accrued_interest=accrued,
+        dirty_price=dirty_price,
+        ytm_gross=ytm_g,
+        ytm_net=ytm_n,
+        fee_in=holding.fee_in or Decimal("0"),
+        closed_at=holding.closed_at,
+    )
+
+
+def _load_holding_group(db: Session, user_id: int, holding: Holding) -> list[Holding]:
+    """Load every tranche of the same asset in the same account, oldest first."""
+    query = (
+        select(Holding)
+        .options(joinedload(Holding.asset).joinedload(Asset.bond_detail))
+        .options(joinedload(Holding.account))
+        .where(
+            Holding.user_id == user_id,
+            Holding.account_id == holding.account_id,
+            Holding.asset_id == holding.asset_id,
+        )
+        .order_by(Holding.entry_date.asc(), Holding.id.asc())
+    )
+    return list(db.execute(query).scalars().all())
+
+
 def get_holding_details(
     db: Session, user_id: int, account_id: int | None = None
 ) -> list[HoldingDetailResponse]:
@@ -24,7 +144,7 @@ def get_holding_details(
         select(Holding)
         .options(joinedload(Holding.asset).joinedload(Asset.bond_detail))
         .options(joinedload(Holding.account))
-        .where(Holding.user_id == user_id)
+        .where(Holding.user_id == user_id, Holding.quantity > 0)
     )
     if account_id is not None:
         query = query.where(Holding.account_id == account_id)
@@ -34,102 +154,16 @@ def get_holding_details(
     results: list[HoldingDetailResponse] = []
 
     for h in holdings:
-        fetched_price = get_current_price(h.asset.symbol, h.asset.exchange)
-        current_price = (
-            fetched_price
-            if fetched_price is not None and fetched_price > Decimal("0")
-            else h.avg_cost
-        )
-        qty = h.quantity
-        is_bond = (h.asset.instrument_type or "").lower() == "bond"
-
-        if is_bond:
-            accrued = (
-                calculate_accrued_interest(h.asset.bond_detail, today, nominal=Decimal("100"))
-                if h.asset.bond_detail
-                else Decimal("0")
-            )
-            dirty_price = current_price + accrued
-            mkt_val = (qty * dirty_price) / Decimal("100")
-            acc_in = h.accrued_interest_in or Decimal("0")
-            cost_basis = (qty * (h.avg_cost + acc_in)) / Decimal("100")
-            ytm_g = (
-                calculate_ytm(current_price, h.asset.bond_detail, today, eligible_for_bonus=h.eligible_for_bonus, is_net=False)
-                if h.asset.bond_detail
-                else None
-            )
-            ytm_n = (
-                calculate_ytm(current_price, h.asset.bond_detail, today, eligible_for_bonus=h.eligible_for_bonus, is_net=True)
-                if h.asset.bond_detail
-                else None
-            )
-        else:
-            accrued = None
-            dirty_price = None
-            ytm_g = None
-            ytm_n = None
-            mkt_val = current_price * qty
-            cost_basis = h.avg_cost * qty
-
-        ret_val = mkt_val - cost_basis
-        ret_pct = (ret_val / cost_basis * Decimal("100")) if cost_basis != 0 else Decimal("0")
-
-        if h.exit_date:
-            hold_duration_days = (h.exit_date - h.entry_date).days
-        else:
-            hold_duration_days = (today - h.entry_date).days
-
-        results.append(
-            HoldingDetailResponse(
-                id=h.id,
-                account_id=h.account_id,
-                asset_id=h.asset_id,
-                asset_symbol=h.asset.symbol,
-                asset_name=h.asset.name,
-                instrument_type=h.asset.instrument_type,
-                asset_currency=h.asset.currency,
-                quantity=qty,
-                avg_cost=h.avg_cost,
-                entry_date=h.entry_date,
-                exit_date=h.exit_date,
-                hold_duration_days=hold_duration_days,
-                current_price=current_price,
-                market_value=mkt_val,
-                return_value=ret_val,
-                return_pct=ret_pct,
-                accrued_interest_in=h.accrued_interest_in or Decimal("0"),
-                eligible_for_bonus=h.eligible_for_bonus,
-                accrued_interest=accrued,
-                dirty_price=dirty_price,
-                ytm_gross=ytm_g,
-                ytm_net=ytm_n,
-            )
-        )
+        results.append(_build_holding_detail(h, today))
 
     return results
 
-def get_single_holding_detail(
-    db: Session, user_id: int, holding_id: int
-) -> HoldingSingleDetailResponse | None:
-    query = (
-        select(Holding)
-        .options(joinedload(Holding.asset).joinedload(Asset.bond_detail))
-        .options(joinedload(Holding.account))
-        .where(Holding.user_id == user_id, Holding.id == holding_id)
-    )
-    h = db.execute(query).scalars().first()
-    if not h:
-        return None
-
-    today = date.today()
-    fetched_price = get_current_price(h.asset.symbol, h.asset.exchange)
-    current_price = (
-        fetched_price
-        if fetched_price is not None and fetched_price > Decimal("0")
-        else h.avg_cost
-    )
+def _build_single_holding_detail(
+    h: Holding, today: date
+) -> HoldingSingleDetailResponse:
+    current_price = _resolve_current_price(h)
     qty = h.quantity
-    is_bond = (h.asset.instrument_type or "").lower() in ("bond", "government_bond")
+    is_bond = is_bond_instrument(h.asset.instrument_type)
 
     bond_detail_schema = None
     if is_bond and h.asset.bond_detail:
@@ -139,7 +173,7 @@ def get_single_holding_detail(
         dirty_price = current_price + accrued
         mkt_val = (qty * dirty_price) / Decimal("100")
         acc_in = h.accrued_interest_in or Decimal("0")
-        cost_basis = (qty * (h.avg_cost + acc_in)) / Decimal("100")
+        cost_basis = (qty * (h.avg_cost + acc_in)) / Decimal("100") + (h.fee_in or Decimal("0"))
         ytm_g = calculate_ytm(current_price, bd, today, eligible_for_bonus=h.eligible_for_bonus, is_net=False)
         ytm_n = calculate_ytm(current_price, bd, today, eligible_for_bonus=h.eligible_for_bonus, is_net=True)
         nominal_yield = get_applicable_rate_for_date(bd, today)
@@ -159,7 +193,7 @@ def get_single_holding_detail(
         current_yield = None
         yield_spread = None
         mkt_val = current_price * qty
-        cost_basis = h.avg_cost * qty
+        cost_basis = h.avg_cost * qty + (h.fee_in or Decimal("0"))
         price_spread = current_price - h.avg_cost
         remaining_days = (h.exit_date - today).days if h.exit_date else None
 
@@ -206,11 +240,154 @@ def get_single_holding_detail(
         yield_spread=yield_spread,
         price_spread=price_spread,
         bond_detail=bond_detail_schema,
+        tranche_count=1,
+        all_eligible_for_bonus=h.eligible_for_bonus,
+        has_eligible_for_bonus=h.eligible_for_bonus,
+        tranches=[],
+        fee_in=h.fee_in or Decimal("0"),
+        closed_at=h.closed_at,
     )
 
 
+def _build_aggregate_holding_detail(
+    group: list[Holding], primary: Holding, today: date
+) -> HoldingSingleDetailResponse:
+    """Aggregate every tranche of the same asset/account into one position."""
+    tranches = [_build_holding_detail(h, today) for h in group]
+    total_qty = sum((t.quantity for t in tranches), Decimal("0"))
+    total_market_value = sum((t.market_value for t in tranches), Decimal("0"))
+    total_cost_basis = sum(
+        (t.market_value - t.return_value for t in tranches), Decimal("0")
+    )
+    total_return = total_market_value - total_cost_basis
+    return_pct = (
+        (total_return / total_cost_basis * Decimal("100"))
+        if total_cost_basis != 0
+        else Decimal("0")
+    )
+
+    avg_cost = _weighted_average([(t.avg_cost, t.quantity) for t in tranches]) or Decimal("0")
+    current_price = (
+        _weighted_average([(t.current_price, t.quantity) for t in tranches])
+        or Decimal("0")
+    )
+    accrued_interest_in = (
+        _weighted_average([(t.accrued_interest_in, t.quantity) for t in tranches])
+        or Decimal("0")
+    )
+    accrued_interest = _weighted_average(
+        [(t.accrued_interest, t.quantity) for t in tranches]
+    )
+    dirty_price = _weighted_average(
+        [(t.dirty_price, t.quantity) for t in tranches]
+    )
+    # YTM is weighted by market value, consistently with get_bond_metrics.
+    ytm_gross = _weighted_average(
+        [(t.ytm_gross, t.market_value) for t in tranches]
+    )
+    ytm_net = _weighted_average([(t.ytm_net, t.market_value) for t in tranches])
+
+    entry_date = min(t.entry_date for t in tranches)
+    exit_dates = [t.exit_date for t in tranches if t.exit_date]
+    exit_date = max(exit_dates) if exit_dates else None
+    hold_duration_days = (today - entry_date).days
+
+    is_bond = is_bond_instrument(primary.asset.instrument_type)
+    bond_detail_schema = None
+    nominal_yield = None
+    current_yield = None
+    yield_spread = None
+    if is_bond and primary.asset.bond_detail:
+        bd = primary.asset.bond_detail
+        bond_detail_schema = BondDetailResponse.model_validate(bd)
+        nominal_yield = get_applicable_rate_for_date(bd, today)
+        current_yield = (
+            (nominal_yield / current_price * Decimal("100"))
+            if current_price > Decimal("0")
+            else None
+        )
+        tax_factor = Decimal("1") - (bd.tax_rate / Decimal("100"))
+        nominal_net = nominal_yield * tax_factor
+        yield_spread = (ytm_net - nominal_net) if ytm_net is not None else None
+        price_spread = current_price - Decimal("100.00")
+        remaining_days = (bd.maturity_date - today).days if bd.maturity_date else None
+    else:
+        price_spread = current_price - avg_cost
+        remaining_days = (exit_date - today).days if exit_date else None
+
+    all_eligible = all(t.eligible_for_bonus for t in tranches)
+    has_eligible = any(t.eligible_for_bonus for t in tranches)
+    acc_name = primary.account.name if primary.account else f"Account {primary.account_id}"
+
+    return HoldingSingleDetailResponse(
+        id=primary.id,
+        account_id=primary.account_id,
+        account_name=acc_name,
+        asset_id=primary.asset_id,
+        asset_symbol=primary.asset.symbol,
+        asset_name=primary.asset.name,
+        isin=primary.asset.isin,
+        instrument_type=primary.asset.instrument_type,
+        exchange=primary.asset.exchange,
+        asset_currency=primary.asset.currency,
+        quantity=total_qty,
+        avg_cost=avg_cost,
+        entry_date=entry_date,
+        exit_date=exit_date,
+        hold_duration_days=hold_duration_days,
+        remaining_days=remaining_days,
+        accrued_interest_in=accrued_interest_in,
+        eligible_for_bonus=all_eligible,
+        current_price=current_price,
+        cost_basis=total_cost_basis,
+        market_value=total_market_value,
+        return_value=total_return,
+        return_pct=return_pct,
+        accrued_interest=accrued_interest,
+        dirty_price=dirty_price,
+        ytm_gross=ytm_gross,
+        ytm_net=ytm_net,
+        nominal_yield=nominal_yield,
+        current_yield=current_yield,
+        yield_spread=yield_spread,
+        price_spread=price_spread,
+        bond_detail=bond_detail_schema,
+        tranche_count=len(tranches),
+        all_eligible_for_bonus=all_eligible,
+        has_eligible_for_bonus=has_eligible,
+        tranches=tranches,
+        fee_in=sum((t.fee_in or Decimal("0") for t in tranches), Decimal("0")),
+        closed_at=(
+            max((t.closed_at for t in tranches if t.closed_at), default=None)
+            if all(t.closed_at for t in tranches)
+            else None
+        ),
+    )
+
+
+def get_single_holding_detail(
+    db: Session, user_id: int, holding_id: int, aggregate: bool = False
+) -> HoldingSingleDetailResponse | None:
+    query = (
+        select(Holding)
+        .options(joinedload(Holding.asset).joinedload(Asset.bond_detail))
+        .options(joinedload(Holding.account))
+        .where(Holding.user_id == user_id, Holding.id == holding_id)
+    )
+    h = db.execute(query).scalars().first()
+    if not h:
+        return None
+
+    today = date.today()
+    if not aggregate:
+        return _build_single_holding_detail(h, today)
+
+    group = _load_holding_group(db, user_id, h)
+    return _build_aggregate_holding_detail(group, h, today)
+
+
 def get_holding_price_history(
-    db: Session, user_id: int, holding_id: int
+    db: Session, user_id: int, holding_id: int, aggregate: bool = False
 ) -> HoldingPriceHistoryResponse | None:
     query = (
         select(Holding)
@@ -222,20 +399,26 @@ def get_holding_price_history(
         return None
 
     today = date.today()
-    fetched_price = get_current_price(h.asset.symbol, h.asset.exchange)
-    current_price = (
-        fetched_price
-        if fetched_price is not None and fetched_price > Decimal("0")
-        else h.avg_cost
-    )
-    is_bond = (h.asset.instrument_type or "").lower() in ("bond", "government_bond")
-    nom_price = Decimal("100.00") if is_bond else h.avg_cost
+    group = _load_holding_group(db, user_id, h) if aggregate else [h]
+    total_qty = sum((t.quantity for t in group), Decimal("0"))
+    if aggregate and total_qty > 0:
+        avg_cost = (
+            sum((t.avg_cost * t.quantity for t in group), Decimal("0")) / total_qty
+        )
+        entry_date = min(t.entry_date for t in group)
+    else:
+        avg_cost = h.avg_cost
+        entry_date = h.entry_date
+
+    current_price = _resolve_current_price(h)
+    is_bond = is_bond_instrument(h.asset.instrument_type)
+    nom_price = Decimal("100.00") if is_bond else avg_cost
 
     points: list[HoldingPriceHistoryPoint] = []
     points_dict: dict[str, Decimal] = {}
 
     # 1. Purchase point at entry_date
-    points_dict[h.entry_date.isoformat()] = h.avg_cost
+    points_dict[entry_date.isoformat()] = avg_cost
 
     # 2. Check stored snapshots from PositionDailySnapshot
     snapshots_query = (
@@ -243,7 +426,7 @@ def get_holding_price_history(
         .where(
             PositionDailySnapshot.account_id == h.account_id,
             PositionDailySnapshot.symbol == h.asset.symbol,
-            PositionDailySnapshot.snapshot_date >= h.entry_date,
+            PositionDailySnapshot.snapshot_date >= entry_date,
             PositionDailySnapshot.snapshot_date <= today,
         )
         .order_by(PositionDailySnapshot.snapshot_date.asc())
@@ -263,7 +446,7 @@ def get_holding_price_history(
                 date=d_str,
                 market_price=points_dict[d_str],
                 nominal_price=nom_price,
-                avg_cost=h.avg_cost,
+                avg_cost=avg_cost,
                 is_projection=False,
             )
         )
@@ -285,7 +468,7 @@ def get_holding_price_history(
                     date=curr_d.isoformat(),
                     market_price=proj_price,
                     nominal_price=nom_price,
-                    avg_cost=h.avg_cost,
+                    avg_cost=avg_cost,
                     is_projection=True,
                 )
             )
@@ -296,7 +479,7 @@ def get_holding_price_history(
                 date=mat_date.isoformat(),
                 market_price=nom_price,
                 nominal_price=nom_price,
-                avg_cost=h.avg_cost,
+                avg_cost=avg_cost,
                 is_projection=True,
             )
         )
@@ -306,7 +489,7 @@ def get_holding_price_history(
         name=h.asset.name,
         instrument_type=h.asset.instrument_type,
         nominal_price=nom_price,
-        avg_cost=h.avg_cost,
+        avg_cost=avg_cost,
         current_price=current_price,
         points=points,
     )
@@ -424,21 +607,58 @@ def get_daily_pnl_series(
     if account_id is not None:
         ledger_query = ledger_query.where(CashLedgerEntry.account_id == account_id)
     cash_flow_by_date: dict[date, Decimal] = {}
+    investment_inflow_by_date: dict[date, Decimal] = {}
     for entry in db.execute(ledger_query).scalars().all():
         if entry.entry_type == "deposit":
             delta = entry.amount
         elif entry.entry_type == "withdrawal":
             delta = -entry.amount
+        elif entry.entry_type in INVESTMENT_INFLOW_TYPES:
+            # Income/divestment cash leaves the invested portfolio: treat it as a
+            # negative external flow so it does not look like a market loss.
+            delta = -entry.amount
+            investment_inflow_by_date[entry.entry_date] = (
+                investment_inflow_by_date.get(entry.entry_date, Decimal("0"))
+                + entry.amount
+            )
         else:
             delta = Decimal("0")
         cash_flow_by_date[entry.entry_date] = cash_flow_by_date.get(entry.entry_date, Decimal("0")) + delta
+
+    # Include today's live holdings so exits/coupons are reflected immediately,
+    # even before the next daily snapshot job runs.
+    today = date.today()
+    if today not in by_date:
+        live_summaries = get_portfolio_summary(db, user_id, account_id)
+        if live_summaries:
+            by_date[today] = {
+                "total_value": sum(
+                    (item.total_value for item in live_summaries), Decimal("0")
+                ),
+                "total_cost": sum(
+                    (item.total_cost for item in live_summaries), Decimal("0")
+                ),
+            }
+
     result: list[DailyPnlPoint] = []
     prev_value: Decimal | None = None
     cumulative_pnl = Decimal("0")
+    cumulative_investment_inflows = Decimal("0")
+    inflow_dates = sorted(investment_inflow_by_date)
+    inflow_index = 0
     for d in sorted(by_date):
         entry = by_date[d]
         value = entry["total_value"]
         cost = entry["total_cost"]
+
+        while (
+            inflow_index < len(inflow_dates)
+            and inflow_dates[inflow_index] <= d
+        ):
+            cumulative_investment_inflows += investment_inflow_by_date[
+                inflow_dates[inflow_index]
+            ]
+            inflow_index += 1
 
         net_cash_flow = cash_flow_by_date.get(d, Decimal("0"))
         if prev_value is None:
@@ -458,6 +678,8 @@ def get_daily_pnl_series(
                 day_pnl_pct=day_pnl_pct,
                 cumulative_pnl=cumulative_pnl,
                 net_cash_flow=net_cash_flow,
+                investment_inflows=cumulative_investment_inflows,
+                total_wealth=value + cumulative_investment_inflows,
             )
         )
         prev_value = value
@@ -508,22 +730,43 @@ def get_all_assets_pnl_series(
         .where(Account.user_id == user_id)
     )
     cash_flow_by_date: dict[date, Decimal] = {}
+    investment_inflow_by_date: dict[date, Decimal] = {}
     for entry in db.execute(ledger_query).scalars().all():
         if entry.entry_type == "deposit":
             delta = entry.amount
         elif entry.entry_type == "withdrawal":
             delta = -entry.amount
+        elif entry.entry_type in INVESTMENT_INFLOW_TYPES:
+            # Income/divestment cash leaves the invested portfolio: treat it as a
+            # negative external flow so it does not look like a market loss.
+            delta = -entry.amount
+            investment_inflow_by_date[entry.entry_date] = (
+                investment_inflow_by_date.get(entry.entry_date, Decimal("0"))
+                + entry.amount
+            )
         else:
             delta = Decimal("0")
         cash_flow_by_date[entry.entry_date] = cash_flow_by_date.get(entry.entry_date, Decimal("0")) + delta
     result: list[AllAssetsPnlPoint] = []
     prev_total: Decimal | None = None
     cumulative_pnl = Decimal("0")
+    cumulative_investment_inflows = Decimal("0")
+    inflow_dates = sorted(investment_inflow_by_date)
+    inflow_index = 0
     for d in sorted(by_date):
         entry = by_date[d]
         holdings_value = entry["holdings"]
         trades_value = entry["trades"]
         total_value = holdings_value + trades_value
+
+        while (
+            inflow_index < len(inflow_dates)
+            and inflow_dates[inflow_index] <= d
+        ):
+            cumulative_investment_inflows += investment_inflow_by_date[
+                inflow_dates[inflow_index]
+            ]
+            inflow_index += 1
 
         net_cash_flow = cash_flow_by_date.get(d, Decimal("0"))
         if prev_total is None:
@@ -543,6 +786,8 @@ def get_all_assets_pnl_series(
                 day_pnl_pct=day_pnl_pct,
                 cumulative_pnl=cumulative_pnl,
                 net_cash_flow=net_cash_flow,
+                investment_inflows=cumulative_investment_inflows,
+                total_wealth=total_value + cumulative_investment_inflows,
             )
         )
         prev_total = total_value

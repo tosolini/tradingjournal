@@ -421,3 +421,135 @@ def test_portfolio_history_does_not_double_count_today_holdings(db, monkeypatch)
     assert today_pt.cost == 5000.0
     # Value should be 100 * 55 = 5500.0, NOT 5500 + 5000 = 10500.0
     assert today_pt.value == 5500.0
+
+
+def test_dashboard_live_holdings_cost_is_bond_aware(db, monkeypatch):
+    """Regression: live cost must use the per-tranche cost basis, not price * quantity.
+
+    For bonds avg_cost is a price on a 100 nominal basis, so ``avg_cost * quantity``
+    inflates the cost by ~100x. Multiple tranches made the error even larger.
+    """
+    from app.models import Asset, BondDetail, Holding
+
+    user = User(
+        email="bond_cost@example.com",
+        username="bond_cost",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    acc = Account(name="Bonds", user_id=user.id, base_currency="EUR")
+    asset = Asset(
+        user_id=user.id,
+        symbol="IT0005583486",
+        name="BTP Valore Mar 2030",
+        instrument_type="bond",
+        currency="EUR",
+    )
+    db.add_all([acc, asset])
+    db.commit()
+    db.refresh(acc)
+    db.refresh(asset)
+
+    db.add(
+        BondDetail(
+            asset_id=asset.id,
+            bond_type="fixed",
+            issue_date=date(2023, 3, 5),
+            maturity_date=date(2030, 3, 5),
+            coupon_frequency=4,
+            annual_coupon_rate=Decimal("3.2500"),
+            tax_rate=Decimal("12.50"),
+            final_bonus_rate=Decimal("0.8000"),
+        )
+    )
+    db.add_all(
+        [
+            Holding(
+                user_id=user.id,
+                account_id=acc.id,
+                asset_id=asset.id,
+                quantity=Decimal("15000.00"),
+                avg_cost=Decimal("100.00"),
+                entry_date=date(2024, 5, 14),
+                eligible_for_bonus=True,
+            ),
+            Holding(
+                user_id=user.id,
+                account_id=acc.id,
+                asset_id=asset.id,
+                quantity=Decimal("10000.00"),
+                avg_cost=Decimal("100.00"),
+                entry_date=date(2026, 10, 26),
+                eligible_for_bonus=True,
+            ),
+        ]
+    )
+    db.commit()
+
+    monkeypatch.setattr(
+        "app.services.portfolio.get_current_price",
+        lambda *_args, **_kwargs: Decimal("100.00"),
+    )
+    monkeypatch.setattr(
+        "app.api.dashboard.get_current_price",
+        lambda *_args, **_kwargs: Decimal("100.00"),
+    )
+
+    kpis = dashboard_kpis(db=db, current_user=user)
+    today_pt = kpis["portfolio_history"][-1]
+
+    # 25,000 nominal at 100 => 25,000 cost (not 2,500,000).
+    assert today_pt["holdings_cost"] == 25000.0
+    assert today_pt["holdings_value"] > 25000.0
+    assert today_pt["holdings_value"] < 26000.0
+
+
+def test_dashboard_equity_curve_is_scoped_per_user(db):
+    user_a = User(
+        email="equity-a@example.com",
+        username="equity_a",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+    )
+    user_b = User(
+        email="equity-b@example.com",
+        username="equity_b",
+        hashed_password=hash_password("Password123!"),
+        role="user",
+    )
+    db.add_all([user_a, user_b])
+    db.commit()
+    db.refresh(user_a)
+    db.refresh(user_b)
+
+    account_a = Account(name="A", user_id=user_a.id, base_currency="EUR")
+    account_b = Account(name="B", user_id=user_b.id, base_currency="EUR")
+    db.add_all([account_a, account_b])
+    db.commit()
+    db.refresh(account_a)
+    db.refresh(account_b)
+
+    db.add_all(
+        [
+            PositionDailySnapshot(
+                account_id=account_a.id,
+                symbol="AAA",
+                snapshot_date=date(2026, 1, 1),
+                market_value=Decimal("100"),
+            ),
+            PositionDailySnapshot(
+                account_id=account_b.id,
+                symbol="BBB",
+                snapshot_date=date(2026, 1, 1),
+                market_value=Decimal("200"),
+            ),
+        ]
+    )
+    db.commit()
+
+    kpis = dashboard_kpis(db=db, current_user=user_a)
+    assert [point["value"] for point in kpis["equity_curve"]] == [100.0]

@@ -78,8 +78,10 @@ function Panel({
 
 /* ─── Equity curve chart (lightweight-charts) ── */
 function EquityChartPanel({ data }: { data: DailyPnlPoint[] }) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const ref = useRef<HTMLDivElement | null>(null);
+  const [mode, setMode] = useState<"invested" | "wealth">("invested");
 
   useEffect(() => {
     if (!ref.current || data.length < 2) return;
@@ -112,7 +114,13 @@ function EquityChartPanel({ data }: { data: DailyPnlPoint[] }) {
       priceFormat: { type: "price", precision: 2, minMove: 0.01 },
     });
     areaSeries.setData(
-      data.map((p) => ({ time: p.date, value: asNumber(p.total_value) }))
+      data.map((p) => ({
+        time: p.date,
+        value:
+          mode === "wealth"
+            ? asNumber(p.total_wealth ?? p.total_value)
+            : asNumber(p.total_value),
+      }))
     );
 
     chart.timeScale().fitContent();
@@ -123,7 +131,7 @@ function EquityChartPanel({ data }: { data: DailyPnlPoint[] }) {
       resizeObserver.disconnect();
       chart.remove();
     };
-  }, [data, theme]);
+  }, [data, theme, mode]);
 
   if (data.length < 2) {
     return (
@@ -133,7 +141,39 @@ function EquityChartPanel({ data }: { data: DailyPnlPoint[] }) {
     );
   }
 
-  return <div ref={ref} />;
+  return (
+    <div>
+      <div className="mb-2 flex justify-end gap-1 text-[10px]">
+        <button
+          type="button"
+          onClick={() => setMode("invested")}
+          className={`rounded px-2 py-1 font-medium transition ${
+            mode === "invested"
+              ? "bg-teal-500 font-bold text-slate-950"
+              : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
+          }`}
+        >
+          {t("performance.mode_invested", "Investito")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("wealth")}
+          title={t(
+            "performance.mode_wealth_hint",
+            "Include cedole, rimborsi e vendite incassate",
+          )}
+          className={`rounded px-2 py-1 font-medium transition ${
+            mode === "wealth"
+              ? "bg-teal-500 font-bold text-slate-950"
+              : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
+          }`}
+        >
+          {t("performance.mode_wealth", "Patrimonio totale")}
+        </button>
+      </div>
+      <div ref={ref} />
+    </div>
+  );
 }
 
 /* ─── Daily P&L bars (custom SVG) ── */

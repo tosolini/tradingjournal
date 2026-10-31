@@ -412,6 +412,8 @@ export type Holding = {
   exit_date: string | null;
   accrued_interest_in: string;
   eligible_for_bonus: boolean;
+  fee_in?: string;
+  closed_at?: string | null;
 };
 
 export type HoldingDetail = {
@@ -437,6 +439,8 @@ export type HoldingDetail = {
   dirty_price?: string | null;
   ytm_gross?: string | null;
   ytm_net?: string | null;
+  fee_in?: string;
+  closed_at?: string | null;
 };
 
 export type HoldingSingleDetail = {
@@ -472,6 +476,66 @@ export type HoldingSingleDetail = {
   yield_spread?: string | null;
   price_spread?: string | null;
   bond_detail?: BondDetail | null;
+  tranche_count?: number;
+  all_eligible_for_bonus?: boolean;
+  has_eligible_for_bonus?: boolean;
+  tranches?: HoldingDetail[];
+  fee_in?: string;
+  closed_at?: string | null;
+};
+
+export type HoldingExitType = "market_sale" | "maturity" | "early_redemption";
+
+export type HoldingExitPayload = {
+  exit_type: HoldingExitType;
+  exit_date?: string | null;
+  quantity?: string | null;
+  clean_price?: string | null;
+  accrued_interest_out?: string | null;
+  fees?: string;
+  taxes?: string | null;
+  coupons_received?: string | null;
+  bonus_received?: string | null;
+  notes?: string | null;
+};
+
+export type HoldingExitPreview = {
+  exit_type: HoldingExitType;
+  exit_date: string;
+  quantity: string;
+  quantity_before: string;
+  quantity_after: string;
+  clean_price: string;
+  accrued_interest_out: string;
+  fees: string;
+  taxes: string;
+  capital_gain_tax: string;
+  interest_tax: string;
+  tax_mode: string;
+  fee_in_allocated: string;
+  coupons_received: string;
+  bonus_received: string;
+  gross_proceeds: string;
+  net_proceeds: string;
+  cost_basis: string;
+  realized_capital_gain: string;
+  realized_interest_income: string;
+  realized_pnl: string;
+  currency: string;
+  warnings: string[];
+};
+
+export type HoldingExit = HoldingExitPreview & {
+  id: number;
+  holding_id: number;
+  account_id: number;
+  account_name: string;
+  asset_id: number;
+  asset_symbol: string;
+  asset_name: string;
+  previous_exit_date?: string | null;
+  notes?: string | null;
+  created_at?: string | null;
 };
 
 export type HoldingPriceHistoryPoint = {
@@ -608,6 +672,7 @@ export function createHolding(payload: {
   exit_date?: string | null;
   accrued_interest_in?: string;
   eligible_for_bonus?: boolean;
+  fee_in?: string;
 }): Promise<Holding> {
   return api("/api/holdings", {
     method: "POST",
@@ -615,11 +680,17 @@ export function createHolding(payload: {
   });
 }
 
-export function fetchBondCalendar(accountId?: number, fromDate?: string, toDate?: string): Promise<BondCalendarItem[]> {
+export function fetchBondCalendar(
+  accountId?: number,
+  fromDate?: string,
+  toDate?: string,
+  aggregate = false,
+): Promise<BondCalendarItem[]> {
   const params = new URLSearchParams();
   if (accountId) params.set("account_id", String(accountId));
   if (fromDate) params.set("from_date", fromDate);
   if (toDate) params.set("to_date", toDate);
+  if (aggregate) params.set("aggregate", "true");
   const q = params.toString();
   return api(`/api/bonds/calendar${q ? `?${q}` : ""}`);
 }
@@ -683,20 +754,89 @@ export function fetchPortfolioHistory(accountId?: number): Promise<PortfolioHist
   return api(`/api/portfolio/history${params}`);
 }
 
-export function fetchHoldingDetail(holdingId: number | string): Promise<HoldingSingleDetail> {
-  return api(`/api/portfolio/holdings/${holdingId}`);
+export function fetchHoldingDetail(
+  holdingId: number | string,
+  aggregate = false,
+): Promise<HoldingSingleDetail> {
+  const params = aggregate ? "?aggregate=true" : "";
+  return api(`/api/portfolio/holdings/${holdingId}${params}`);
 }
 
-export function fetchHoldingPriceHistory(holdingId: number | string): Promise<HoldingPriceHistory> {
-  return api(`/api/portfolio/holdings/${holdingId}/price-history`);
+export function fetchHoldingPriceHistory(
+  holdingId: number | string,
+  aggregate = false,
+): Promise<HoldingPriceHistory> {
+  const params = aggregate ? "?aggregate=true" : "";
+  return api(`/api/portfolio/holdings/${holdingId}/price-history${params}`);
 }
 
-export function fetchHoldingCalendar(holdingId: number | string): Promise<BondCalendarItem[]> {
-  return api(`/api/portfolio/holdings/${holdingId}/calendar`);
+export function fetchHoldingCalendar(
+  holdingId: number | string,
+  aggregate = false,
+): Promise<BondCalendarItem[]> {
+  const params = aggregate ? "?aggregate=true" : "";
+  return api(`/api/portfolio/holdings/${holdingId}/calendar${params}`);
 }
 
 export function syncHoldingEuronext(holdingId: number | string): Promise<HoldingSingleDetail> {
   return api(`/api/portfolio/holdings/${holdingId}/sync-euronext`, { method: "POST" });
+}
+
+export function previewHoldingExit(
+  holdingId: number | string,
+  payload: HoldingExitPayload,
+): Promise<HoldingExitPreview> {
+  return api(`/api/holdings/${holdingId}/exits/preview`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createHoldingExit(
+  holdingId: number | string,
+  payload: HoldingExitPayload,
+): Promise<HoldingExit> {
+  return api(`/api/holdings/${holdingId}/exits`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function previewHoldingBulkExit(
+  holdingId: number | string,
+  payload: HoldingExitPayload,
+): Promise<HoldingExitPreview> {
+  return api(`/api/holdings/${holdingId}/exits/bulk/preview`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createHoldingBulkExit(
+  holdingId: number | string,
+  payload: HoldingExitPayload,
+): Promise<HoldingExit[]> {
+  return api(`/api/holdings/${holdingId}/exits/bulk`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchHoldingExits(
+  holdingId: number | string,
+  aggregate = false,
+): Promise<HoldingExit[]> {
+  const params = aggregate ? "?aggregate=true" : "";
+  return api(`/api/holdings/${holdingId}/exits${params}`);
+}
+
+export function deleteHoldingExit(exitId: number | string): Promise<{ ok: boolean }> {
+  return api(`/api/holdings/exits/${exitId}`, { method: "DELETE" });
+}
+
+export function fetchPortfolioExits(accountId?: number): Promise<HoldingExit[]> {
+  const params = accountId ? `?account_id=${accountId}` : "";
+  return api(`/api/portfolio/exits${params}`);
 }
 
 // ── Tickers ─────────────────────────────────────────
@@ -786,6 +926,8 @@ export type DashboardKpis = {
   weekly_pnl?: WeeklyPnlPoint[];
   open_positions: number;
   realized_pnl: string;
+  holding_realized_pnl?: string;
+  holding_exits_count?: number;
   unrealized_pnl: string;
   total_pnl: string;
   kpi_currency: string;
@@ -837,6 +979,8 @@ export type DailyPnlPoint = {
   day_pnl_pct: string;
   cumulative_pnl: string;
   net_cash_flow: string;
+  investment_inflows?: string;
+  total_wealth?: string;
 };
 
 export function fetchDailyPnl(accountId?: number): Promise<DailyPnlPoint[]> {
@@ -853,13 +997,24 @@ export type AllAssetsPnlPoint = {
   day_pnl_pct: string;
   cumulative_pnl: string;
   net_cash_flow: string;
+  investment_inflows?: string;
+  total_wealth?: string;
 };
 
 // ── Cash Ledger ──────────────────────────────────────
+export type CashLedgerEntryType =
+  | "deposit"
+  | "withdrawal"
+  | "coupon"
+  | "bond_bonus"
+  | "bond_redemption"
+  | "dividend"
+  | "asset_sale";
+
 export type CashLedgerEntry = {
   id: number;
   account_id: number;
-  entry_type: "deposit" | "withdrawal";
+  entry_type: CashLedgerEntryType;
   amount: string;
   description: string | null;
   entry_date: string;

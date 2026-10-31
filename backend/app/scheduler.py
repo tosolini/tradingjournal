@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.database import SessionLocal
 from app.models import User
+from app.services.holding_exits import auto_record_matured_holdings
 from app.services.portfolio import recompute_portfolio_snapshot
 from app.services.snapshot import recompute_daily_snapshots
 
@@ -52,6 +53,19 @@ def run_daily_snapshot_job() -> None:
         recompute_daily_snapshots(db, today)
         for user in db.execute(select(User)).scalars().all():
             recompute_portfolio_snapshot(db, today, user.id)
+            preferences = user.preferences or {}
+            portfolio_prefs = (
+                preferences.get("portfolio", {})
+                if isinstance(preferences, dict)
+                else {}
+            )
+            if (
+                isinstance(portfolio_prefs, dict)
+                and portfolio_prefs.get("auto_record_maturity") is True
+            ):
+                recorded = auto_record_matured_holdings(db, user.id)
+                if recorded:
+                    recompute_portfolio_snapshot(db, today, user.id)
 
 
 

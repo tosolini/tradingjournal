@@ -4,8 +4,24 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import Holding, User
-from app.schemas import HoldingCreate, HoldingResponse, HoldingUpdate
+from app.models import Account, Asset, Holding, User
+from app.schemas import (
+    HoldingCreate,
+    HoldingExitCreate,
+    HoldingExitPreviewResponse,
+    HoldingExitResponse,
+    HoldingResponse,
+    HoldingUpdate,
+)
+from app.services.holding_exits import (
+    create_holding_exit,
+    create_holding_group_exits,
+    delete_holding_exit,
+    list_holding_exits,
+    preview_holding_exit,
+    preview_holding_group_exit,
+    to_exit_response,
+)
 
 router = APIRouter(prefix="/api/holdings", tags=["holdings"])
 
@@ -17,6 +33,22 @@ def create_holding(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    account = db.execute(
+        select(Account).where(
+            Account.id == payload.account_id, Account.user_id == current_user.id
+        )
+    ).scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    asset = db.execute(
+        select(Asset).where(
+            Asset.id == payload.asset_id, Asset.user_id == current_user.id
+        )
+    ).scalar_one_or_none()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
     holding = Holding(
         user_id=current_user.id,
         account_id=payload.account_id,
@@ -27,6 +59,7 @@ def create_holding(
         exit_date=payload.exit_date,
         accrued_interest_in=payload.accrued_interest_in,
         eligible_for_bonus=payload.eligible_for_bonus,
+        fee_in=payload.fee_in,
     )
     db.add(holding)
     db.commit()
@@ -84,4 +117,94 @@ def delete_holding(
 
     db.delete(holding)
     db.commit()
+    return {"ok": True}
+
+
+@router.post("/{holding_id}/exits/preview", response_model=HoldingExitPreviewResponse)
+def preview_exit(
+    holding_id: int,
+    payload: HoldingExitCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        preview = preview_holding_exit(db, current_user.id, holding_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not preview:
+        raise HTTPException(status_code=404, detail="Holding not found")
+    return preview
+
+
+@router.post("/{holding_id}/exits", response_model=HoldingExitResponse)
+def create_exit(
+    holding_id: int,
+    payload: HoldingExitCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        exit_event = create_holding_exit(db, current_user.id, holding_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not exit_event:
+        raise HTTPException(status_code=404, detail="Holding not found")
+    return to_exit_response(exit_event)
+
+
+@router.post("/{holding_id}/exits/bulk/preview", response_model=HoldingExitPreviewResponse)
+def preview_bulk_exit(
+    holding_id: int,
+    payload: HoldingExitCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        preview = preview_holding_group_exit(
+            db, current_user.id, holding_id, payload
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not preview:
+        raise HTTPException(status_code=404, detail="Holding not found")
+    return preview
+
+
+@router.post("/{holding_id}/exits/bulk", response_model=list[HoldingExitResponse])
+def create_bulk_exit(
+    holding_id: int,
+    payload: HoldingExitCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        exits = create_holding_group_exits(db, current_user.id, holding_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not exits:
+        raise HTTPException(status_code=404, detail="Holding not found")
+    return [to_exit_response(item) for item in exits]
+
+
+@router.get("/{holding_id}/exits", response_model=list[HoldingExitResponse])
+def list_exits(
+    holding_id: int,
+    aggregate: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    exits = list_holding_exits(
+        db, current_user.id, holding_id=holding_id, aggregate=aggregate
+    )
+    return [to_exit_response(item) for item in exits]
+
+
+@router.delete("/exits/{exit_id}")
+def delete_exit(
+    exit_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not delete_holding_exit(db, current_user.id, exit_id):
+        raise HTTPException(status_code=404, detail="Exit not found")
     return {"ok": True}

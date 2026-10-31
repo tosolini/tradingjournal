@@ -10,17 +10,20 @@ from app.models import Account, Asset, Holding, PortfolioSnapshot, User
 from app.schemas import (
     BondCalendarItem,
     HoldingDetailResponse,
+    HoldingExitResponse,
     HoldingPriceHistoryResponse,
     HoldingSingleDetailResponse,
     PortfolioHistoryPoint,
     PortfolioSummaryResponse,
 )
 from app.services.bonds import get_bond_cash_flows
+from app.services.holding_exits import list_holding_exits, to_exit_response
 from app.services.portfolio import (
     get_holding_details,
     get_holding_price_history,
     get_portfolio_summary,
     get_single_holding_detail,
+    is_bond_instrument,
 )
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
@@ -41,6 +44,18 @@ def portfolio_summary(
     current_user: User = Depends(get_current_user),
 ):
     return get_portfolio_summary(db, current_user.id, account_id)
+
+
+@router.get("/exits", response_model=list[HoldingExitResponse])
+def portfolio_exits(
+    account_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    exits = list_holding_exits(db, current_user.id)
+    if account_id is not None:
+        exits = [item for item in exits if item.account_id == account_id]
+    return [to_exit_response(item) for item in exits]
 
 
 @router.get("/history", response_model=list[PortfolioHistoryPoint])
@@ -81,7 +96,9 @@ def portfolio_history(
 
     # If there are fewer than 2 points, backfill starting points from holding entry dates
     if len(by_date) < 2:
-        holdings_query = select(Holding).where(Holding.user_id == current_user.id)
+        holdings_query = select(Holding).where(
+            Holding.user_id == current_user.id, Holding.quantity > 0
+        )
         if account_id is not None:
             holdings_query = holdings_query.where(Holding.account_id == account_id)
         holdings = db.execute(holdings_query).scalars().all()
@@ -90,8 +107,9 @@ def portfolio_history(
             # Do not fold entry-date costs into today's already-complete live valuation
             if e_str == today_str:
                 continue
-            is_bond = (h.asset.instrument_type or "").lower() in ("bond", "government_bond")
+            is_bond = is_bond_instrument(h.asset.instrument_type)
             cost = (h.quantity * (h.avg_cost + (h.accrued_interest_in or Decimal("0")))) / Decimal("100") if is_bond else h.quantity * h.avg_cost
+            cost += h.fee_in or Decimal("0")
             if e_str not in by_date:
                 by_date[e_str] = {"value": cost, "cost": cost}
             else:
@@ -124,10 +142,11 @@ def portfolio_history(
 @router.get("/holdings/{holding_id}", response_model=HoldingSingleDetailResponse)
 def holding_detail(
     holding_id: int,
+    aggregate: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    detail = get_single_holding_detail(db, current_user.id, holding_id)
+    detail = get_single_holding_detail(db, current_user.id, holding_id, aggregate=aggregate)
     if not detail:
         raise HTTPException(status_code=404, detail="Holding not found")
     return detail
@@ -136,10 +155,11 @@ def holding_detail(
 @router.get("/holdings/{holding_id}/price-history", response_model=HoldingPriceHistoryResponse)
 def holding_price_history(
     holding_id: int,
+    aggregate: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    history = get_holding_price_history(db, current_user.id, holding_id)
+    history = get_holding_price_history(db, current_user.id, holding_id, aggregate=aggregate)
     if not history:
         raise HTTPException(status_code=404, detail="Holding not found")
     return history
@@ -150,6 +170,7 @@ def holding_calendar(
     holding_id: int,
     from_date: date | None = None,
     to_date: date | None = None,
+    aggregate: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -172,35 +193,73 @@ def holding_calendar(
     if not h.asset or not h.asset.bond_detail:
         return []
 
-    flows = get_bond_cash_flows(
-        bond_detail=h.asset.bond_detail,
-        nominal=h.quantity,
-        eligible_for_bonus=h.eligible_for_bonus,
-        from_date=start_date,
-    )
+    if h.quantity <= 0:
+        return []
+
+    if aggregate:
+        holdings = db.execute(
+            select(Holding)
+            .options(joinedload(Holding.asset).joinedload(Asset.bond_detail))
+            .options(joinedload(Holding.account))
+            .where(
+                Holding.user_id == current_user.id,
+                Holding.account_id == h.account_id,
+                Holding.asset_id == h.asset_id,
+            )
+            .order_by(Holding.entry_date.asc(), Holding.id.asc())
+        ).scalars().all()
+    else:
+        holdings = [h]
+
+    # Consolidate flows by (date, flow_type): the same coupon paid on the same
+    # day across multiple tranches becomes a single row with summed amounts.
+    merged: dict[tuple[date, str], dict] = {}
+    for tranche in holdings:
+        if not tranche.asset or not tranche.asset.bond_detail:
+            continue
+
+        flows = get_bond_cash_flows(
+            bond_detail=tranche.asset.bond_detail,
+            nominal=tranche.quantity,
+            eligible_for_bonus=tranche.eligible_for_bonus,
+            from_date=start_date,
+        )
+        for f in flows:
+            if f.date > end_date:
+                continue
+            if tranche.exit_date and f.date > tranche.exit_date:
+                continue
+
+            key = (f.date, f.flow_type)
+            item = merged.get(key)
+            if item is None:
+                merged[key] = {
+                    "rate": f.rate,
+                    "gross_amount": f.gross_amount,
+                    "tax_amount": f.tax_amount,
+                    "net_amount": f.net_amount,
+                }
+            else:
+                item["gross_amount"] += f.gross_amount
+                item["tax_amount"] += f.tax_amount
+                item["net_amount"] += f.net_amount
 
     acc_name = h.account.name if h.account else f"Account {h.account_id}"
-    items: list[BondCalendarItem] = []
-    for f in flows:
-        if f.date > end_date:
-            continue
-        if h.exit_date and f.date > h.exit_date:
-            continue
-
-        items.append(
-            BondCalendarItem(
-                holding_id=h.id,
-                asset_symbol=h.asset.symbol,
-                asset_name=h.asset.name,
-                account_name=acc_name,
-                date=f.date,
-                flow_type=f.flow_type,
-                rate=f.rate,
-                gross_amount=f.gross_amount,
-                tax_amount=f.tax_amount,
-                net_amount=f.net_amount,
-            )
+    items: list[BondCalendarItem] = [
+        BondCalendarItem(
+            holding_id=h.id,
+            asset_symbol=h.asset.symbol,
+            asset_name=h.asset.name,
+            account_name=acc_name,
+            date=flow_date,
+            flow_type=flow_type,
+            rate=data["rate"],
+            gross_amount=data["gross_amount"],
+            tax_amount=data["tax_amount"],
+            net_amount=data["net_amount"],
         )
+        for (flow_date, flow_type), data in merged.items()
+    ]
 
     items.sort(key=lambda x: x.date)
     return items

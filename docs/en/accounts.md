@@ -118,3 +118,4 @@ Select an account to manage its **cash ledger** (deposits and withdrawals):
 - Record a **deposit** or **withdrawal** with date, amount and optional description
 - The ledger shows totals **In / Out / Net** for the account
 - Entries can be edited or deleted; the account's cash balance reflects the movements
+- **Portfolio exits** automatically create `asset_sale`, `bond_redemption`, `coupon` and `bond_bonus` entries; they are inflows and contribute to the In total

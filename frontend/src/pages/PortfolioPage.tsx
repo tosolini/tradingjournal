@@ -9,6 +9,7 @@ import {
   BondCalendarItem,
   BondPortfolioMetrics,
   HoldingDetail,
+  HoldingExit,
   PortfolioSummary,
   createHolding,
   deleteHolding,
@@ -17,6 +18,7 @@ import {
   fetchBondCalendar,
   fetchBondMetrics,
   fetchPortfolioDetails,
+  fetchPortfolioExits,
   fetchPortfolioHistory,
   fetchPortfolioSummary,
   updateHolding,
@@ -26,6 +28,10 @@ import { useToast } from "../contexts/ToastContext";
 import { AssetFormModal } from "./AssetsPage";
 import { QuickAccountModal } from "../components/QuickAccountModal";
 import { cleanNumberInput, formatMoney, formatNumber, formatPct, formatPrice, formatQuantity, getNumberLocale, parseLocaleNumber, parseLocaleNumber as asNumber } from "../lib/numbers";
+
+function isBondInstrumentType(value: string | null | undefined): boolean {
+  return ["bond", "government_bond", "titolo_di_stato"].includes((value || "").toLowerCase());
+}
 
 function EditIcon() {
   return (
@@ -111,14 +117,14 @@ function groupHoldings(items: HoldingDetail[]): GroupedHolding[] {
         tranches: [],
         totalQuantity: 0,
         avgCost: 0,
-        currentPrice: asNumber(h.current_price),
+        currentPrice: 0,
         marketValue: 0,
         returnValue: 0,
         returnPct: 0,
         hasBonusEligible: false,
         allBonusEligible: true,
-        accruedInterest: h.accrued_interest !== undefined && h.accrued_interest !== null ? asNumber(h.accrued_interest) : null,
-        dirtyPrice: h.dirty_price !== undefined && h.dirty_price !== null ? asNumber(h.dirty_price) : null,
+        accruedInterest: null,
+        dirtyPrice: null,
         weightedYtmNet: null,
       };
       map.set(key, group);
@@ -127,15 +133,19 @@ function groupHoldings(items: HoldingDetail[]): GroupedHolding[] {
   }
 
   for (const group of map.values()) {
-    const isBond =
-      (group.instrument_type || "").toLowerCase() === "bond" ||
-      (group.instrument_type || "").toLowerCase() === "government_bond";
+    const isBond = isBondInstrumentType(group.instrument_type);
 
     let totalQty = 0;
     let totalCostBasis = 0;
     let totalMktVal = 0;
     let totalRetVal = 0;
-    let ytmSum = 0;
+    let priceWeightedSum = 0;
+    let accruedWeightedSum = 0;
+    let accruedWeight = 0;
+    let dirtyWeightedSum = 0;
+    let dirtyWeight = 0;
+    let ytmWeightedSum = 0;
+    let ytmWeight = 0;
 
     for (const t of group.tranches) {
       const q = asNumber(t.quantity);
@@ -145,12 +155,23 @@ function groupHoldings(items: HoldingDetail[]): GroupedHolding[] {
       totalQty += q;
       totalMktVal += mv;
       totalRetVal += rv;
+      priceWeightedSum += q * asNumber(t.current_price);
+
+      if (t.accrued_interest !== undefined && t.accrued_interest !== null) {
+        accruedWeightedSum += q * asNumber(t.accrued_interest);
+        accruedWeight += q;
+      }
+      if (t.dirty_price !== undefined && t.dirty_price !== null) {
+        dirtyWeightedSum += q * asNumber(t.dirty_price);
+        dirtyWeight += q;
+      }
 
       if (isBond) {
         const accIn = asNumber(t.accrued_interest_in);
         totalCostBasis += (q * (c + accIn)) / 100;
         if (t.ytm_net !== undefined && t.ytm_net !== null) {
-          ytmSum += q * asNumber(t.ytm_net);
+          ytmWeightedSum += mv * asNumber(t.ytm_net);
+          ytmWeight += mv;
         }
       } else {
         totalCostBasis += q * c;
@@ -158,16 +179,19 @@ function groupHoldings(items: HoldingDetail[]): GroupedHolding[] {
     }
 
     group.totalQuantity = totalQty;
+    group.currentPrice = totalQty > 0 ? priceWeightedSum / totalQty : 0;
     group.marketValue = totalMktVal;
     group.returnValue = totalRetVal;
     group.returnPct = totalCostBasis > 0 ? (totalRetVal / totalCostBasis) * 100 : 0;
     group.hasBonusEligible = group.tranches.some((t) => t.eligible_for_bonus);
     group.allBonusEligible = group.tranches.length > 0 && group.tranches.every((t) => t.eligible_for_bonus);
+    group.accruedInterest = accruedWeight > 0 ? accruedWeightedSum / accruedWeight : null;
+    group.dirtyPrice = dirtyWeight > 0 ? dirtyWeightedSum / dirtyWeight : null;
 
     if (isBond) {
       const weightedClean = group.tranches.reduce((sum, t) => sum + asNumber(t.quantity) * asNumber(t.avg_cost), 0);
       group.avgCost = totalQty > 0 ? weightedClean / totalQty : 0;
-      group.weightedYtmNet = totalQty > 0 ? ytmSum / totalQty : null;
+      group.weightedYtmNet = ytmWeight > 0 ? ytmWeightedSum / ytmWeight : null;
     } else {
       group.avgCost = totalQty > 0 ? totalCostBasis / totalQty : 0;
     }
@@ -548,6 +572,7 @@ function HoldingFormModal({
   const [exitDate, setExitDate] = useState("");
   const [accruedInterestIn, setAccruedInterestIn] = useState("");
   const [eligibleForBonus, setEligibleForBonus] = useState(false);
+  const [feeIn, setFeeIn] = useState("");
 
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [showAddAsset, setShowAddAsset] = useState(false);
@@ -566,6 +591,7 @@ function HoldingFormModal({
       setAvgCost("");
       setAccruedInterestIn("");
       setEligibleForBonus(false);
+      setFeeIn("");
       setEntryDate(new Date().toISOString().slice(0, 10));
       setExitDate("");
     }
@@ -582,6 +608,7 @@ function HoldingFormModal({
         exit_date: exitDate || null,
         accrued_interest_in: cleanNumberInput(accruedInterestIn) || "0",
         eligible_for_bonus: eligibleForBonus,
+        fee_in: cleanNumberInput(feeIn) || "0",
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
@@ -682,7 +709,7 @@ function HoldingFormModal({
             </div>
           {(() => {
             const selectedAsset = assets?.find((a: Asset) => String(a.id) === assetId);
-            const isBond = selectedAsset?.instrument_type === "bond";
+            const isBond = isBondInstrumentType(selectedAsset?.instrument_type);
             return (
               <>
                 <div>
@@ -731,6 +758,18 @@ function HoldingFormModal({
                     </div>
                   </>
                 )}
+                <div>
+                  <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
+                    {t("portfolio.fee_in", "Commissioni di acquisto")}
+                  </label>
+                  <input
+                    type="text"
+                    value={feeIn}
+                    onChange={(e) => setFeeIn(e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+                  />
+                </div>
               </>
             );
           })()}
@@ -798,6 +837,7 @@ export function HoldingEditFormModal({
     exit_date?: string | null;
     accrued_interest_in?: string;
     eligible_for_bonus?: boolean;
+    fee_in?: string;
   } | null;
   onClose: () => void;
   onUpdated?: () => void;
@@ -814,6 +854,7 @@ export function HoldingEditFormModal({
   const [exitDate, setExitDate] = useState("");
   const [accruedInterestIn, setAccruedInterestIn] = useState("");
   const [eligibleForBonus, setEligibleForBonus] = useState(false);
+  const [feeIn, setFeeIn] = useState("");
 
   useEffect(() => {
     if (holding) {
@@ -823,6 +864,7 @@ export function HoldingEditFormModal({
       setAvgCost(holding.avg_cost);
       setAccruedInterestIn(holding.accrued_interest_in || "0");
       setEligibleForBonus(Boolean(holding.eligible_for_bonus));
+      setFeeIn(holding.fee_in || "0");
       setEntryDate(holding.entry_date);
       setExitDate(holding.exit_date ?? "");
     }
@@ -836,6 +878,7 @@ export function HoldingEditFormModal({
       setAvgCost("");
       setAccruedInterestIn("");
       setEligibleForBonus(false);
+      setFeeIn("");
       setEntryDate("");
       setExitDate("");
     }
@@ -849,6 +892,7 @@ export function HoldingEditFormModal({
         exit_date: exitDate || null,
         accrued_interest_in: cleanNumberInput(accruedInterestIn) || "0",
         eligible_for_bonus: eligibleForBonus,
+        fee_in: cleanNumberInput(feeIn) || "0",
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
@@ -872,7 +916,7 @@ export function HoldingEditFormModal({
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-              {holding.instrument_type === "bond" ? t("portfolio.nominal_value", "Valore Nominale (€)") : t("portfolio.quantity")}
+              {isBondInstrumentType(holding.instrument_type) ? t("portfolio.nominal_value", "Valore Nominale (€)") : t("portfolio.quantity")}
             </label>
             <input
               type="text"
@@ -883,7 +927,7 @@ export function HoldingEditFormModal({
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-              {holding.instrument_type === "bond" ? t("portfolio.bond_clean_price", "Prezzo di Carico (% base 100)") : t("portfolio.avg_cost")}
+              {isBondInstrumentType(holding.instrument_type) ? t("portfolio.bond_clean_price", "Prezzo di Carico (% base 100)") : t("portfolio.avg_cost")}
             </label>
             <input
               type="text"
@@ -892,7 +936,7 @@ export function HoldingEditFormModal({
               className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
             />
           </div>
-          {holding.instrument_type === "bond" && (
+          {isBondInstrumentType(holding.instrument_type) && (
             <>
               <BondRateoInput
                 quantity={quantity}
@@ -914,6 +958,18 @@ export function HoldingEditFormModal({
               </div>
             </>
           )}
+          <div>
+            <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
+              {t("portfolio.fee_in", "Commissioni di acquisto")}
+            </label>
+            <input
+              type="text"
+              value={feeIn}
+              onChange={(e) => setFeeIn(e.target.value)}
+              placeholder="0"
+              className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
+            />
+          </div>
           <div>
             <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">{t("portfolio.entry_date")}</label>
             <DatePickerWidget value={entryDate} onChange={setEntryDate} />
@@ -946,12 +1002,21 @@ export function HoldingEditFormModal({
 export function PortfolioPage() {
   const { t, i18n } = useTranslation();
   const locale = getNumberLocale(i18n.resolvedLanguage);
+  const exitTypeLabel = (type: string) => {
+    if (type === "maturity") {
+      return t("portfolio.exit_maturity", "Rimborso a scadenza");
+    }
+    if (type === "early_redemption") {
+      return t("portfolio.exit_early_redemption", "Rimborso anticipato emittente");
+    }
+    return t("portfolio.exit_market_sale", "Vendita a mercato");
+  };
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [addTrancheTarget, setAddTrancheTarget] = useState<{ accountId?: number; assetId?: number } | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [editHolding, setEditHolding] = useState<HoldingDetail | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "bonds">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "bonds" | "exits">("all");
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -981,7 +1046,13 @@ export function PortfolioPage() {
 
   const { data: bondCalendar } = useQuery<BondCalendarItem[]>({
     queryKey: ["bonds", "calendar"],
-    queryFn: () => fetchBondCalendar(),
+    queryFn: () => fetchBondCalendar(undefined, undefined, undefined, true),
+  });
+
+  const { data: portfolioExits } = useQuery<HoldingExit[]>({
+    queryKey: ["portfolio", "exits"],
+    queryFn: () => fetchPortfolioExits(),
+    enabled: activeTab === "exits",
   });
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteHolding(id),
@@ -1023,10 +1094,7 @@ export function PortfolioPage() {
     value: p.value,
   }));
   const bondHoldings = (details ?? []).filter((h: HoldingDetail) => {
-    const isBond =
-      (h.instrument_type || "").toLowerCase() === "bond" ||
-      (h.instrument_type || "").toLowerCase() === "government_bond";
-    if (!isBond) return false;
+    if (!isBondInstrumentType(h.instrument_type)) return false;
     if (h.exit_date) {
       const exitD = new Date(h.exit_date);
       const today = new Date();
@@ -1084,6 +1152,21 @@ export function PortfolioPage() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab("exits")}
+          className={`pb-2.5 text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+            activeTab === "exits"
+              ? "border-b-2 border-teal-400 text-teal-300 dark:text-teal-900"
+              : "text-slate-400 dark:text-slate-500 hover:text-slate-200"
+          }`}
+        >
+          <span>{t("portfolio.tab_exits", "Uscite registrate")}</span>
+          {(portfolioExits?.length ?? 0) > 0 && (
+            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-300 dark:text-amber-800">
+              {portfolioExits?.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {activeTab === "all" ? (
@@ -1131,7 +1214,7 @@ export function PortfolioPage() {
                     </tr>
                   )}
                   {groupedDetails.map((g: GroupedHolding) => {
-                    const isBond = (g.instrument_type || "").toLowerCase() === "bond" || (g.instrument_type || "").toLowerCase() === "government_bond";
+                    const isBond = isBondInstrumentType(g.instrument_type);
                     const isExpanded = Boolean(expandedGroups[g.key]);
                     const hasMulti = g.tranches.length > 1;
 
@@ -1357,7 +1440,7 @@ export function PortfolioPage() {
             </div>
           </section>
         </>
-      ) : (
+      ) : activeTab === "bonds" ? (
         <>
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <article className="card p-4">
@@ -1715,6 +1798,96 @@ export function PortfolioPage() {
             </div>
           </section>
         </>
+      ) : (
+        <section className="card overflow-x-auto">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 p-5 dark:border-slate-200">
+            <div>
+              <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
+                {t("portfolio.tab_exits", "Uscite registrate")}
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
+                {t(
+                  "portfolio.exit_history_hint",
+                  "Vendite a mercato, rimborsi a scadenza e rimborsi anticipati dell'emittente.",
+                )}
+              </p>
+            </div>
+            <span className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 dark:bg-slate-100 dark:text-slate-800">
+              {portfolioExits?.length ?? 0} {t("portfolio.exit_count", "uscite")}
+            </span>
+          </div>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-700 bg-slate-850 text-xs uppercase text-slate-400 dark:border-slate-300 dark:bg-slate-50 dark:text-slate-600">
+                <th className="p-3">{t("portfolio.exit_col_date", "Data")}</th>
+                <th className="p-3">{t("portfolio.asset", "Asset")}</th>
+                <th className="p-3">{t("portfolio.account", "Conto")}</th>
+                <th className="p-3">{t("portfolio.exit_col_type", "Tipo")}</th>
+                <th className="p-3 text-right">{t("portfolio.exit_col_quantity", "Quantità")}</th>
+                <th className="p-3 text-right">{t("portfolio.exit_col_net", "Incasso netto")}</th>
+                <th className="p-3 text-right">{t("portfolio.exit_col_pnl", "P&L realizzato")}</th>
+                <th className="p-3 text-right">{t("portfolio.exit_col_taxes", "Tasse")}</th>
+                <th className="p-3">{t("portfolio.exit_col_notes", "Note")}</th>
+                <th className="p-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {(!portfolioExits || portfolioExits.length === 0) && (
+                <tr>
+                  <td colSpan={10} className="p-8 text-center text-slate-500 dark:text-slate-400">
+                    {t("portfolio.no_exits", "Nessuna uscita registrata.")}
+                  </td>
+                </tr>
+              )}
+              {(portfolioExits ?? []).map((item) => (
+                <tr key={item.id} className="border-b border-slate-800 hover:bg-slate-800/40 dark:border-slate-100 dark:hover:bg-slate-50">
+                  <td className="p-3 font-mono text-slate-200 dark:text-slate-900">{item.exit_date}</td>
+                  <td className="p-3">
+                    <span className="font-semibold text-teal-300 dark:text-teal-900">{item.asset_symbol}</span>
+                    <span className="block max-w-xs truncate text-xs text-slate-400 dark:text-slate-600">{item.asset_name}</span>
+                  </td>
+                  <td className="p-3 text-xs text-slate-400 dark:text-slate-600">{item.account_name}</td>
+                  <td className="p-3">
+                    <span
+                      className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                        item.exit_type === "maturity"
+                          ? "bg-purple-500/20 text-purple-300 dark:text-purple-800"
+                          : item.exit_type === "early_redemption"
+                            ? "bg-amber-500/20 text-amber-300 dark:text-amber-800"
+                            : "bg-teal-500/20 text-teal-300 dark:text-teal-800"
+                      }`}
+                    >
+                      {exitTypeLabel(item.exit_type)}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right font-mono text-slate-200 dark:text-slate-900">
+                    {formatNumber(item.quantity, { minDecimals: 0, maxDecimals: 6, locale })}
+                  </td>
+                  <td className="p-3 text-right font-mono font-semibold text-teal-300 dark:text-teal-800">
+                    {formatMoney(item.net_proceeds, item.currency, locale)}
+                  </td>
+                  <td className={`p-3 text-right font-mono font-semibold ${item.realized_pnl.startsWith("-") ? "text-red-400 dark:text-red-600" : "text-green-400 dark:text-green-700"}`}>
+                    {formatMoney(item.realized_pnl, item.currency, locale)}
+                  </td>
+                  <td className="p-3 text-right font-mono text-slate-400 dark:text-slate-600">
+                    {formatMoney(item.taxes, item.currency, locale)}
+                  </td>
+                  <td className="p-3 max-w-[220px] truncate text-xs text-slate-400 dark:text-slate-600">
+                    {item.notes || "—"}
+                  </td>
+                  <td className="p-3 text-right">
+                    <Link
+                      to={`/portfolio/holdings/${item.holding_id}`}
+                      className="text-xs font-semibold text-teal-400 hover:text-teal-300 dark:text-teal-700"
+                    >
+                      {t("portfolio.view_detail", "Dettaglio")}
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
       <HoldingFormModal
         open={showAddHolding}

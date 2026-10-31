@@ -143,7 +143,7 @@ class AccountResponse(BaseModel):
 
 class CashLedgerCreate(BaseModel):
     account_id: int
-    entry_type: str  # "deposit" | "withdrawal" | "coupon" | "bond_bonus" | "bond_redemption" | "dividend"
+    entry_type: str  # "deposit" | "withdrawal" | "coupon" | "bond_bonus" | "bond_redemption" | "dividend" | "asset_sale"
     amount: LocaleDecimal
     description: Optional[str] = None
     entry_date: Optional[date] = None
@@ -552,6 +552,7 @@ class HoldingCreate(BaseModel):
     exit_date: date | None = None
     accrued_interest_in: LocaleDecimal = Decimal("0")
     eligible_for_bonus: bool = False
+    fee_in: LocaleDecimal = Decimal("0")
 
 
 class HoldingUpdate(BaseModel):
@@ -561,6 +562,7 @@ class HoldingUpdate(BaseModel):
     exit_date: date | None = None
     accrued_interest_in: OptionalLocaleDecimal = None
     eligible_for_bonus: bool | None = None
+    fee_in: OptionalLocaleDecimal = None
 
 
 class HoldingResponse(BaseModel):
@@ -573,6 +575,8 @@ class HoldingResponse(BaseModel):
     exit_date: date | None = None
     accrued_interest_in: Decimal = Decimal("0")
     eligible_for_bonus: bool = False
+    fee_in: Decimal = Decimal("0")
+    closed_at: date | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -600,6 +604,8 @@ class HoldingDetailResponse(BaseModel):
     dirty_price: Decimal | None = None
     ytm_gross: Decimal | None = None
     ytm_net: Decimal | None = None
+    fee_in: Decimal = Decimal("0")
+    closed_at: date | None = None
 
 
 class HoldingSingleDetailResponse(BaseModel):
@@ -635,6 +641,64 @@ class HoldingSingleDetailResponse(BaseModel):
     yield_spread: Decimal | None = None
     price_spread: Decimal | None = None
     bond_detail: BondDetailResponse | None = None
+    tranche_count: int = 1
+    all_eligible_for_bonus: bool = False
+    has_eligible_for_bonus: bool = False
+    tranches: list[HoldingDetailResponse] = Field(default_factory=list)
+    fee_in: Decimal = Decimal("0")
+    closed_at: date | None = None
+
+
+class HoldingExitCreate(BaseModel):
+    exit_type: str = "market_sale"
+    exit_date: date | None = None
+    quantity: OptionalLocaleDecimal = None
+    clean_price: OptionalLocaleDecimal = None
+    accrued_interest_out: OptionalLocaleDecimal = None
+    fees: LocaleDecimal = Decimal("0")
+    taxes: OptionalLocaleDecimal = None
+    coupons_received: OptionalLocaleDecimal = None
+    bonus_received: OptionalLocaleDecimal = None
+    notes: str | None = None
+
+
+class HoldingExitPreviewResponse(BaseModel):
+    exit_type: str
+    exit_date: date
+    quantity: Decimal
+    quantity_before: Decimal
+    quantity_after: Decimal
+    clean_price: Decimal
+    accrued_interest_out: Decimal
+    fees: Decimal
+    taxes: Decimal
+    capital_gain_tax: Decimal = Decimal("0")
+    interest_tax: Decimal = Decimal("0")
+    tax_mode: str
+    fee_in_allocated: Decimal
+    coupons_received: Decimal
+    bonus_received: Decimal
+    gross_proceeds: Decimal
+    net_proceeds: Decimal
+    cost_basis: Decimal
+    realized_capital_gain: Decimal
+    realized_interest_income: Decimal
+    realized_pnl: Decimal
+    currency: str
+    warnings: list[str] = Field(default_factory=list)
+
+
+class HoldingExitResponse(HoldingExitPreviewResponse):
+    id: int
+    holding_id: int
+    account_id: int
+    account_name: str
+    asset_id: int
+    asset_symbol: str
+    asset_name: str
+    previous_exit_date: date | None = None
+    notes: str | None = None
+    created_at: datetime | None = None
 
 
 class HoldingPriceHistoryPoint(BaseModel):
@@ -728,6 +792,8 @@ class DailyPnlPoint(BaseModel):
     day_pnl_pct: Decimal
     cumulative_pnl: Decimal
     net_cash_flow: Decimal = Decimal("0")
+    investment_inflows: Decimal = Decimal("0")
+    total_wealth: Decimal = Decimal("0")
 
 
 class AllAssetsPnlPoint(BaseModel):
@@ -739,6 +805,8 @@ class AllAssetsPnlPoint(BaseModel):
     day_pnl_pct: Decimal
     cumulative_pnl: Decimal
     net_cash_flow: Decimal = Decimal("0")
+    investment_inflows: Decimal = Decimal("0")
+    total_wealth: Decimal = Decimal("0")
 
 
 class TickerResponse(BaseModel):

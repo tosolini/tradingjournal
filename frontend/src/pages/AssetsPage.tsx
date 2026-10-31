@@ -5,7 +5,7 @@ import { Asset, Ticker, createAsset, deleteAsset, fetchAssets, lookupBond, syncA
 import { parseLocaleNumber } from "../lib/numbers";
 import { useToast } from "../contexts/ToastContext";
 
-const INSTRUMENT_TYPES = ["etf", "stock", "bond", "fund"];
+const INSTRUMENT_TYPES = ["etf", "stock", "bond", "government_bond", "fund"];
 
 export interface AssetFormModalProps {
   open: boolean;
@@ -402,7 +402,9 @@ export function AssetFormModal({
             >
               {INSTRUMENT_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {type.toUpperCase()}
+                  {type === "government_bond"
+                    ? t("assets.instrument_government_bond", "Titolo di Stato")
+                    : type.toUpperCase()}
                 </option>
               ))}
             </select>
@@ -743,7 +745,7 @@ export function AssetsPage() {
                   <td className="px-3 py-2 text-slate-400 dark:text-slate-700">{asset.currency}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="flex justify-end gap-2">
-                      {["bond", "government_bond"].includes(asset.instrument_type) && (
+                      {["bond", "government_bond", "titolo_di_stato"].includes(asset.instrument_type) && (
                         <button
                           onClick={() => syncAssetMutation.mutate(asset.id)}
                           disabled={syncAssetMutation.isPending}

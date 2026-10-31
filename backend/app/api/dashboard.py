@@ -4,12 +4,13 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import (
     Account,
+    HoldingExit,
     PortfolioSnapshot,
     PositionDailySnapshot,
     Trade,
@@ -160,6 +161,86 @@ def dashboard_kpis(
             }
         )
 
+    # Holding exits contribute to realized P&L, monthly/weekly stats and taxes.
+    holding_exits = db.execute(
+        select(HoldingExit)
+        .options(
+            joinedload(HoldingExit.asset),
+            joinedload(HoldingExit.account).joinedload(Account.broker),
+        )
+        .where(HoldingExit.user_id == current_user.id)
+    ).scalars().all()
+
+    holding_realized = Decimal("0")
+    holding_exits_count = 0
+    for exit_event in holding_exits:
+        holding_realized += exit_event.realized_pnl
+        holding_exits_count += 1
+
+        asset_currency = (
+            exit_event.asset.currency if exit_event.asset and exit_event.asset.currency else "EUR"
+        ).upper()
+        currencies.add(asset_currency)
+        yearly_tax_currency.add(asset_currency)
+
+        month_key = exit_event.exit_date.strftime("%Y-%m")
+        bucket = monthly.setdefault(month_key, {"realized": Decimal("0"), "count": 0})
+        bucket["realized"] += exit_event.realized_pnl
+        bucket["count"] += 1
+
+        iso_year, iso_week, _ = exit_event.exit_date.isocalendar()
+        week_key = f"{iso_year}-W{iso_week:02d}"
+        w_bucket = weekly.setdefault(week_key, {"realized": Decimal("0"), "count": 0})
+        w_bucket["realized"] += exit_event.realized_pnl
+        w_bucket["count"] += 1
+
+        broker = exit_event.account.broker if exit_event.account else None
+        broker_id = broker.id if broker else exit_event.account_id
+        mode = str(exit_event.tax_mode or (broker.capital_gain_mode if broker else "immediate")).lower()
+        is_gov = (
+            (exit_event.asset.instrument_type or "").strip().lower()
+            in {"government_bond", "titolo_di_stato"}
+            if exit_event.asset
+            else False
+        )
+        std_rate = Decimal(str(broker.capital_gain_rate if broker else Decimal("26.00")))
+        gov_rate = Decimal(str(broker.capital_gain_rate_gov if broker else Decimal("12.50")))
+
+        if exit_event.exit_date >= year_start.date():
+            if mode == "year_end":
+                # Interest tax is withheld immediately; capital gain is deferred to year end.
+                immediate_tax += exit_event.interest_tax
+                if is_gov:
+                    immediate_tax_gov += exit_event.interest_tax
+                    year_end_gov_buckets[broker_id] += exit_event.realized_capital_gain
+                    year_end_gov_rates[broker_id] = gov_rate
+                else:
+                    immediate_tax_std += exit_event.interest_tax
+                    year_end_std_buckets[broker_id] += exit_event.realized_capital_gain
+                    year_end_std_rates[broker_id] = std_rate
+            else:
+                immediate_tax += exit_event.capital_gain_tax + exit_event.interest_tax
+                if is_gov:
+                    immediate_tax_gov += exit_event.capital_gain_tax + exit_event.interest_tax
+                else:
+                    immediate_tax_std += exit_event.capital_gain_tax + exit_event.interest_tax
+
+                if exit_event.realized_capital_gain < 0:
+                    loss = abs(exit_event.realized_capital_gain)
+                    nominal_loss += loss
+                    if is_gov:
+                        loss_offset_gov += loss
+                        # Italian tax rule: Gov bond loss weighted at (12.5 / 26) in standard basket
+                        weighted_factor = (
+                            (gov_rate / std_rate) if std_rate > 0 else Decimal("0.480769")
+                        )
+                        loss_offset += loss * weighted_factor
+                    else:
+                        loss_offset_std += loss
+                        loss_offset += loss
+
+    realized += holding_realized
+
     all_year_end_broker_ids = set(list(year_end_std_buckets.keys()) + list(year_end_gov_buckets.keys()))
     for broker_id in all_year_end_broker_ids:
         s_rate = year_end_std_rates.get(broker_id, Decimal("26.00"))
@@ -187,7 +268,11 @@ def dashboard_kpis(
             loss_offset_gov += abs(g_net)
         nominal_loss += abs(min(s_net, Decimal("0"))) + abs(min(g_net, Decimal("0")))
 
-    snapshots = db.execute(select(PositionDailySnapshot)).scalars().all()
+    snapshots = db.execute(
+        select(PositionDailySnapshot)
+        .join(Account, Account.id == PositionDailySnapshot.account_id)
+        .where(Account.user_id == current_user.id)
+    ).scalars().all()
     equity_curve = [
         {
             "date": s.snapshot_date.isoformat(),
@@ -368,7 +453,11 @@ def dashboard_kpis(
         }
     # 3. Live current day mark-to-market and nominal cost basis
     live_holdings_val = sum((h.market_value for h in holding_details), Decimal("0"))
-    live_holdings_cost = sum((h.avg_cost * h.quantity for h in holding_details), Decimal("0"))
+    # Cost basis per tranche: market_value - unrealized return. This is bond-aware
+    # (includes the /100 nominal factor and the accrued interest paid at purchase).
+    live_holdings_cost = sum(
+        (h.market_value - h.return_value for h in holding_details), Decimal("0")
+    )
 
     live_trades_val = Decimal("0")
     live_trades_cost = Decimal("0")
@@ -605,6 +694,8 @@ def dashboard_kpis(
         "weekly_pnl": weekly_pnl,
         "open_positions": open_positions,
         "realized_pnl": str(realized),
+        "holding_realized_pnl": str(holding_realized),
+        "holding_exits_count": holding_exits_count,
         "unrealized_pnl": str(unrealized),
         "total_pnl": str(realized + unrealized),
         "kpi_currency": kpi_currency,

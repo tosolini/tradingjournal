@@ -56,7 +56,7 @@ La lingua viene rilevata automaticamente dal browser e può essere cambiata qui;
 
 ## Export / Import Dati
 
-- **Esporta tutto** — scarica un backup JSON completo (`tradejournal-export-<data>.json`) di tutti i tuoi dati: borse, broker, conti, ticker, trade, esecuzioni, immagini, note giornaliere, assets, posizioni, snapshot giornalieri, libro cassa e snapshot di portafoglio
+- **Esporta tutto** — scarica un backup JSON completo (`tradejournal-export-<data>.json`) di tutti i tuoi dati: borse, broker, conti, ticker, trade, esecuzioni, immagini, note giornaliere, assets, posizioni, uscite di portafoglio, snapshot giornalieri, libro cassa e snapshot di portafoglio
 - **Importa tutto** — ripristina un backup JSON creato con Esporta
 
 > ⚠️ L'import è **additivo/upsert**: i record corrispondenti vengono aggiornati in base alle chiavi naturali, i nuovi vengono creati; un import non elimina mai nulla.
@@ -70,6 +70,8 @@ Imposta l'orario (default `23:55`) in cui il backend esegue il **job di snapshot
 
 Il job viene eseguito una volta al giorno, nel fuso orario del server configurato con `APP_TIMEZONE`. In questa sezione puoi anche eseguire ricalcoli manuali per popolare una data.
 
+Nello stesso job, se attivata l'apposita preferenza, viene eseguita anche la **registrazione automatica dei rimborsi obbligazionari a scadenza** (vedi sezione Portafoglio).
+
 
 ## Grafico Dashboard
 
@@ -80,6 +82,19 @@ Personalizza la visualizzazione predefinita del grafico del patrimonio nella Das
   - **Portafoglio (ETF e Obbligazioni)** — mostra unicamente gli asset e le posizioni di portafoglio a lungo termine
   - **Azionario (Azioni e Trading)** — mostra unicamente le posizioni azionarie aperte e il capitale impiegato nel trading
 - Clicca **Salva preferenze** per registrare l'impostazione nel tuo profilo utente.
+
+## Portafoglio
+
+Gestisci il comportamento automatico delle posizioni di portafoglio:
+
+- **Registra automaticamente i rimborsi a scadenza** — se attivo, il job giornaliero chiude le obbligazioni scadute e registra:
+  - rimborso del capitale a 100;
+  - cedola finale;
+  - premio fedeltà CUM, se spettante;
+  - imposte stimate e movimenti del libro cassa.
+
+L'operazione è idempotente e viene eseguita una sola volta per tranche. La preferenza è disattivata di default; puoi comunque registrare manualmente il rimborso dal dettaglio posizione.
+
 ## Sessione
 
 - **Logout** — termina la sessione corrente e torna alla pagina di login
