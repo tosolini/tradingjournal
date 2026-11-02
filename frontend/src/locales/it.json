@@ -983,6 +983,7 @@
     "flow_coupon": "Cedola",
     "flow_bonus": "Premio Fedeltà",
     "flow_redemption": "Rimborso Capitale",
+    "export_calendar_ics": "Esporta calendario (.ics)",
     "view_detail": "Vedi dettaglio completo",
     "holding_deleted": "Posizione eliminata con successo",
     "holding_updated": "Posizione aggiornata con successo",
@@ -1047,6 +1048,8 @@
   "assets": {
     "title": "Anagrafica Asset",
     "subtitle": "Catalogo degli strumenti finanziari monitorati nel portafoglio.",
+    "search_placeholder": "Cerca per simbolo, nome o ISIN...",
+    "view_asset": "Visualizza asset",
     "add": "Aggiungi Asset",
     "add_title": "Nuovo Asset",
     "edit_title": "Modifica Asset",

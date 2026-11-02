@@ -983,6 +983,7 @@
     "flow_coupon": "Coupon",
     "flow_bonus": "Loyalty Bonus",
     "flow_redemption": "Capital Redemption",
+    "export_calendar_ics": "Export calendar (.ics)",
     "view_detail": "View full detail",
     "holding_deleted": "Holding deleted successfully",
     "holding_updated": "Holding updated successfully",
@@ -1047,6 +1048,8 @@
   "assets": {
     "title": "Asset Registry",
     "subtitle": "Catalog of financial instruments tracked in your portfolio.",
+    "search_placeholder": "Search by symbol, name or ISIN...",
+    "view_asset": "View asset",
     "add": "Add Asset",
     "add_title": "New Asset",
     "edit_title": "Edit Asset",

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { Asset, Ticker, createAsset, deleteAsset, fetchAssets, lookupBond, syncAssetEuronext, tickersApi, updateAsset } from "../lib/api";
 import { parseLocaleNumber } from "../lib/numbers";
 import { useToast } from "../contexts/ToastContext";
@@ -636,16 +637,33 @@ export function AssetFormModal({
 export function AssetsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [editAsset, setEditAsset] = useState<Asset | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const toast = useToast();
+  const querySearch = searchParams.get("search") || "";
+  const [searchFilter, setSearchFilter] = useState(querySearch);
+
+  useEffect(() => {
+    setSearchFilter(querySearch);
+  }, [querySearch]);
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["assets"],
     queryFn: fetchAssets,
   });
 
+  const filteredAssets = useMemo(() => {
+    const q = searchFilter.trim().toLowerCase();
+    if (!q) return assets;
+    return assets.filter(
+      (a) =>
+        a.symbol.toLowerCase().includes(q) ||
+        a.name.toLowerCase().includes(q) ||
+        (a.isin && a.isin.toLowerCase().includes(q))
+    );
+  }, [assets, searchFilter]);
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteAsset(id),
     onSuccess: () => {
@@ -681,15 +699,31 @@ export function AssetsPage() {
           <h1 className="text-2xl font-semibold">{t("assets.title")}</h1>
           <p className="text-sm text-slate-400 dark:text-slate-900">{t("assets.subtitle")}</p>
         </div>
-        <button
-          onClick={() => {
-            setEditAsset(null);
-            setShowForm(true);
-          }}
-          className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400"
-        >
-          + {t("assets.add")}
-        </button>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={searchFilter}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchFilter(val);
+              const next = new URLSearchParams(searchParams);
+              if (val) next.set("search", val);
+              else next.delete("search");
+              setSearchParams(next, { replace: true });
+            }}
+            placeholder={t("assets.search_placeholder", "Cerca per simbolo, nome o ISIN...")}
+            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:border-teal-500 focus:outline-none dark:border-slate-300 dark:bg-white dark:text-slate-800"
+          />
+          <button
+            onClick={() => {
+              setEditAsset(null);
+              setShowForm(true);
+            }}
+            className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400"
+          >
+            + {t("assets.add")}
+          </button>
+        </div>
       </div>
 
       <div className="card overflow-x-auto">
@@ -712,7 +746,7 @@ export function AssetsPage() {
                   {t("common.loading", "Caricamento...")}
                 </td>
               </tr>
-            ) : assets.length === 0 ? (
+            ) : filteredAssets.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-3 py-8 text-center">
                   <div className="flex flex-col items-center justify-center gap-2">
@@ -735,7 +769,7 @@ export function AssetsPage() {
                 </td>
               </tr>
             ) : (
-              assets.map((asset: Asset) => (
+              filteredAssets.map((asset: Asset) => (
                 <tr key={asset.id} className="border-b border-slate-800/80 hover:bg-slate-800/40">
                   <td className="px-3 py-2 font-mono font-medium text-teal-200 dark:text-teal-900">{asset.symbol}</td>
                   <td className="px-3 py-2 text-slate-300 dark:text-slate-900">{asset.name}</td>

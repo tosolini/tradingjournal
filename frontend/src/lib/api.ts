@@ -695,6 +695,45 @@ export function fetchBondCalendar(
   return api(`/api/bonds/calendar${q ? `?${q}` : ""}`);
 }
 
+export async function downloadBondCalendarIcs(params?: {
+  accountId?: number;
+  holdingId?: number;
+  fromDate?: string;
+  toDate?: string;
+  flowType?: string;
+  aggregate?: boolean;
+}): Promise<void> {
+  const q = new URLSearchParams();
+  if (params?.accountId) q.set("account_id", String(params.accountId));
+  if (params?.holdingId) q.set("holding_id", String(params.holdingId));
+  if (params?.fromDate) q.set("from_date", params.fromDate);
+  if (params?.toDate) q.set("to_date", params.toDate);
+  if (params?.flowType) q.set("flow_type", params.flowType);
+  if (params?.aggregate !== undefined) q.set("aggregate", String(params.aggregate));
+
+  const token = localStorage.getItem("token");
+  const qs = q.toString();
+  const response = await fetch(`${API_BASE}/api/bonds/calendar.ics${qs ? `?${qs}` : ""}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) throw await parseApiError(response);
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition");
+  let filename = `cedole-tradingjournal-${new Date().toISOString().slice(0, 10)}.ics`;
+  if (disposition && disposition.includes("filename=")) {
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export function fetchBondMetrics(accountId?: number): Promise<BondPortfolioMetrics> {
   const params = new URLSearchParams();
   if (accountId) params.set("account_id", String(accountId));
@@ -880,7 +919,9 @@ export const tickersApi = {
 
 // ── Dashboard ───────────────────────────────────────
 export type TradeStat = {
+  id?: number;
   symbol: string;
+  asset_id?: number | null;
   side: string;
   status: string;
   net_pnl: string;
@@ -906,8 +947,10 @@ export type DashboardAllocation = {
   instrument_type: string;
   market_value: string;
   weight_pct: number;
+  asset_id?: number | null;
+  holding_id?: number | null;
+  trade_id?: number | null;
 };
-
 export type DashboardKpis = {
   trade_count: number;
   wins: number;
