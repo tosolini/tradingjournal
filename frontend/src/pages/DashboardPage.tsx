@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AreaSeries, ColorType, LineSeries, createChart } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { AllAssetsPnlPoint, DashboardAllocation, DashboardKpis, MonthlyPnlPoint, PortfolioHistoryPoint, TradeStat, WeeklyPnlPoint, api, dashboardKpis } from "../lib/api";
 
@@ -817,29 +818,46 @@ function AllocationPanel({ allocation, classes }: { allocation: DashboardAllocat
         </div>
       ) : (
         <div className="space-y-3 p-4">
-          {allocation.map((a, i) => (
-            <div key={a.symbol} className="fade-up" style={{ animationDelay: `${i * 40}ms` }}>
-              <div className="flex items-baseline justify-between gap-3 text-sm">
-                <div className="flex min-w-0 items-baseline gap-2">
-                  <span className="font-semibold text-teal-300 dark:text-teal-800">{a.symbol}</span>
-                  <span className="truncate text-xs text-slate-400 dark:text-slate-500">{a.name}</span>
-                  <span className="rounded bg-slate-800/80 px-1.5 py-0.5 text-[10px] uppercase text-slate-400 dark:bg-slate-200 dark:text-slate-700">
-                    {formatInstrumentType(a.instrument_type)}
-                  </span>
+          {allocation.map((a, i) => {
+            const detailUrl = a.holding_id
+              ? `/portfolio/holdings/${a.holding_id}`
+              : a.trade_id
+              ? `/trades/${a.trade_id}`
+              : null;
+            return (
+              <div key={a.symbol} className="fade-up" style={{ animationDelay: `${i * 40}ms` }}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <div className="flex min-w-0 items-baseline gap-2">
+                    {detailUrl ? (
+                      <Link
+                        to={detailUrl}
+                        className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-800 dark:hover:text-teal-700 hover:underline transition-colors"
+                        title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                      >
+                        {a.symbol}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-teal-300 dark:text-teal-800">{a.symbol}</span>
+                    )}
+                    <span className="truncate text-xs text-slate-400 dark:text-slate-500">{a.name}</span>
+                    <span className="rounded bg-slate-800/80 px-1.5 py-0.5 text-[10px] uppercase text-slate-400 dark:bg-slate-200 dark:text-slate-700">
+                      {formatInstrumentType(a.instrument_type)}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-baseline gap-3 tabular-nums">
+                    <span className="text-slate-200 dark:text-slate-700">{formatMoney(a.market_value, undefined, locale)}</span>
+                    <span className="w-12 text-right text-xs text-slate-400 dark:text-slate-500">{a.weight_pct.toFixed(1)}%</span>
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-baseline gap-3 tabular-nums">
-                  <span className="text-slate-200 dark:text-slate-700">{formatMoney(a.market_value, undefined, locale)}</span>
-                  <span className="w-12 text-right text-xs text-slate-400 dark:text-slate-500">{a.weight_pct.toFixed(1)}%</span>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-700/40 dark:bg-slate-300/40">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-teal-600 to-sky-600 dark:from-teal-400 dark:to-sky-400"
+                    style={{ width: `${Math.min(a.weight_pct, 100)}%` }}
+                  />
                 </div>
               </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-700/40 dark:bg-slate-300/40">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-teal-600 to-sky-600 dark:from-teal-400 dark:to-sky-400"
-                  style={{ width: `${Math.min(a.weight_pct, 100)}%` }}
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {classes.length > 1 && (
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-700/40 pt-3 dark:border-slate-300/30">
               <span className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500">
@@ -1306,9 +1324,24 @@ function BestWorstTradesPanel({
                 </span>
               </div>
               <div className="mt-2 flex items-baseline justify-between">
-                <div>
-                  <span className="text-base font-extrabold text-teal-300 dark:text-teal-800">{bestTrade.symbol}</span>
-                  <span className="ml-2 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">{bestTrade.side}</span>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/assets?search=${encodeURIComponent(bestTrade.symbol)}`}
+                    className="text-base font-extrabold text-teal-300 hover:text-teal-200 dark:text-teal-800 dark:hover:text-teal-700 hover:underline transition-colors"
+                    title={t("assets.view_asset", "Visualizza asset")}
+                  >
+                    {bestTrade.symbol}
+                  </Link>
+                  {bestTrade.id && (
+                    <Link
+                      to={`/trades/${bestTrade.id}`}
+                      className="rounded bg-teal-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300 hover:bg-teal-500/30 dark:bg-teal-100 dark:text-teal-800 hover:underline"
+                      title={t("trades.view_detail", "Visualizza trade")}
+                    >
+                      #{bestTrade.id}
+                    </Link>
+                  )}
+                  <span className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">{bestTrade.side}</span>
                 </div>
                 <span className="text-lg font-bold tabular-nums text-teal-300 dark:text-teal-700">
                   {formatSignedMoney(bestTrade.net_pnl, currency, locale)}
@@ -1335,9 +1368,24 @@ function BestWorstTradesPanel({
                 </span>
               </div>
               <div className="mt-2 flex items-baseline justify-between">
-                <div>
-                  <span className="text-base font-extrabold text-red-300 dark:text-red-800">{worstTrade.symbol}</span>
-                  <span className="ml-2 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">{worstTrade.side}</span>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/assets?search=${encodeURIComponent(worstTrade.symbol)}`}
+                    className="text-base font-extrabold text-red-300 hover:text-red-200 dark:text-red-800 dark:hover:text-red-700 hover:underline transition-colors"
+                    title={t("assets.view_asset", "Visualizza asset")}
+                  >
+                    {worstTrade.symbol}
+                  </Link>
+                  {worstTrade.id && (
+                    <Link
+                      to={`/trades/${worstTrade.id}`}
+                      className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-300 hover:bg-red-500/30 dark:bg-red-100 dark:text-red-800 hover:underline"
+                      title={t("trades.view_detail", "Visualizza trade")}
+                    >
+                      #{worstTrade.id}
+                    </Link>
+                  )}
+                  <span className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">{worstTrade.side}</span>
                 </div>
                 <span className="text-lg font-bold tabular-nums text-red-400 dark:text-red-600">
                   {formatSignedMoney(worstTrade.net_pnl, currency, locale)}

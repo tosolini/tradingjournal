@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import select, or_, func
 from sqlalchemy.orm import Session, joinedload
 
@@ -14,6 +14,7 @@ from app.services.bonds import (
     calculate_ytm,
     get_bond_cash_flows,
 )
+from app.services.calendar_ics import IcsEvent, build_icalendar
 from app.services.price_provider import get_current_price
 
 router = APIRouter(prefix="/api/bonds", tags=["bonds"])
@@ -127,6 +128,79 @@ def get_bond_calendar(
 
     items.sort(key=lambda x: x.date)
     return items
+
+
+@router.get("/calendar.ics")
+def export_bond_calendar_ics(
+    account_id: int | None = None,
+    holding_id: int | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    flow_type: str | None = None,
+    aggregate: bool = True,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    items = get_bond_calendar(
+        account_id=account_id,
+        holding_id=holding_id,
+        from_date=from_date,
+        to_date=to_date,
+        aggregate=aggregate,
+        db=db,
+        current_user=current_user,
+    )
+
+    if flow_type:
+        allowed = {ft.strip().lower() for ft in flow_type.split(",")}
+        items = [it for it in items if it.flow_type.lower() in allowed]
+
+    flow_labels = {
+        "coupon": "Cedola",
+        "redemption": "Rimborso capitale",
+        "bonus": "Premio fedeltà (CUM)",
+    }
+
+    events: list[IcsEvent] = []
+    for idx, item in enumerate(items):
+        flow_name = flow_labels.get(item.flow_type, item.flow_type.capitalize())
+        summary = f"{flow_name}: {item.asset_name or item.asset_symbol} ({item.asset_symbol})"
+
+        desc_parts = [
+            f"Tipo: {flow_name}",
+            f"Strumento: {item.asset_name or item.asset_symbol} ({item.asset_symbol})",
+            f"Conto: {item.account_name or 'N/D'}",
+            f"Netto stimato: € {item.net_amount:,.2f}",
+            f"Lordo stimato: € {item.gross_amount:,.2f}",
+            f"Imposte: € {item.tax_amount:,.2f}",
+        ]
+        if item.rate is not None:
+            desc_parts.append(f"Tasso: {item.rate:.4f}%")
+
+        uid_scope = f"h{item.holding_id}" if item.holding_id else f"item{idx}"
+        uid = f"tj-bond-{uid_scope}-{item.flow_type}-{item.date.strftime('%Y%m%d')}@tradingjournal"
+
+        events.append(
+            IcsEvent(
+                uid=uid,
+                summary=summary,
+                event_date=item.date,
+                description="\n".join(desc_parts),
+                categories=f"Cedole,Finanza,{flow_name}",
+            )
+        )
+
+    ics_content = build_icalendar(calendar_name="TradingJournal - Cedole & Flussi", events=events)
+    filename = f"cedole-tradingjournal-{date.today().strftime('%Y%m%d')}.ics"
+
+    return Response(
+        content=ics_content,
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-cache",
+        },
+    )
 
 
 @router.get("/metrics", response_model=BondPortfolioMetrics)

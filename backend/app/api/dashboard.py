@@ -10,6 +10,7 @@ from app.database import get_db
 from app.deps import get_current_user
 from app.models import (
     Account,
+    Asset,
     HoldingExit,
     PortfolioSnapshot,
     PositionDailySnapshot,
@@ -301,11 +302,20 @@ def dashboard_kpis(
     nonzero = [row for row in trade_rows if row["net"] != 0]
     best = max(nonzero, key=lambda row: row["net"]) if nonzero else None
     worst = min(nonzero, key=lambda row: row["net"]) if nonzero else None
+    user_assets = (
+        db.execute(select(Asset.id, Asset.symbol).where(Asset.user_id == current_user.id))
+        .all()
+    )
+    symbol_to_asset_id = {sym.upper(): aid for aid, sym in user_assets if sym}
+
 
     def trade_stat(row: dict) -> dict:
         trade = row["trade"]
+        sym_norm = (trade.symbol or "").strip().upper()
         return {
+            "id": trade.id,
             "symbol": trade.symbol,
+            "asset_id": symbol_to_asset_id.get(sym_norm),
             "side": trade.side,
             "status": trade.status,
             "net_pnl": str(row["net"]),
@@ -609,6 +619,8 @@ def dashboard_kpis(
         entry = by_symbol.setdefault(
             holding.asset_symbol,
             {
+                "asset_id": holding.asset_id,
+                "holding_id": holding.id,
                 "name": holding.asset_name,
                 "instrument_type": holding.instrument_type,
                 "market_value": Decimal("0"),
@@ -635,6 +647,7 @@ def dashboard_kpis(
                     entry = by_symbol.setdefault(
                         trade.symbol,
                         {
+                            "trade_id": trade.id,
                             "name": trade_name,
                             "instrument_type": inst_type,
                             "market_value": Decimal("0"),
@@ -648,6 +661,9 @@ def dashboard_kpis(
     asset_allocation = [
         {
             "symbol": symbol,
+            "asset_id": entry.get("asset_id"),
+            "holding_id": entry.get("holding_id"),
+            "trade_id": entry.get("trade_id"),
             "name": entry["name"],
             "instrument_type": entry["instrument_type"],
             "market_value": str(entry["market_value"]),
