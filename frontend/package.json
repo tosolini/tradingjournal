@@ -10,7 +10,7 @@
     },
     "dependencies": {
         "@tanstack/react-query": "^5.105.0",
-        "@hookform/resolvers": "^6.0.2",
+        "@hookform/resolvers": "^7.0.3",
         "@uiw/react-markdown-preview": "^5.2.1",
         "dompurify": "^3.4.17",
         "i18next": "^26.5.11",
