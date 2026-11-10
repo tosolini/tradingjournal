@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.1] - 2026-11-02
+
+- Version bump to 0.2.1 (Backend 0.2.1 / Frontend 0.2.1)
+
 ## [0.2.0] - 2026-10-30
 
 - Bond Rate Healing & Euronext MOT Re-Sync

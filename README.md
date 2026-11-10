@@ -35,8 +35,8 @@ The entire project is meant to be used on localhost or private networks. **Do no
 
 ## Current version
 
-- Backend: `0.2.0` (`backend/pyproject.toml`)
-- Frontend: `0.2.0` (`frontend/package.json`)
+- Backend: `0.2.1` (`backend/pyproject.toml`)
+- Frontend: `0.2.1` (`frontend/package.json`)
 
 More details on change log and versioning strategy in the [changelog.md](changelog.md) file.
 
