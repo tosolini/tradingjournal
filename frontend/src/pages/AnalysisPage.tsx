@@ -1,8 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { analysisApi, AnalysisReportDetail, AnalysisReportSummary, AnalysisTargetItem } from "../lib/api";
+import {
+  analysisApi,
+  AnalysisReportDetail,
+  AnalysisReportSummary,
+  AnalysisTargetItem,
+  Ticker,
+  tickersApi,
+} from "../lib/api";
 import { ReportViewer } from "../components/analysis/ReportViewer";
 import { useToast } from "../contexts/ToastContext";
 
@@ -23,7 +30,60 @@ export const AnalysisPage: React.FC = () => {
   const [selectedTargetKey, setSelectedTargetKey] = useState<string>("");
   const [customSymbol, setCustomSymbol] = useState<string>("");
   const [customMarket, setCustomMarket] = useState<string>("NASDAQ");
+  const [selectedDbTicker, setSelectedDbTicker] = useState<Ticker | null>(null);
+  const [tickerSuggestions, setTickerSuggestions] = useState<Ticker[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [isSearchingTickers, setIsSearchingTickers] = useState<boolean>(false);
   const [activeReportId, setActiveReportId] = useState<number | null>(null);
+
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleCustomSymbolChange = (value: string) => {
+    setCustomSymbol(value);
+    setSelectedDbTicker(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const trimmed = value.trim();
+    if (trimmed.length >= 2) {
+      setIsSearchingTickers(true);
+      debounceRef.current = setTimeout(async () => {
+        try {
+          const results = await tickersApi.search(trimmed, 8);
+          setTickerSuggestions(results);
+          setShowSuggestions(results.length > 0);
+        } catch {
+          setTickerSuggestions([]);
+        } finally {
+          setIsSearchingTickers(false);
+        }
+      }, 250);
+    } else {
+      setTickerSuggestions([]);
+      setShowSuggestions(false);
+      setIsSearchingTickers(false);
+    }
+  };
+
+  const handleSelectTicker = (ticker: Ticker) => {
+    setCustomSymbol(ticker.symbol);
+    if (ticker.market) {
+      setCustomMarket(ticker.market);
+    }
+    setSelectedDbTicker(ticker);
+    setShowSuggestions(false);
+  };
 
   // 1. Fetch eligible targets
   const { data: targets = [], isLoading: targetsLoading } = useQuery<AnalysisTargetItem[]>({
@@ -249,19 +309,62 @@ export const AnalysisPage: React.FC = () => {
                 )}
               </div>
             ) : (
-              /* Free-form Ticker Input */
+              /* Free-form Ticker Input with Internal DB Autocomplete */
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Simbolo Azionario (Ticker)
-                  </label>
+                <div ref={autocompleteRef} className="relative">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold uppercase text-slate-400">
+                      Simbolo Azionario o Nome
+                    </label>
+                    {isSearchingTickers && (
+                      <span className="text-[10px] text-teal-400 animate-pulse">Cerca nel database...</span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={customSymbol}
-                    onChange={(e) => setCustomSymbol(e.target.value.toUpperCase())}
-                    placeholder="Es. NVDA, PLTR, AAPL, RACE.MI"
+                    onChange={(e) => handleCustomSymbolChange(e.target.value.toUpperCase())}
+                    onFocus={() => {
+                      if (tickerSuggestions.length > 0) setShowSuggestions(true);
+                    }}
+                    placeholder="Es. NVDA, PLTR, Ferrari, Eni..."
+                    autoComplete="off"
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
                   />
+
+                  {/* Autocomplete Dropdown from Internal DB */}
+                  {showSuggestions && tickerSuggestions.length > 0 && (
+                    <ul className="absolute left-0 top-full z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 shadow-2xl divide-y divide-slate-800/80">
+                      {tickerSuggestions.map((tk) => (
+                        <li
+                          key={tk.id}
+                          onMouseDown={() => handleSelectTicker(tk)}
+                          className="flex cursor-pointer items-baseline justify-between gap-2 px-3 py-2.5 hover:bg-slate-800/80 transition-colors"
+                        >
+                          <div className="flex items-baseline gap-2 min-w-0">
+                            <span className="font-mono font-bold text-teal-400 text-sm shrink-0">
+                              {tk.symbol}
+                            </span>
+                            <span className="truncate text-xs text-slate-300">
+                              {tk.name}
+                            </span>
+                          </div>
+                          <span className="shrink-0 text-[10px] uppercase font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700/50">
+                            {tk.market}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Selected Ticker Pill */}
+                  {selectedDbTicker && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-teal-300 bg-teal-950/40 border border-teal-800/40 rounded-md px-2 py-1">
+                      <span className="text-teal-400">✓</span>
+                      <span className="font-semibold">{selectedDbTicker.symbol}</span>
+                      <span className="text-slate-400 truncate max-w-[180px]">— {selectedDbTicker.name}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -275,10 +378,28 @@ export const AnalysisPage: React.FC = () => {
                   >
                     <option value="NASDAQ">NASDAQ (USA)</option>
                     <option value="NYSE">NYSE (USA)</option>
-                    <option value="Borsa Italiana">Borsa Italiana (Milano .MI)</option>
-                    <option value="Euronext">Euronext</option>
+                    <option value="Euronext Milan">Euronext Milan / Borsa Italiana</option>
+                    <option value="Euronext Growth Milan">Euronext Growth Milan</option>
+                    <option value="Euronext Global Equity Market">Euronext Global Equity Market</option>
+                    <option value="EuroTLX">EuroTLX</option>
+                    <option value="Euronext Paris">Euronext Paris (.PA)</option>
+                    <option value="Euronext Amsterdam">Euronext Amsterdam (.AS)</option>
                     <option value="Xetra">XETRA (Germania .DE)</option>
                     <option value="London">LSE (Londra .L)</option>
+                    {![
+                      "NASDAQ",
+                      "NYSE",
+                      "Euronext Milan",
+                      "Euronext Growth Milan",
+                      "Euronext Global Equity Market",
+                      "EuroTLX",
+                      "Euronext Paris",
+                      "Euronext Amsterdam",
+                      "Xetra",
+                      "London",
+                    ].includes(customMarket) && (
+                      <option value={customMarket}>{customMarket}</option>
+                    )}
                   </select>
                 </div>
               </div>
