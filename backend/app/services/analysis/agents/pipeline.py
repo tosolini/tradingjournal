@@ -31,7 +31,7 @@ def _extract_json_block(text: str) -> dict:
             pass
 
     # 2. General code fences: try all matches, prefer one with overall_score
-    for m in re.finditer(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text):
+for m in re.finditer(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text, re.IGNORECASE):
         try:
             parsed = json.loads(m.group(1))
             if isinstance(parsed, dict) and "overall_score" in parsed:
