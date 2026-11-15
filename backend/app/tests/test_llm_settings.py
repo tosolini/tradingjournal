@@ -41,6 +41,18 @@ def test_get_user_llm_client_openai():
     assert client.api_key == "sk-test12345"
 
 
+def test_get_user_llm_client_openrouter():
+    client = get_user_llm_client({
+        "provider": "openrouter",
+        "model": "deepseek/deepseek-r1",
+        "api_key": "sk-or-v1-test",
+    })
+    assert isinstance(client, OpenAIChatClient)
+    assert client.model == "deepseek/deepseek-r1"
+    assert client.api_key == "sk-or-v1-test"
+    assert client.base_url == "https://openrouter.ai/api/v1"
+
+
 def test_get_user_llm_client_gemini():
     client = get_user_llm_client({
         "provider": "gemini",
@@ -93,6 +105,27 @@ def test_connectivity_gemini_success():
         assert latency is not None
         assert "Gemini" in message
         assert err is None
+
+
+def test_connectivity_openrouter_success():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"choices": [{"message": {"content": "Pong"}}]}
+
+    with patch("requests.post", return_value=mock_resp) as mock_post:
+        success, latency, message, err = execute_test_connection(
+            provider="openrouter",
+            model="meta-llama/llama-3.3-70b-instruct",
+            api_key="sk-or-test"
+        )
+        assert success is True
+        assert latency is not None
+        assert "OpenRouter" in message
+        assert err is None
+        # Check HTTP-Referer and X-Title were included
+        call_headers = mock_post.call_args[1]["headers"]
+        assert call_headers["HTTP-Referer"] == "https://tradingjournal.local"
+        assert call_headers["Authorization"] == "Bearer sk-or-test"
 
 
 def test_api_endpoint_mock(test_user):

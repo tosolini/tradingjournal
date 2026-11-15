@@ -47,6 +47,8 @@ class OpenAIChatClient(BaseChatClient):
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
+            "HTTP-Referer": "https://tradingjournal.local",
+            "X-Title": "Trading Journal",
         }
         payload = {
             "model": self.model,
@@ -157,6 +159,13 @@ def get_llm_client(
             logger.warning("OpenAI API key is not set; falling back to MockChatClient")
             return MockChatClient()
         return OpenAIChatClient(api_key=key, model=mod, base_url=b_url)
+
+    elif prov == "openrouter":
+        if not key:
+            logger.warning("OpenRouter API key is not set; falling back to MockChatClient")
+            return MockChatClient()
+        openrouter_url = b_url or "https://openrouter.ai/api/v1"
+        return OpenAIChatClient(api_key=key, model=mod, base_url=openrouter_url)
 
     # Default fallback
     return MockChatClient()
@@ -292,6 +301,38 @@ def test_llm_connection(
                 return True, latency_ms, f"Connessione a Ollama riuscita ({root_url})!", None
             else:
                 return False, latency_ms, "Errore Ollama", f"HTTP {resp.status_code}: {resp.text[:200]}"
+
+        elif prov == "openrouter":
+            if not effective_key:
+                return False, None, "Connessione fallita", "API Key mancante per OpenRouter."
+            eff_model = (model or settings.analysis_llm_model or "").strip()
+            if not eff_model:
+                return False, None, "Connessione fallita", "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
+            eff_base_url = (base_url or settings.analysis_base_url or "https://openrouter.ai/api/v1").rstrip("/")
+            url = f"{eff_base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {effective_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://tradingjournal.local",
+                "X-Title": "Trading Journal",
+            }
+            payload = {
+                "model": eff_model,
+                "messages": [{"role": "user", "content": "Ping"}],
+                "max_tokens": 5,
+            }
+            resp = requests.post(url, headers=headers, json=payload, timeout=12)
+            latency_ms = int((time.perf_counter() - t_start) * 1000)
+            if resp.status_code == 200:
+                return True, latency_ms, f"Connessione a OpenRouter ({eff_model}) riuscita!", None
+            else:
+                err_detail = resp.text[:200]
+                try:
+                    err_json = resp.json()
+                    err_detail = err_json.get("error", {}).get("message", err_detail)
+                except Exception:
+                    pass
+                return False, latency_ms, "Errore API OpenRouter", f"HTTP {resp.status_code}: {err_detail}"
 
         else:
             return False, None, "Provider non supportato", f"Provider sconosciuto: {provider}"

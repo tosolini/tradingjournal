@@ -1267,7 +1267,7 @@ export interface AnalysisReportDetail {
 }
 
 export interface LlmConfig {
-  provider: "gemini" | "openai" | "anthropic" | "ollama" | "mock";
+  provider: "gemini" | "openai" | "anthropic" | "ollama" | "openrouter" | "mock";
   model?: string;
   api_key?: string;
   base_url?: string;

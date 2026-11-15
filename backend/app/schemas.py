@@ -936,7 +936,7 @@ class AnalysisRunRequest(BaseModel):
 
 class TestLlmRequest(BaseModel):
     __test__ = False
-    provider: str  # "gemini" | "openai" | "anthropic" | "ollama" | "mock"
+    provider: str  # "gemini" | "openai" | "anthropic" | "ollama" | "openrouter" | "mock"
     model: Optional[str] = None
     api_key: Optional[str] = None
     base_url: Optional[str] = None

@@ -89,6 +89,7 @@ Non è necessario modificare file di sistema o riavviare Docker per abilitare l'
    - **Google Gemini**: console [Google AI Studio](https://aistudio.google.com/app/apikey).
    - **OpenAI**: console [OpenAI Platform](https://platform.openai.com/api-keys).
    - **Anthropic Claude**: console [Anthropic Console](https://console.anthropic.com/).
+   - **OpenRouter**: gateway unificato [OpenRouter.ai](https://openrouter.ai/keys) per accedere a centinaia di modelli (DeepSeek, Llama, Claude, GPT, Gemini).
    - **Ollama (Locale / Self-Hosted)**: 100% privato e gratuito sul tuo computer (endpoint predefinito `http://localhost:11434/v1` o `http://host.docker.internal:11434/v1` in Docker).
    - **Simulazione (Mock)**: modalità dimostrativa offline senza API key né costi.
 3. Inserisci l'identificativo esatto del modello desiderato (es. consultando la documentazione del tuo provider) e la tua API Key (con tasto di visibilità 👁️).

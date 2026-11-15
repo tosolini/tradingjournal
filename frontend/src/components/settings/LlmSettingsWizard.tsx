@@ -12,7 +12,7 @@ interface UserPreferencesResponse {
 }
 
 interface ProviderPreset {
-  id: "gemini" | "openai" | "anthropic" | "ollama" | "mock";
+  id: "gemini" | "openai" | "anthropic" | "openrouter" | "ollama" | "mock";
   titleKey: string;
   badgeKey?: string;
   badgeColor?: string;
@@ -49,6 +49,15 @@ const PROVIDERS: ProviderPreset[] = [
     requiresKey: true,
   },
   {
+    id: "openrouter",
+    titleKey: "settings.llm.openrouter_title",
+    descKey: "settings.llm.openrouter_desc",
+    linkKey: "settings.llm.openrouter_link",
+    linkUrl: "https://openrouter.ai/keys",
+    defaultBaseUrl: "https://openrouter.ai/api/v1",
+    requiresKey: true,
+  },
+  {
     id: "ollama",
     titleKey: "settings.llm.ollama_title",
     badgeKey: "settings.llm.ollama_badge",
@@ -81,7 +90,7 @@ export function LlmSettingsWizard() {
 
   const savedConfig = prefData?.preferences?.llm_config;
 
-  const [provider, setProvider] = useState<"gemini" | "openai" | "anthropic" | "ollama" | "mock">("gemini");
+  const [provider, setProvider] = useState<"gemini" | "openai" | "anthropic" | "openrouter" | "ollama" | "mock">("gemini");
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
@@ -107,7 +116,7 @@ export function LlmSettingsWizard() {
 
   const activeProviderDef = PROVIDERS.find((p) => p.id === provider) || PROVIDERS[0];
 
-  const handleProviderSelect = (newProvId: "gemini" | "openai" | "anthropic" | "ollama" | "mock") => {
+  const handleProviderSelect = (newProvId: "gemini" | "openai" | "anthropic" | "openrouter" | "ollama" | "mock") => {
     setProvider(newProvId);
     setTestResult(null);
     const def = PROVIDERS.find((p) => p.id === newProvId);
@@ -230,7 +239,7 @@ export function LlmSettingsWizard() {
         <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           {t("settings.llm.provider_label")}
         </label>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           {PROVIDERS.map((p) => {
             const isSelected = provider === p.id;
             return (
