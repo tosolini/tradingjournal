@@ -29,7 +29,7 @@ export function DashboardSkeleton() {
                 {t("dashboard.loading_title", "Caricamento dashboard in corso...")}
               </h2>
               <span className="inline-flex items-center rounded-full bg-teal-500/15 px-2 py-0.5 text-[11px] font-medium text-teal-300 dark:text-teal-700">
-                Live Sync
+                {t("dashboard.syncing", "Live Sync")}
               </span>
             </div>
             <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">

@@ -441,12 +441,12 @@ export function HoldingDetailPage() {
 
         <div className="flex items-center gap-2">
           <Link
-            to="/analysis"
+            to={`/analysis?symbol=${holding.asset_symbol}`}
             className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20 dark:text-indigo-800 transition-colors"
-            title={t("portfolio.ai_analysis_title", "Apri l'Analisi Multi-Agente & Coaching per questo titolo")}
+            title={t("portfolio.ai_analysis_title")}
           >
-            <span>🤖</span>
-            <span>{t("portfolio.ai_analysis", "Analisi AI")}</span>
+            <span aria-hidden="true">🤖</span>
+            <span>{t("portfolio.ai_analysis")}</span>
           </Link>
           {isBond && (
             <button

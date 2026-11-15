@@ -99,7 +99,7 @@ export function Layout({ children }: PropsWithChildren) {
         { to: "/calendar", label: t("layout.nav.calendar"), icon: CalendarIcon },
         { to: "/trades", label: t("layout.nav.trades"), icon: TrendingUpIcon },
         { to: "/notes", label: t("layout.nav.notes"), icon: BookOpenIcon },
-        { to: "/analysis", label: t("layout.nav.analysis", "Analisi AI"), icon: BotIcon },
+        { to: "/analysis", label: t("layout.nav.analysis"), icon: BotIcon },
       ],
     },
     {
@@ -138,7 +138,7 @@ export function Layout({ children }: PropsWithChildren) {
     if (p.startsWith("/calendar")) return t("layout.nav.calendar");
     if (p.startsWith("/trades")) return t("layout.nav.trades");
     if (p.startsWith("/notes")) return t("layout.nav.notes");
-    if (p.startsWith("/analysis")) return t("layout.nav.analysis", "Analisi AI");
+    if (p.startsWith("/analysis")) return t("layout.nav.analysis");
     if (p.startsWith("/portfolio")) return t("layout.nav.portfolio");
     if (p.startsWith("/performance")) return t("layout.nav.performance");
     if (p.startsWith("/assets")) return t("layout.nav.assets");

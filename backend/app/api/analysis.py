@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import SessionLocal, get_db
 from app.deps import get_current_user
 from app.models import AnalysisReport, Asset, Holding, Trade, TradeIdea, User
@@ -164,9 +165,9 @@ def get_analysis_targets(
         key = f"trade:{tr.id}"
         if key not in seen_keys:
             executions = tr.executions or []
-            buys_qty = sum(e.quantity for e in executions if e.action in ("buy", "buy_to_cover"))
-            buys_val = sum(e.quantity * e.price for e in executions if e.action in ("buy", "buy_to_cover"))
-            sells_qty = sum(e.quantity for e in executions if e.action in ("sell", "sell_short"))
+            buys_qty = sum(e.quantity for e in executions if (e.action or "").lower() in ("buy", "buy_to_cover"))
+            buys_val = sum(e.quantity * e.price for e in executions if (e.action or "").lower() in ("buy", "buy_to_cover"))
+            sells_qty = sum(e.quantity for e in executions if (e.action or "").lower() in ("sell", "sell_short"))
             open_qty = buys_qty - sells_qty
             avg_price = (buys_val / buys_qty) if buys_qty > Decimal("0") else Decimal("0")
 
@@ -349,4 +350,3 @@ def test_llm_endpoint(
         message=message,
         error=error,
     )
-    return {"ok": True}

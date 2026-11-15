@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+import threading
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -100,10 +101,25 @@ def run_scheduled_portfolio_coaching_job() -> None:
                     )
                 ).scalars().all()
 
+                recent_cutoff = datetime.now(timezone.utc) - timedelta(hours=20)
+
                 for h in holdings:
                     asset = h.asset
                     if not asset:
                         continue
+
+                    # Avoid redundant analyses if a report was completed or started recently
+                    recent_exists = db.execute(
+                        select(AnalysisReport.id).where(
+                            AnalysisReport.user_id == user.id,
+                            AnalysisReport.symbol == asset.symbol,
+                            AnalysisReport.created_at >= recent_cutoff,
+                            AnalysisReport.status.in_(["pending", "running", "completed"]),
+                        )
+                    ).scalar_one_or_none()
+                    if recent_exists:
+                        continue
+
                     report = AnalysisReport(
                         user_id=user.id,
                         symbol=asset.symbol,
@@ -116,7 +132,11 @@ def run_scheduled_portfolio_coaching_job() -> None:
                     db.add(report)
                     db.commit()
                     db.refresh(report)
-                    _execute_analysis_background(report.id)
+                    threading.Thread(
+                        target=_execute_analysis_background,
+                        args=(report.id,),
+                        daemon=True,
+                    ).start()
     except Exception:
         pass
 

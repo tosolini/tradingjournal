@@ -246,9 +246,9 @@ def collect_analysis_data(
         ).scalar_one_or_none()
         if trade:
             executions = trade.executions or []
-            buys_qty = sum(e.quantity for e in executions if e.action in ("buy", "buy_to_cover"))
-            buys_val = sum(e.quantity * e.price for e in executions if e.action in ("buy", "buy_to_cover"))
-            sells_qty = sum(e.quantity for e in executions if e.action in ("sell", "sell_short"))
+            buys_qty = sum(e.quantity for e in executions if (e.action or "").lower() in ("buy", "buy_to_cover"))
+            buys_val = sum(e.quantity * e.price for e in executions if (e.action or "").lower() in ("buy", "buy_to_cover"))
+            sells_qty = sum(e.quantity for e in executions if (e.action or "").lower() in ("sell", "sell_short"))
             open_qty = buys_qty - sells_qty
             avg_entry = (buys_val / buys_qty) if buys_qty > Decimal("0") else Decimal("0")
 
@@ -284,7 +284,7 @@ def collect_analysis_data(
         select(Trade).where(
             Trade.user_id == user_id,
             Trade.symbol == symbol,
-            Trade.status == "closed",
+            Trade.status.in_(["close", "closed"]),
         )
     ).scalars().all()
 

@@ -101,12 +101,12 @@ export function LlmSettingsWizard() {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestLlmResult | null>(null);
 
-  // Sync state once preferences are loaded
+  // Sync state once preferences are loaded (without hydrating api_key into plain text state)
   useEffect(() => {
     if (savedConfig) {
       if (savedConfig.provider) setProvider(savedConfig.provider);
       if (savedConfig.model) setModel(savedConfig.model);
-      if (savedConfig.api_key) setApiKey(savedConfig.api_key);
+      setApiKey("");
       if (savedConfig.base_url) {
         setBaseUrl(savedConfig.base_url);
         setShowAdvanced(true);
@@ -114,11 +114,13 @@ export function LlmSettingsWizard() {
     }
   }, [savedConfig]);
 
+  const hasSavedKeyForProvider = Boolean(savedConfig?.api_key && savedConfig.provider === provider);
   const activeProviderDef = PROVIDERS.find((p) => p.id === provider) || PROVIDERS[0];
 
   const handleProviderSelect = (newProvId: "gemini" | "openai" | "anthropic" | "openrouter" | "ollama" | "mock") => {
     setProvider(newProvId);
     setTestResult(null);
+    setApiKey("");
     const def = PROVIDERS.find((p) => p.id === newProvId);
     if (def?.defaultBaseUrl && !baseUrl) {
       setBaseUrl(def.defaultBaseUrl);
@@ -133,10 +135,11 @@ export function LlmSettingsWizard() {
     setIsTesting(true);
     setTestResult(null);
     try {
+      const effectiveKey = apiKey.trim() || (hasSavedKeyForProvider ? savedConfig?.api_key : undefined);
       const res = await analysisApi.testLlm({
         provider,
         model: model.trim() || undefined,
-        api_key: apiKey.trim(),
+        api_key: effectiveKey,
         base_url: baseUrl.trim() || undefined,
       });
       setTestResult(res);
@@ -183,10 +186,16 @@ export function LlmSettingsWizard() {
       toast.error(t("settings.llm.model_required"));
       return;
     }
+    const effectiveKey = apiKey.trim()
+      ? apiKey.trim()
+      : hasSavedKeyForProvider
+      ? savedConfig?.api_key
+      : undefined;
+
     const payload: LlmConfig = {
       provider,
       model: model.trim() || undefined,
-      api_key: apiKey.trim() || undefined,
+      api_key: effectiveKey,
       base_url: baseUrl.trim() || undefined,
     };
     saveMutation.mutate(payload);
@@ -209,7 +218,7 @@ export function LlmSettingsWizard() {
       <section className="card p-6">
         <div className="flex items-center gap-3 text-slate-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-          <span>Caricamento impostazioni AI...</span>
+          <span>{t("common.loading", "Caricamento...")}</span>
         </div>
       </section>
     );
@@ -322,7 +331,11 @@ export function LlmSettingsWizard() {
                 type={showKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={t("settings.llm.api_key_placeholder")}
+                placeholder={
+                  hasSavedKeyForProvider && !apiKey
+                    ? "•••••••• (configurata)"
+                    : t("settings.llm.api_key_placeholder")
+                }
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 pr-10 pl-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
               />
               <button

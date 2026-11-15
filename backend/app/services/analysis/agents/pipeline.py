@@ -61,6 +61,7 @@ def run_agentic_analysis(
         # Stage 1: Parallel Specialist Analysts
         # -------------------------------------------------------------
         bundle_dict = bundle.to_dict()
+        is_en = language.startswith("en")
 
         def run_technical():
             tech_input = json.dumps(
@@ -72,10 +73,12 @@ def run_agentic_analysis(
                 },
                 indent=2,
             )
-            return client.generate(
-                prompts["technical"],
-                f"Analizza i dati tecnici per {bundle.symbol}:\n{tech_input}",
+            msg = (
+                f"Analyze technical indicators and price action for {bundle.symbol}:\n{tech_input}"
+                if is_en
+                else f"Analizza i dati tecnici per {bundle.symbol}:\n{tech_input}"
             )
+            return client.generate(prompts["technical"], msg)
 
         def run_fundamental():
             fund_input = json.dumps(
@@ -87,10 +90,12 @@ def run_agentic_analysis(
                 },
                 indent=2,
             )
-            return client.generate(
-                prompts["fundamental"],
-                f"Analizza i fondamentali o parametri obbligazionari per {bundle.symbol}:\n{fund_input}",
+            msg = (
+                f"Analyze fundamentals or fixed income parameters for {bundle.symbol}:\n{fund_input}"
+                if is_en
+                else f"Analizza i fondamentali o parametri obbligazionari per {bundle.symbol}:\n{fund_input}"
             )
+            return client.generate(prompts["fundamental"], msg)
 
         def run_cyclical():
             cyc_input = json.dumps(
@@ -100,10 +105,12 @@ def run_agentic_analysis(
                 },
                 indent=2,
             )
-            return client.generate(
-                prompts["cyclical"],
-                f"Analizza i cicli e il regime frattale (Hurst) per {bundle.symbol}:\n{cyc_input}",
+            msg = (
+                f"Analyze market cycles and fractal regime (Hurst Exponent) for {bundle.symbol}:\n{cyc_input}"
+                if is_en
+                else f"Analizza i cicli e il regime frattale (Hurst) per {bundle.symbol}:\n{cyc_input}"
             )
+            return client.generate(prompts["cyclical"], msg)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             fut_tech = executor.submit(run_technical)
@@ -117,25 +124,35 @@ def run_agentic_analysis(
         # -------------------------------------------------------------
         # Stage 2: Adversarial Debate (Bull vs Bear)
         # -------------------------------------------------------------
+        header_tech = "=== TECHNICAL REPORT ===" if is_en else "=== REPORT TECNICO ==="
+        header_fund = "=== FUNDAMENTAL REPORT ===" if is_en else "=== REPORT FONDAMENTALE ==="
+        header_cyc = "=== CYCLICAL REPORT ===" if is_en else "=== REPORT CICLICO ==="
+
         analyst_brief = (
-            f"=== REPORT TECNICO ===\n{state.technical_report}\n\n"
-            f"=== REPORT FONDAMENTALE ===\n{state.fundamental_report}\n\n"
-            f"=== REPORT CICLICO ===\n{state.cyclical_report}\n"
+            f"{header_tech}\n{state.technical_report}\n\n"
+            f"{header_fund}\n{state.fundamental_report}\n\n"
+            f"{header_cyc}\n{state.cyclical_report}\n"
         )
 
         def run_bull():
-            return client.generate(
-                prompts["bull"],
-                f"Dati analitici raccolti per {bundle.symbol}:\n{analyst_brief}\n"
-                f"Formula la tua migliore tesi rialzista.",
+            msg = (
+                f"Analytic data collected for {bundle.symbol}:\n{analyst_brief}\n"
+                f"Formulate your best institutional bull thesis."
+                if is_en
+                else f"Dati analitici raccolti per {bundle.symbol}:\n{analyst_brief}\n"
+                f"Formula la tua migliore tesi rialzista."
             )
+            return client.generate(prompts["bull"], msg)
 
         def run_bear():
-            return client.generate(
-                prompts["bear"],
-                f"Dati analitici raccolti per {bundle.symbol}:\n{analyst_brief}\n"
-                f"Formula la tua migliore tesi ribassista e i rischi.",
+            msg = (
+                f"Analytic data collected for {bundle.symbol}:\n{analyst_brief}\n"
+                f"Formulate your best institutional bear thesis and key risks."
+                if is_en
+                else f"Dati analitici raccolti per {bundle.symbol}:\n{analyst_brief}\n"
+                f"Formula la tua migliore tesi ribassista e i rischi."
             )
+            return client.generate(prompts["bear"], msg)
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             fut_bull = executor.submit(run_bull)
@@ -147,28 +164,44 @@ def run_agentic_analysis(
         # -------------------------------------------------------------
         # Stage 3: Lead Researcher Synthesis
         # -------------------------------------------------------------
+        header_bull = "=== BULL THESIS ===" if is_en else "=== TESI BULL ==="
+        header_bear = "=== BEAR THESIS ===" if is_en else "=== TESI BEAR ==="
         debate_brief = (
             f"{analyst_brief}\n"
-            f"=== TESI BULL ===\n{state.bull_thesis}\n\n"
-            f"=== TESI BEAR ===\n{state.bear_thesis}\n"
+            f"{header_bull}\n{state.bull_thesis}\n\n"
+            f"{header_bear}\n{state.bear_thesis}\n"
         )
-        state.lead_synthesis = client.generate(
-            prompts["lead"],
-            f"Sintetizza il dibattito su {bundle.symbol}:\n{debate_brief}",
+        lead_msg = (
+            f"Synthesize the debate and committee findings for {bundle.symbol}:\n{debate_brief}"
+            if is_en
+            else f"Sintetizza il dibattito su {bundle.symbol}:\n{debate_brief}"
         )
+        state.lead_synthesis = client.generate(prompts["lead"], lead_msg)
 
         # -------------------------------------------------------------
         # Stage 4: Personal Coach Guidance & JSON Extraction
         # -------------------------------------------------------------
+        header_comm = (
+            "=== INVESTMENT COMMITTEE SYNTHESIS ==="
+            if is_en
+            else "=== SINTESI DELLA COMMISSIONE D'INVESTIMENTO ==="
+        )
+        header_ctx = (
+            "=== USER PERSONAL CONTEXT ON ASSET (OPEN TRADE / POSITION / HOLDING) ==="
+            if is_en
+            else "=== CONTESTO PERSONALE DELL'UTENTE SUL TITOLO (POSIZIONE APERTA / TRADE / HOLDING) ==="
+        )
         coach_input = (
-            f"=== SINTESI DELLA COMMISSIONE D'INVESTIMENTO ===\n{state.lead_synthesis}\n\n"
-            f"=== CONTESTO PERSONALE DELL'UTENTE SUL TITOLO (POSIZIONE APERTA / TRADE / HOLDING) ===\n"
+            f"{header_comm}\n{state.lead_synthesis}\n\n"
+            f"{header_ctx}\n"
             f"{json.dumps({'trade_context': bundle_dict.get('trade_context'), 'holding_context': bundle_dict.get('holding_context'), 'idea_context': bundle_dict.get('trade_idea_context'), 'past_trades': bundle_dict.get('past_trades_summary')}, indent=2)}\n"
         )
-        coaching_raw = client.generate(
-            prompts["coach"],
-            f"Fornisci il coaching personalizzato per {bundle.symbol}:\n{coach_input}",
+        coach_msg = (
+            f"Provide personalized trading coaching for {bundle.symbol}:\n{coach_input}"
+            if is_en
+            else f"Fornisci il coaching personalizzato per {bundle.symbol}:\n{coach_input}"
         )
+        coaching_raw = client.generate(prompts["coach"], coach_msg)
         state.coaching_report = coaching_raw
 
         # Extract structured outputs

@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:15173,http://127.0.0.1:15173"
 
     # Asset Analysis & Coaching LLM settings
-    analysis_llm_provider: str = "gemini"  # "gemini" | "openai" | "anthropic" | "ollama"
+    analysis_llm_provider: str = "gemini"  # "gemini" | "openai" | "anthropic" | "ollama" | "openrouter" | "mock"
     analysis_llm_model: str = "gemini-2.5-flash"
     analysis_api_key: str = ""
     analysis_base_url: str = ""
