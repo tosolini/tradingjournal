@@ -10,7 +10,7 @@ from app.api.analysis import (
     list_analysis_history,
     start_analysis_job,
 )
-from app.models import Account, AnalysisReport, Asset, Holding, TradeIdea, User
+from app.models import Account, AnalysisReport, Asset, Holding, Trade, TradeIdea, User
 from app.schemas import AnalysisRunRequest
 
 
@@ -65,14 +65,32 @@ def test_get_analysis_targets_from_holdings_and_ideas(db, test_user):
         expires_at="2026-11-25T00:00:00Z",
     )
     db.add(idea)
+
+    trade = Trade(
+        user_id=test_user.id,
+        account_id=account.id,
+        symbol="NVDA",
+        market="NASDAQ",
+        instrument_type="stock",
+        side="long",
+        status="open",
+        target_price=Decimal("150.00"),
+        stop_loss=Decimal("120.00"),
+    )
+    db.add(trade)
     db.commit()
 
     targets = get_analysis_targets(db=db, current_user=test_user)
-    assert len(targets) == 2
+    assert len(targets) == 3
 
     symbols = [t.symbol for t in targets]
     assert "ENEL.MI" in symbols
     assert "ISP.MI" in symbols
+    assert "NVDA" in symbols
+
+    trade_targets = [t for t in targets if t.target_source == "trade"]
+    assert len(trade_targets) == 1
+    assert trade_targets[0].trade_id == trade.id
 
 
 def test_start_analysis_job_and_get_details(db, test_user):

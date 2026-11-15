@@ -916,9 +916,14 @@ class AnalysisTargetItem(BaseModel):
     market: str
     holding_id: Optional[int] = None
     trade_idea_id: Optional[int] = None
+    trade_id: Optional[int] = None
+    trade_id: Optional[int] = None
     quantity: Optional[Decimal] = None
     avg_cost: Optional[Decimal] = None
-    target_source: str  # "holding" | "trade_idea"
+    side: Optional[str] = None
+    stop_loss: Optional[Decimal] = None
+    target_price: Optional[Decimal] = None
+    target_source: str  # "holding" | "trade_idea" | "trade"
 
 
 class AnalysisRunRequest(BaseModel):
@@ -926,6 +931,8 @@ class AnalysisRunRequest(BaseModel):
     market: str = "Euronext"
     holding_id: Optional[int] = None
     trade_idea_id: Optional[int] = None
+    trade_id: Optional[int] = None
+    trade_id: Optional[int] = None
     language: str = "it"  # "it" | "en"
 
 
@@ -950,6 +957,7 @@ class AnalysisReportDetail(BaseModel):
     market: str
     holding_id: Optional[int] = None
     trade_idea_id: Optional[int] = None
+    trade_id: Optional[int] = None
     language: str
     trigger_mode: str
     status: str

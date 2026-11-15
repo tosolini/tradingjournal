@@ -46,6 +46,24 @@ class TradeIdeaContext:
 
 
 @dataclass
+class TradeContext:
+    trade_id: int
+    account_name: str
+    side: str
+    status: str
+    strategy_name: Optional[str]
+    open_quantity: Decimal
+    average_entry_price: Decimal
+    current_price: Optional[Decimal]
+    unrealized_pnl: Optional[Decimal]
+    unrealized_pnl_pct: Optional[Decimal]
+    target_price: Optional[Decimal]
+    stop_loss: Optional[Decimal]
+    confidence_score: Optional[int]
+    journal_notes: Optional[str]
+
+
+@dataclass
 class AnalysisDataBundle:
     symbol: str
     market: str
@@ -61,6 +79,7 @@ class AnalysisDataBundle:
     holding_context: Optional[HoldingContext] = None
     bond_context: Optional[BondContext] = None
     trade_idea_context: Optional[TradeIdeaContext] = None
+    trade_context: Optional[TradeContext] = None
     past_trades_summary: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -73,6 +92,27 @@ class AnalysisDataBundle:
             "technical": self.technical,
             "cyclical": self.cyclical,
             "fundamentals": self.fundamentals,
+            "trade_context": {
+                "trade_id": self.trade_context.trade_id,
+                "account_name": self.trade_context.account_name,
+                "side": self.trade_context.side,
+                "status": self.trade_context.status,
+                "strategy_name": self.trade_context.strategy_name,
+                "open_quantity": float(self.trade_context.open_quantity),
+                "average_entry_price": float(self.trade_context.average_entry_price),
+                "current_price": float(self.trade_context.current_price)
+                if self.trade_context.current_price is not None else None,
+                "unrealized_pnl": float(self.trade_context.unrealized_pnl)
+                if self.trade_context.unrealized_pnl is not None else None,
+                "unrealized_pnl_pct": float(self.trade_context.unrealized_pnl_pct)
+                if self.trade_context.unrealized_pnl_pct is not None else None,
+                "target_price": float(self.trade_context.target_price)
+                if self.trade_context.target_price is not None else None,
+                "stop_loss": float(self.trade_context.stop_loss)
+                if self.trade_context.stop_loss is not None else None,
+                "confidence_score": self.trade_context.confidence_score,
+                "journal_notes": self.trade_context.journal_notes,
+            } if self.trade_context else None,
             "holding_context": {
                 "holding_id": self.holding_context.holding_id,
                 "account_name": self.holding_context.account_name,
@@ -116,6 +156,7 @@ def collect_analysis_data(
     market: str = "Euronext",
     holding_id: Optional[int] = None,
     trade_idea_id: Optional[int] = None,
+    trade_id: Optional[int] = None,
     provider: Optional[BaseDataProvider] = None,
 ) -> AnalysisDataBundle:
     """Consolidate market data, math indicators, and DB portfolio context."""
@@ -197,6 +238,47 @@ def collect_analysis_data(
                 status=idea.status,
             )
 
+    # Check for active Trade context
+    trade_ctx = None
+    if trade_id:
+        trade = db.execute(
+            select(Trade).where(Trade.id == trade_id, Trade.user_id == user_id)
+        ).scalar_one_or_none()
+        if trade:
+            executions = trade.executions or []
+            buys_qty = sum(e.quantity for e in executions if e.action in ("buy", "buy_to_cover"))
+            buys_val = sum(e.quantity * e.price for e in executions if e.action in ("buy", "buy_to_cover"))
+            sells_qty = sum(e.quantity for e in executions if e.action in ("sell", "sell_short"))
+            open_qty = buys_qty - sells_qty
+            avg_entry = (buys_val / buys_qty) if buys_qty > Decimal("0") else Decimal("0")
+
+            unrealized_pnl = None
+            unrealized_pnl_pct = None
+            if current_price is not None and open_qty > Decimal("0") and avg_entry > Decimal("0"):
+                if trade.side == "long":
+                    unrealized_pnl = (current_price - avg_entry) * open_qty
+                    unrealized_pnl_pct = ((current_price - avg_entry) / avg_entry) * Decimal("100")
+                else:
+                    unrealized_pnl = (avg_entry - current_price) * open_qty
+                    unrealized_pnl_pct = ((avg_entry - current_price) / avg_entry) * Decimal("100")
+
+            trade_ctx = TradeContext(
+                trade_id=trade.id,
+                account_name=trade.account.name if trade.account else "Default",
+                side=trade.side,
+                status=trade.status,
+                strategy_name=trade.strategy_name,
+                open_quantity=open_qty,
+                average_entry_price=avg_entry,
+                current_price=current_price,
+                unrealized_pnl=unrealized_pnl,
+                unrealized_pnl_pct=unrealized_pnl_pct,
+                target_price=trade.target_price,
+                stop_loss=trade.stop_loss,
+                confidence_score=trade.confidence_score,
+                journal_notes=trade.journal_notes,
+            )
+
     # Check past closed trades for this user on this symbol
     past_trades = db.execute(
         select(Trade).where(
@@ -227,5 +309,6 @@ def collect_analysis_data(
         holding_context=holding_ctx,
         bond_context=bond_ctx,
         trade_idea_context=idea_ctx,
+        trade_context=trade_ctx,
         past_trades_summary=past_trades_summary,
     )

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.models import Asset, Holding, User
+from app.models import Account, Asset, Holding, Trade, User
 from app.services.analysis.data_collector import AnalysisDataBundle, collect_analysis_data
 from app.services.analysis.data_providers.base import BaseDataProvider
 
@@ -82,3 +82,68 @@ def test_collect_analysis_data_with_mock_provider(db):
     assert "technical" in data_dict
     assert "cyclical" in data_dict
     assert "fundamentals" in data_dict
+
+
+def test_collect_analysis_data_with_open_trade(db):
+    test_user = User(
+        email="test_equity_trader@example.com",
+        username="test_equity_trader",
+        hashed_password="hash",
+    )
+    db.add(test_user)
+    db.flush()
+
+    account = Account(user_id=test_user.id, name="Trading Account", base_currency="USD")
+    db.add(account)
+    db.flush()
+
+    from app.models import TradeExecution
+    from datetime import datetime, timezone
+
+    trade = Trade(
+        user_id=test_user.id,
+        account_id=account.id,
+        symbol="AAPL",
+        market="NASDAQ",
+        instrument_type="stock",
+        side="long",
+        status="open",
+        target_price=Decimal("250.00"),
+        stop_loss=Decimal("210.00"),
+        journal_notes="Breakout pullback play",
+    )
+    db.add(trade)
+    db.flush()
+
+    exec1 = TradeExecution(
+        trade_id=trade.id,
+        action="buy",
+        quantity=Decimal("50"),
+        price=Decimal("220.00"),
+        fee=Decimal("1.50"),
+        executed_at=datetime.now(timezone.utc),
+    )
+    db.add(exec1)
+    db.commit()
+
+    mock_provider = MockDataProvider()
+    bundle = collect_analysis_data(
+        db=db,
+        user_id=test_user.id,
+        symbol="AAPL",
+        market="NASDAQ",
+        trade_id=trade.id,
+        provider=mock_provider,
+    )
+
+    assert bundle.trade_context is not None
+    assert bundle.trade_context.trade_id == trade.id
+    assert bundle.trade_context.open_quantity == Decimal("50")
+    assert bundle.trade_context.average_entry_price == Decimal("220.00")
+    assert bundle.trade_context.target_price == Decimal("250.00")
+    assert bundle.trade_context.stop_loss == Decimal("210.00")
+    assert bundle.trade_context.journal_notes == "Breakout pullback play"
+
+    data_dict = bundle.to_dict()
+    assert data_dict["trade_context"] is not None
+    assert data_dict["trade_context"]["open_quantity"] == 50.0

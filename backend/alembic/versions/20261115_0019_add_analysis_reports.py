@@ -23,6 +23,7 @@ def upgrade() -> None:
         market VARCHAR(80) NOT NULL DEFAULT 'Euronext',
         holding_id INTEGER NULL REFERENCES holdings(id) ON DELETE SET NULL,
         trade_idea_id INTEGER NULL REFERENCES trade_ideas(id) ON DELETE SET NULL,
+        trade_id INTEGER NULL REFERENCES trades(id) ON DELETE SET NULL,
         language VARCHAR(8) NOT NULL DEFAULT 'it',
         trigger_mode VARCHAR(16) NOT NULL DEFAULT 'manual',
         status VARCHAR(16) NOT NULL DEFAULT 'pending',
@@ -49,6 +50,7 @@ def upgrade() -> None:
     CREATE INDEX IF NOT EXISTS ix_analysis_reports_status ON analysis_reports(status);
     CREATE INDEX IF NOT EXISTS ix_analysis_reports_holding_id ON analysis_reports(holding_id);
     CREATE INDEX IF NOT EXISTS ix_analysis_reports_trade_idea_id ON analysis_reports(trade_idea_id);
+    CREATE INDEX IF NOT EXISTS ix_analysis_reports_trade_id ON analysis_reports(trade_id);
     """)
 
 

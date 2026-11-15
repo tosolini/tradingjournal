@@ -162,8 +162,8 @@ def run_agentic_analysis(
         # -------------------------------------------------------------
         coach_input = (
             f"=== SINTESI DELLA COMMISSIONE D'INVESTIMENTO ===\n{state.lead_synthesis}\n\n"
-            f"=== CONTESTO PERSONALE DELL'UTENTE SUL TITOLO ===\n"
-            f"{json.dumps({'holding': bundle_dict['holding_context'], 'idea': bundle_dict['trade_idea_context'], 'past_trades': bundle_dict['past_trades_summary']}, indent=2)}\n"
+            f"=== CONTESTO PERSONALE DELL'UTENTE SUL TITOLO (POSIZIONE APERTA / TRADE / HOLDING) ===\n"
+            f"{json.dumps({'trade_context': bundle_dict.get('trade_context'), 'holding_context': bundle_dict.get('holding_context'), 'idea_context': bundle_dict.get('trade_idea_context'), 'past_trades': bundle_dict.get('past_trades_summary')}, indent=2)}\n"
         )
         coaching_raw = client.generate(
             prompts["coach"],

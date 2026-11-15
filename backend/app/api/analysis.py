@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, get_db
 from app.deps import get_current_user
-from app.models import AnalysisReport, Asset, Holding, TradeIdea, User
+from app.models import AnalysisReport, Asset, Holding, Trade, TradeIdea, User
 from app.schemas import (
     AnalysisReportDetail,
     AnalysisReportSummary,
@@ -42,6 +42,7 @@ def _execute_analysis_background(report_id: int):
                 market=report.market,
                 holding_id=report.holding_id,
                 trade_idea_id=report.trade_idea_id,
+                trade_id=report.trade_id,
             )
 
             # 2. Run multi-agent pipeline
@@ -141,6 +142,41 @@ def get_analysis_targets(
             )
             seen_keys.add(key)
 
+    # 3. Active open trades (trading positions)
+    open_trades = db.execute(
+        select(Trade).where(
+            Trade.user_id == current_user.id,
+            Trade.status == "open",
+        )
+    ).scalars().all()
+
+    for tr in open_trades:
+        key = f"trade:{tr.id}"
+        if key not in seen_keys:
+            executions = tr.executions or []
+            buys_qty = sum(e.quantity for e in executions if e.action in ("buy", "buy_to_cover"))
+            buys_val = sum(e.quantity * e.price for e in executions if e.action in ("buy", "buy_to_cover"))
+            sells_qty = sum(e.quantity for e in executions if e.action in ("sell", "sell_short"))
+            open_qty = buys_qty - sells_qty
+            avg_price = (buys_val / buys_qty) if buys_qty > Decimal("0") else Decimal("0")
+
+            targets.append(
+                AnalysisTargetItem(
+                    symbol=tr.symbol,
+                    name=f"Trade {tr.side.upper()} #{tr.id} ({tr.symbol})",
+                    instrument_type=tr.instrument_type or "stock",
+                    market=tr.market or "Euronext",
+                    trade_id=tr.id,
+                    quantity=open_qty,
+                    avg_cost=avg_price,
+                    side=tr.side,
+                    stop_loss=tr.stop_loss,
+                    target_price=tr.target_price,
+                    target_source="trade",
+                )
+            )
+            seen_keys.add(key)
+
     return targets
 
 
@@ -158,6 +194,7 @@ def start_analysis_job(
         market=payload.market,
         holding_id=payload.holding_id,
         trade_idea_id=payload.trade_idea_id,
+        trade_id=payload.trade_id,
         language=payload.language.lower() if payload.language in ("it", "en") else "it",
         trigger_mode="manual",
         status="pending",

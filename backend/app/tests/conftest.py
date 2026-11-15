@@ -46,6 +46,7 @@ def db():
         conn.execute(text("ALTER TABLE holding_exits ADD COLUMN IF NOT EXISTS interest_tax NUMERIC(18, 2) NOT NULL DEFAULT 0;"))
         conn.execute(text("ALTER TABLE cash_ledger_entries ADD COLUMN IF NOT EXISTS holding_exit_id INTEGER REFERENCES holding_exits(id) ON DELETE CASCADE;"))
         conn.execute(text("ALTER TABLE holdings DROP CONSTRAINT IF EXISTS uq_holding_account_asset;"))
+        conn.execute(text("ALTER TABLE analysis_reports ADD COLUMN IF NOT EXISTS trade_id INTEGER REFERENCES trades(id) ON DELETE SET NULL;"))
     session = TestingSession()
     yield session
     session.close()

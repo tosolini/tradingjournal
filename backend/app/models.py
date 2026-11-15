@@ -413,6 +413,9 @@ class AnalysisReport(TimestampMixin, Base):
     trade_idea_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("trade_ideas.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    trade_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("trades.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     language: Mapped[str] = mapped_column(String(8), default="it")
     trigger_mode: Mapped[str] = mapped_column(String(16), default="manual")  # "manual" | "scheduled"
     status: Mapped[str] = mapped_column(String(16), default="pending", index=True)  # "pending" | "running" | "completed" | "failed"
@@ -442,3 +445,4 @@ class AnalysisReport(TimestampMixin, Base):
     user: Mapped["User"] = relationship(back_populates="analysis_reports")
     holding: Mapped[Optional["Holding"]] = relationship()
     trade_idea: Mapped[Optional["TradeIdea"]] = relationship()
+    trade: Mapped[Optional["Trade"]] = relationship()

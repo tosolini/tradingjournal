@@ -1207,9 +1207,13 @@ export interface AnalysisTargetItem {
   market: string;
   holding_id?: number | null;
   trade_idea_id?: number | null;
+  trade_id?: number | null;
   quantity?: number | null;
   avg_cost?: number | null;
-  target_source: "holding" | "trade_idea";
+  side?: string | null;
+  stop_loss?: number | null;
+  target_price?: number | null;
+  target_source: "holding" | "trade_idea" | "trade";
 }
 
 export interface AnalysisRunPayload {
@@ -1217,6 +1221,7 @@ export interface AnalysisRunPayload {
   market?: string;
   holding_id?: number | null;
   trade_idea_id?: number | null;
+  trade_id?: number | null;
   language?: "it" | "en";
 }
 
@@ -1239,6 +1244,7 @@ export interface AnalysisReportDetail {
   market: string;
   holding_id?: number | null;
   trade_idea_id?: number | null;
+  trade_id?: number | null;
   language: "it" | "en";
   trigger_mode: "manual" | "scheduled";
   status: "pending" | "running" | "completed" | "failed";

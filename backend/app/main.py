@@ -125,6 +125,13 @@ def ensure_runtime_schema_compatibility() -> None:
                 conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS accrued_interest_in NUMERIC(18, 6) NOT NULL DEFAULT 0"))
                 conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS eligible_for_bonus BOOLEAN NOT NULL DEFAULT FALSE"))
 
+    if "analysis_reports" in table_names:
+        report_columns = {column["name"] for column in inspector.get_columns("analysis_reports")}
+        with engine.begin() as conn:
+            if "trade_id" not in report_columns:
+                conn.execute(text("ALTER TABLE analysis_reports ADD COLUMN IF NOT EXISTS trade_id INTEGER REFERENCES trades(id) ON DELETE SET NULL"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_analysis_reports_trade_id ON analysis_reports(trade_id)"))
+
     # The table is created by Base.metadata.create_all, no ALTER needed
 
 

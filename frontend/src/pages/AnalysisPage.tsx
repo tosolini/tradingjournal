@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { analysisApi, AnalysisReportDetail, AnalysisReportSummary, AnalysisTargetItem } from "../lib/api";
 import { ReportViewer } from "../components/analysis/ReportViewer";
 import { useToast } from "../contexts/ToastContext";
 
 export const AnalysisPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { addToast } = useToast();
+  const toast = useToast();
+  const [searchParams] = useSearchParams();
 
+  const [inputMode, setInputMode] = useState<"existing" | "custom">("existing");
   const [selectedTargetKey, setSelectedTargetKey] = useState<string>("");
+  const [customSymbol, setCustomSymbol] = useState<string>("");
+  const [customMarket, setCustomMarket] = useState<string>("NASDAQ");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [activeReportId, setActiveReportId] = useState<number | null>(null);
 
@@ -24,12 +29,37 @@ export const AnalysisPage: React.FC = () => {
     queryFn: () => analysisApi.getHistory(),
   });
 
+  // Check URL query parameters (e.g. ?symbol=NVDA&market=NASDAQ&tradeId=5)
+  useEffect(() => {
+    const querySymbol = searchParams.get("symbol");
+    const queryMarket = searchParams.get("market");
+    const queryTradeId = searchParams.get("tradeId");
+
+    if (querySymbol) {
+      if (queryTradeId && targets.length > 0) {
+        const found = targets.find((t) => t.trade_id === Number(queryTradeId));
+        if (found) {
+          setInputMode("existing");
+          setSelectedTargetKey(`trade:${found.trade_id}`);
+          return;
+        }
+      }
+      setInputMode("custom");
+      setCustomSymbol(querySymbol.toUpperCase());
+      if (queryMarket) setCustomMarket(queryMarket);
+    }
+  }, [searchParams, targets]);
+
   // Select first target by default once loaded
   useEffect(() => {
-    if (targets.length > 0 && !selectedTargetKey) {
-      setSelectedTargetKey(`${targets[0].target_source}:${targets[0].symbol}`);
+    if (targets.length > 0 && !selectedTargetKey && inputMode === "existing") {
+      const firstTarget = targets[0];
+      const key = firstTarget.target_source === "trade"
+        ? `trade:${firstTarget.trade_id}`
+        : `${firstTarget.target_source}:${firstTarget.symbol}`;
+      setSelectedTargetKey(key);
     }
-  }, [targets, selectedTargetKey]);
+  }, [targets, selectedTargetKey, inputMode]);
 
   // Select first completed report from history if none is active
   useEffect(() => {
@@ -53,20 +83,12 @@ export const AnalysisPage: React.FC = () => {
   const runMutation = useMutation({
     mutationFn: analysisApi.run,
     onSuccess: (newReport) => {
-      addToast({
-        type: "success",
-        title: "Analisi avviata",
-        message: `L'analisi multi-agente per ${newReport.symbol} è in elaborazione.`,
-      });
+      toast.success(`L'analisi multi-agente per ${newReport.symbol} è in elaborazione.`);
       queryClient.invalidateQueries({ queryKey: ["analysisHistory"] });
       setActiveReportId(newReport.id);
     },
     onError: (err: any) => {
-      addToast({
-        type: "error",
-        title: "Errore avvio analisi",
-        message: err.message || "Impossibile avviare l'analisi.",
-      });
+      toast.error(err.message || "Impossibile avviare l'analisi.");
     },
   });
 
@@ -74,20 +96,36 @@ export const AnalysisPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: analysisApi.delete,
     onSuccess: () => {
-      addToast({
-        type: "info",
-        title: "Report eliminato",
-        message: "Il report è stato rimosso dallo storico.",
-      });
+      toast.info("Il report è stato rimosso dallo storico.");
       queryClient.invalidateQueries({ queryKey: ["analysisHistory"] });
       setActiveReportId(null);
     },
   });
 
   const handleStartAnalysis = () => {
+    if (inputMode === "custom") {
+      if (!customSymbol.trim()) {
+        toast.error("Inserisci un ticker azionario valido (es. AAPL, NVDA, RACE.MI).");
+        return;
+      }
+      runMutation.mutate({
+        symbol: customSymbol.trim().toUpperCase(),
+        market: customMarket,
+        language: language,
+      });
+      return;
+    }
+
     if (!selectedTargetKey) return;
-    const [source, symbol] = selectedTargetKey.split(":");
-    const target = targets.find((t) => t.target_source === source && t.symbol === symbol);
+    const [source, idOrSymbol] = selectedTargetKey.split(":");
+    let target: AnalysisTargetItem | undefined;
+
+    if (source === "trade") {
+      target = targets.find((t) => t.target_source === "trade" && String(t.trade_id) === idOrSymbol);
+    } else {
+      target = targets.find((t) => t.target_source === source && t.symbol === idOrSymbol);
+    }
+
     if (!target) return;
 
     runMutation.mutate({
@@ -95,66 +133,148 @@ export const AnalysisPage: React.FC = () => {
       market: target.market,
       holding_id: target.holding_id,
       trade_idea_id: target.trade_idea_id,
+      trade_id: target.trade_id,
       language: language,
     });
   };
 
-  const selectedTarget = targets.find((t) => `${t.target_source}:${t.symbol}` === selectedTargetKey);
+  const selectedTarget = targets.find((t) => {
+    if (t.target_source === "trade") return `trade:${t.trade_id}` === selectedTargetKey;
+    return `${t.target_source}:${t.symbol}` === selectedTargetKey;
+  });
+
+  const openTrades = targets.filter((t) => t.target_source === "trade");
+  const holdings = targets.filter((t) => t.target_source === "holding");
+  const tradeIdeas = targets.filter((t) => t.target_source === "trade_idea");
 
   return (
     <div className="space-y-8">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-          <span>🤖</span> Asset Coaching & Analisi Multi-Agente
+          <span>🤖</span> Asset & Equity Coaching Multi-Agente
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          Punto di vista terzo basato su analisi tecnica, fondamentale e ciclica (Hurst) con dibattito dialettico Bull vs Bear.
+          Analisi tecnica, fondamentale (Equity Research) e ciclica (Hurst & FFT) per azioni, trade aperti e portafoglio con dibattito dialettico Bull vs Bear.
         </p>
       </div>
 
       {/* Control Panel: Target Selection & Run Trigger */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
+        {/* Mode Selector Tabs */}
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+          <button
+            type="button"
+            onClick={() => setInputMode("existing")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+              inputMode === "existing"
+                ? "bg-primary text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            <span>📁 I miei Asset & Trade</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800/80 text-slate-300">
+              {targets.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setInputMode("custom")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+              inputMode === "custom"
+                ? "bg-primary text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            <span>🔍 Cerca Qualsiasi Azione (Ticker Libero)</span>
+          </button>
+        </div>
+
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
-            {/* Target Asset Selector */}
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Asset da analizzare
-              </label>
-              {targetsLoading ? (
-                <div className="h-10 bg-slate-800 animate-pulse rounded-lg" />
-              ) : targets.length === 0 ? (
-                <div className="text-sm text-slate-400 py-2">
-                  Nessun asset attivo censito in portafoglio o idee.
+            {inputMode === "existing" ? (
+              /* Existing Inventory Selector */
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  Seleziona Titolo o Posizione Aperta
+                </label>
+                {targetsLoading ? (
+                  <div className="h-10 bg-slate-800 animate-pulse rounded-lg" />
+                ) : targets.length === 0 ? (
+                  <div className="text-sm text-slate-400 py-2">
+                    Nessun trade aperto o asset in portafoglio. Passa a "Cerca Qualsiasi Azione" sopra!
+                  </div>
+                ) : (
+                  <select
+                    value={selectedTargetKey}
+                    onChange={(e) => setSelectedTargetKey(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {openTrades.length > 0 && (
+                      <optgroup label="⚡ Posizioni Azionarie Aperte (Trades)">
+                        {openTrades.map((t) => (
+                          <option key={`trade:${t.trade_id}`} value={`trade:${t.trade_id}`}>
+                            {t.symbol} — {t.side?.toUpperCase()} #{t.trade_id} ({t.quantity ? `${Number(t.quantity)} pz` : ""}{t.avg_cost ? ` @ €${Number(t.avg_cost).toFixed(2)}` : ""})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {holdings.length > 0 && (
+                      <optgroup label="📊 Holdings di Portafoglio (ETF & Bond)">
+                        {holdings.map((t) => (
+                          <option key={`holding:${t.symbol}`} value={`holding:${t.symbol}`}>
+                            {t.symbol} — {t.name} ({t.quantity ? `${Number(t.quantity)} pz` : ""})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {tradeIdeas.length > 0 && (
+                      <optgroup label="💡 Trade Ideas & Scouting">
+                        {tradeIdeas.map((t) => (
+                          <option key={`trade_idea:${t.symbol}`} value={`trade_idea:${t.symbol}`}>
+                            {t.symbol} (Setup Scouting)
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                )}
+              </div>
+            ) : (
+              /* Free-form Ticker Input */
+              <>
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Simbolo Azionario (Ticker)
+                  </label>
+                  <input
+                    type="text"
+                    value={customSymbol}
+                    onChange={(e) => setCustomSymbol(e.target.value.toUpperCase())}
+                    placeholder="Es. NVDA, PLTR, AAPL, RACE.MI"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
                 </div>
-              ) : (
-                <select
-                  value={selectedTargetKey}
-                  onChange={(e) => setSelectedTargetKey(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <optgroup label="Holdings di Portafoglio">
-                    {targets
-                      .filter((t) => t.target_source === "holding")
-                      .map((t) => (
-                        <option key={`holding:${t.symbol}`} value={`holding:${t.symbol}`}>
-                          {t.symbol} — {t.name} ({t.quantity ? `${Number(t.quantity)} pz` : ""})
-                        </option>
-                      ))}
-                  </optgroup>
-                  <optgroup label="Trade Ideas Attive">
-                    {targets
-                      .filter((t) => t.target_source === "trade_idea")
-                      .map((t) => (
-                        <option key={`trade_idea:${t.symbol}`} value={`trade_idea:${t.symbol}`}>
-                          {t.symbol} (Setup Scouting)
-                        </option>
-                      ))}
-                  </optgroup>
-                </select>
-              )}
-            </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Mercato Principale
+                  </label>
+                  <select
+                    value={customMarket}
+                    onChange={(e) => setCustomMarket(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="NASDAQ">NASDAQ (USA)</option>
+                    <option value="NYSE">NYSE (USA)</option>
+                    <option value="Borsa Italiana">Borsa Italiana (Milano .MI)</option>
+                    <option value="Euronext">Euronext</option>
+                    <option value="Xetra">XETRA (Germania .DE)</option>
+                    <option value="London">LSE (Londra .L)</option>
+                  </select>
+                </div>
+              </>
+            )}
 
             {/* Language Selector */}
             <div>
@@ -170,30 +290,13 @@ export const AnalysisPage: React.FC = () => {
                 <option value="en">English 🇬🇧</option>
               </select>
             </div>
-
-            {/* Target Info Badge */}
-            <div className="flex flex-col justify-end">
-              {selectedTarget && (
-                <div className="text-xs text-slate-400 bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50">
-                  <span className="font-semibold text-slate-200">{selectedTarget.instrument_type.toUpperCase()}</span>
-                  {" · "}
-                  <span>Mercato: {selectedTarget.market}</span>
-                  {selectedTarget.avg_cost && (
-                    <>
-                      {" · "}
-                      <span>Carico: €{Number(selectedTarget.avg_cost).toFixed(2)}</span>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Run Button */}
           <div>
             <button
               onClick={handleStartAnalysis}
-              disabled={runMutation.isPending || targets.length === 0}
+              disabled={runMutation.isPending || (inputMode === "existing" && targets.length === 0)}
               className="w-full sm:w-auto px-6 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-semibold text-sm rounded-lg shadow transition-all flex items-center justify-center gap-2"
             >
               {runMutation.isPending ? (
@@ -202,7 +305,7 @@ export const AnalysisPage: React.FC = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  <span>Avvio in corso...</span>
+                  <span>Analisi in corso...</span>
                 </>
               ) : (
                 <>
@@ -213,6 +316,27 @@ export const AnalysisPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Selected Target Info Bar */}
+        {inputMode === "existing" && selectedTarget && (
+          <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+            <span className="font-semibold text-slate-200">
+              {selectedTarget.target_source === "trade"
+                ? `Trade Aperto ${selectedTarget.side?.toUpperCase()} #${selectedTarget.trade_id}`
+                : selectedTarget.instrument_type.toUpperCase()}
+            </span>
+            <span>Mercato: <strong className="text-slate-300">{selectedTarget.market}</strong></span>
+            {selectedTarget.avg_cost && (
+              <span>Prezzo Carico: <strong className="text-slate-300">€{Number(selectedTarget.avg_cost).toFixed(2)}</strong></span>
+            )}
+            {selectedTarget.stop_loss && (
+              <span>Stop Loss: <strong className="text-rose-400">€{Number(selectedTarget.stop_loss).toFixed(2)}</strong></span>
+            )}
+            {selectedTarget.target_price && (
+              <span>Target: <strong className="text-emerald-400">€{Number(selectedTarget.target_price).toFixed(2)}</strong></span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Content Area: Active Report + History Sidebar */}
@@ -284,7 +408,7 @@ export const AnalysisPage: React.FC = () => {
               <span className="text-4xl block mb-2">📊</span>
               <h3 className="text-lg font-bold text-white">Nessuna analisi selezionata</h3>
               <p className="text-sm text-slate-400">
-                Seleziona un report dallo storico o avviane uno nuovo per visualizzare il coaching e i dibattiti.
+                Seleziona una posizione azionaria o digita qualsiasi simbolo sopra per avviare il coaching multi-agente.
               </p>
             </div>
           ) : activeReport.status === "pending" || activeReport.status === "running" ? (
@@ -292,7 +416,7 @@ export const AnalysisPage: React.FC = () => {
               <div className="inline-block animate-spin h-10 w-10 border-4 border-amber-500 border-t-transparent rounded-full" />
               <h3 className="text-lg font-bold text-white">Analisi Multi-Agente in corso...</h3>
               <p className="text-sm text-slate-400 max-w-md mx-auto">
-                La squadra di analisti (Tecnico, Fondamentale e Ciclico con Hurst) sta raccogliendo i dati ed elaborando il dibattito con il Coach.
+                La squadra di analisti (Tecnico, Equity Research Fondamentale e Ciclico con Hurst) sta raccogliendo i dati ed elaborando il dibattito con il Coach.
               </p>
               <div className="text-xs font-mono text-slate-500">Aggiornamento automatico ogni 3 secondi</div>
             </div>

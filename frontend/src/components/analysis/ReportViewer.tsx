@@ -15,6 +15,24 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
   const regimeVal = typeof cyclicalSnapshot.regime === "string" ? cyclicalSnapshot.regime : null;
   const dominantCycles = Array.isArray(cyclicalSnapshot.dominant_cycles) ? cyclicalSnapshot.dominant_cycles : [];
 
+  // Extract trade context if present
+  const tradeCtx = (report.data_snapshot?.trade_context as Record<string, any>) || null;
+
+  // Extract fundamental snapshot metrics
+  const fundSnapshot = (report.data_snapshot?.fundamental as Record<string, any>) || {};
+  const peRatio = typeof fundSnapshot.pe_ratio === "number" ? fundSnapshot.pe_ratio : null;
+  const forwardPe = typeof fundSnapshot.forward_pe === "number" ? fundSnapshot.forward_pe : null;
+  const pegRatio = typeof fundSnapshot.peg_ratio === "number" ? fundSnapshot.peg_ratio : null;
+  const pbRatio = typeof fundSnapshot.price_to_book === "number" ? fundSnapshot.price_to_book : null;
+  const evEbitda = typeof fundSnapshot.enterprise_to_ebitda === "number" ? fundSnapshot.enterprise_to_ebitda : null;
+  const operatingMargins = typeof fundSnapshot.operating_margins === "number" ? fundSnapshot.operating_margins : null;
+  const grossMargins = typeof fundSnapshot.gross_margins === "number" ? fundSnapshot.gross_margins : null;
+  const targetMean = typeof fundSnapshot.target_mean_price === "number" ? fundSnapshot.target_mean_price : null;
+  const targetHigh = typeof fundSnapshot.target_high_price === "number" ? fundSnapshot.target_high_price : null;
+  const targetLow = typeof fundSnapshot.target_low_price === "number" ? fundSnapshot.target_low_price : null;
+  const recommendation = typeof fundSnapshot.recommendation_key === "string" ? fundSnapshot.recommendation_key : null;
+  const numAnalysts = typeof fundSnapshot.number_of_analyst_opinions === "number" ? fundSnapshot.number_of_analyst_opinions : null;
+
   return (
     <div className="space-y-6">
       {/* Hero Overview Card */}
@@ -115,6 +133,68 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
       {/* Tab 1: Coach & Action Items */}
       {activeTab === "coach" && (
         <div className="space-y-6">
+          {/* Trade Context Banner if attached to an active trade */}
+          {tradeCtx && (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-3 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-bold text-white">🎯 Posizione a Mercato</span>
+                  {tradeCtx.trade_id && (
+                    <span className="text-xs font-mono text-slate-400">Trade #{tradeCtx.trade_id}</span>
+                  )}
+                  <span
+                    className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${
+                      String(tradeCtx.side).toLowerCase() === "short"
+                        ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                        : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    }`}
+                  >
+                    {tradeCtx.side || "LONG"}
+                  </span>
+                </div>
+                {tradeCtx.unrealized_pnl !== undefined && tradeCtx.unrealized_pnl !== null && (
+                  <div className="text-sm">
+                    <span className="text-slate-400 mr-1.5">PnL Non Realizzato:</span>
+                    <span
+                      className={`font-semibold ${
+                        Number(tradeCtx.unrealized_pnl) >= 0 ? "text-emerald-400" : "text-rose-400"
+                      }`}
+                    >
+                      {Number(tradeCtx.unrealized_pnl) >= 0 ? "+" : ""}
+                      {Number(tradeCtx.unrealized_pnl).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Quantità Aperta</span>
+                  <span className="font-semibold text-white text-sm">{tradeCtx.open_position_qty ?? "—"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Prezzo Medio Entrata</span>
+                  <span className="font-semibold text-white text-sm">
+                    {tradeCtx.average_entry_price !== undefined && tradeCtx.average_entry_price !== null
+                      ? Number(tradeCtx.average_entry_price).toFixed(2)
+                      : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Stop Loss</span>
+                  <span className="font-semibold text-rose-400 text-sm">
+                    {tradeCtx.stop_loss ? Number(tradeCtx.stop_loss).toFixed(2) : "Non impostato"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Target Price</span>
+                  <span className="font-semibold text-emerald-400 text-sm">
+                    {tradeCtx.target_price ? Number(tradeCtx.target_price).toFixed(2) : "Non impostato"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action Suggestions & Risk Warnings Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-emerald-950/20 border border-emerald-900/40 rounded-xl p-5">
@@ -277,12 +357,64 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
       {/* Tab 6: Fundamental Analysis */}
       {activeTab === "fundamental" && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span>📋</span> Analisi Fondamentale & Obbligazionaria
-          </h3>
-          <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-            {report.fundamental_report || "Nessun report fondamentale disponibile."}
+        <div className="space-y-6">
+          {/* Equity Fundamentals & Wall Street Consensus Grid */}
+          {(peRatio !== null || pegRatio !== null || targetMean !== null || recommendation !== null) && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <span className="text-xs uppercase font-medium text-slate-400 block mb-1">Consensus Wall St.</span>
+                <span className="text-lg font-bold text-amber-400 capitalize">
+                  {recommendation?.replace(/_/g, " ") || "—"}
+                </span>
+                {numAnalysts !== null && (
+                  <p className="text-[11px] text-slate-400 mt-1">{numAnalysts} analisti censiti</p>
+                )}
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <span className="text-xs uppercase font-medium text-slate-400 block mb-1">Target Price Medio</span>
+                <span className="text-lg font-bold text-emerald-400">
+                  {targetMean !== null ? targetMean.toFixed(2) : "—"}
+                </span>
+                {targetLow !== null && targetHigh !== null && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Min: {targetLow.toFixed(1)} | Max: {targetHigh.toFixed(1)}
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <span className="text-xs uppercase font-medium text-slate-400 block mb-1">Multipli (P/E & PEG)</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-sky-400">
+                    {peRatio !== null ? peRatio.toFixed(1) : "—"}
+                  </span>
+                  <span className="text-xs text-slate-400">P/E</span>
+                </div>
+                {pegRatio !== null && (
+                  <p className="text-[11px] text-slate-400 mt-1">PEG Ratio: {pegRatio.toFixed(2)}</p>
+                )}
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <span className="text-xs uppercase font-medium text-slate-400 block mb-1">Margini Operativi</span>
+                <span className="text-lg font-bold text-indigo-400">
+                  {operatingMargins !== null ? `${(operatingMargins * 100).toFixed(1)}%` : "—"}
+                </span>
+                {grossMargins !== null && (
+                  <p className="text-[11px] text-slate-400 mt-1">Margine Lordo: {(grossMargins * 100).toFixed(1)}%</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span>📋</span> Analisi Fondamentale & Obbligazionaria
+            </h3>
+            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+              {report.fundamental_report || "Nessun report fondamentale disponibile."}
+            </div>
           </div>
         </div>
       )}

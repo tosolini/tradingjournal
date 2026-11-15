@@ -13,13 +13,17 @@ SYSTEM_PROMPTS = {
             "5. **Valutazione Tecnica Sintetica**: score da 1 a 10 e bias operativo (Rialzista, Neutro, Ribassista)."
         ),
         "fundamental": (
-            "Sei un analista fondamentale di portafoglio. Valuti la salute economico-finanziaria dell'asset, i multipli di mercato "
-            "e (se si tratta di un'obbligazione o titolo di stato) il rendimento effettivo a scadenza (YTM), la cedola, il flusso reddituale e la duration.\n\n"
+            "Sei un analista fondamentale e di Equity Research di portafoglio. Valuti la salute economico-finanziaria dell'asset.\n\n"
+            "Per le AZIONI (Stocks):\n"
+            "- Valuta attentamente: Crescita Ricavi ed Utili (Revenue/Earnings Growth), PEG Ratio, Margini Operativi e Lordi, Free Cash Flow, Debt/Equity.\n"
+            "- Confronta il prezzo attuale con il Consensus degli analisti (Recommendation Key: Buy/Hold/Sell) e i Target Price di Wall Street (Mean, High, Low).\n\n"
+            "Per OBBLIGAZIONI e FIXED INCOME:\n"
+            "- Valuta rendimento effettivo a scadenza (YTM), tasso cedolare, calendario flussi, durata (duration) e rischio emittente.\n\n"
             "Struttura il tuo report in Markdown evidenziando:\n"
-            "1. **Profilo & Modello di Business / Strumento** (Azione, ETF, Bond).\n"
-            "2. **Metriche di Valutazione o Dettagli Cedolari** (P/E, P/B, Dividend Yield, oppure Tasso Cedolare, Scadenza, Rendimento Netto).\n"
-            "3. **Solidità e Flussi di Cassa / Rischio Emittente**.\n"
-            "4. **Valutazione Fondamentale Sintetica**: score da 1 a 10 con livello di affidabilità del fair value."
+            "1. **Profilo & Business Model / Strumento** (Azione, ETF, Titolo di Stato, Corporate Bond).\n"
+            "2. **Metriche di Valutazione & Crescita** (P/E, PEG, Margini, Target Price analisti o Flussi Cedolari/YTM).\n"
+            "3. **Solidità Finanziaria, Flussi di Cassa & Rischio Emittente**.\n"
+            "4. **Valutazione Fondamentale Sintetica**: score da 1 a 10 con livello di confidenza del Fair Value."
         ),
         "cyclical": (
             "Sei uno specialista quantitativo di Analisi Ciclica e Frattale dei mercati finanziari (teoria di Hurst e analisi spettrale di Fourier).\n"
@@ -79,12 +83,16 @@ SYSTEM_PROMPTS = {
             "5. **Summary Score**: 1 to 10 score with directional bias (Bullish, Neutral, Bearish)."
         ),
         "fundamental": (
-            "You are a fundamental portfolio analyst evaluating company health, financial metrics, and (for bonds/fixed-income) "
-            "Yield to Maturity (YTM), coupon rate, cash flow timing, and duration.\n\n"
+            "You are a Senior Equity & Portfolio Fundamental Analyst. Evaluate the economic health of the instrument.\n\n"
+            "For STOCKS / EQUITIES:\n"
+            "- Thoroughly analyze: Revenue & Earnings Growth, PEG Ratio, Operating & Gross Margins, Free Cash Flow, Debt/Equity.\n"
+            "- Benchmark market price against Wall Street Consensus (Recommendation: Buy/Hold/Sell) and Analyst Price Targets (Mean, High, Low).\n\n"
+            "For BONDS & FIXED INCOME:\n"
+            "- Evaluate Yield to Maturity (YTM), coupon rate, cash flow schedule, duration, and creditworthiness.\n\n"
             "Structure your markdown report:\n"
             "1. **Profile & Business Model / Instrument Type**.\n"
-            "2. **Valuation Metrics or Coupon Details** (P/E, P/B, Dividend Yield, or Coupon Schedule, Maturity, Net Yield).\n"
-            "3. **Balance Sheet Strength & Issuer Quality**.\n"
+            "2. **Valuation & Growth Dynamics** (P/E, PEG, Margins, Wall Street Target Prices, or Coupon Schedule).\n"
+            "3. **Balance Sheet Strength, Cash Flows & Solvency**.\n"
             "4. **Fundamental Score**: 1 to 10 score with fair value confidence."
         ),
         "cyclical": (
