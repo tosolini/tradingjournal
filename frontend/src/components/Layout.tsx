@@ -99,14 +99,13 @@ export function Layout({ children }: PropsWithChildren) {
         { to: "/calendar", label: t("layout.nav.calendar"), icon: CalendarIcon },
         { to: "/trades", label: t("layout.nav.trades"), icon: TrendingUpIcon },
         { to: "/notes", label: t("layout.nav.notes"), icon: BookOpenIcon },
-        { to: "/help", label: t("layout.nav.help"), icon: HelpCircleIcon },
+        { to: "/analysis", label: t("layout.nav.analysis", "Analisi AI"), icon: BotIcon },
       ],
     },
     {
       label: t("layout.nav.section_investments"),
       items: [
         { to: "/portfolio", label: t("layout.nav.portfolio"), icon: PieChartIcon },
-        { to: "/analysis", label: t("layout.nav.analysis", "Analisi AI"), icon: BotIcon },
         { to: "/performance", label: t("layout.nav.performance"), icon: ActivityIcon },
         { to: "/assets", label: t("layout.nav.assets"), icon: CoinsIcon },
       ],
@@ -117,6 +116,7 @@ export function Layout({ children }: PropsWithChildren) {
         { to: "/accounts", label: t("layout.nav.accounts"), icon: WalletIcon },
         { to: "/brokers", label: t("layout.nav.brokers"), icon: Building2Icon },
         { to: "/tickers", label: t("layout.nav.tickers"), icon: SearchIcon },
+        { to: "/help", label: t("layout.nav.help"), icon: HelpCircleIcon },
         { to: "/settings", label: t("layout.nav.settings"), icon: SettingsIcon },
       ],
     },
