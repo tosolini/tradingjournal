@@ -14,6 +14,7 @@ import { NotesPage } from "./pages/NotesPage";
 import { PerformancePage } from "./pages/PerformancePage";
 import { PortfolioPage } from "./pages/PortfolioPage";
 import { HoldingDetailPage } from "./pages/HoldingDetailPage";
+import { AnalysisPage } from "./pages/AnalysisPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TradeDetailPage } from "./pages/TradeDetailPage";
 import { TradeEditPage } from "./pages/TradeEditPage";
@@ -75,6 +76,8 @@ export default function App() {
                 <Route path="/portfolio/holdings/:holdingId" element={<HoldingDetailPage />} />
                 <Route path="/portfolio/:holdingId" element={<HoldingDetailPage />} />
                 <Route path="/performance" element={<PerformancePage />} />
+                <Route path="/analysis" element={<AnalysisPage />} />
+                <Route path="/analysis/:analysisId" element={<AnalysisPage />} />
                 <Route path="/assets" element={<AssetsPage />} />
                 <Route path="/trades" element={<TradesPage />} />
                 <Route path="/trades/:tradeId" element={<TradeDetailPage />} />

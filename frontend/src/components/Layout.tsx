@@ -16,6 +16,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import {
   ActivityIcon,
   BookOpenIcon,
+  BotIcon,
   Building2Icon,
   CalendarIcon,
   CoinsIcon,
@@ -105,6 +106,7 @@ export function Layout({ children }: PropsWithChildren) {
       label: t("layout.nav.section_investments"),
       items: [
         { to: "/portfolio", label: t("layout.nav.portfolio"), icon: PieChartIcon },
+        { to: "/analysis", label: t("layout.nav.analysis", "Analisi AI"), icon: BotIcon },
         { to: "/performance", label: t("layout.nav.performance"), icon: ActivityIcon },
         { to: "/assets", label: t("layout.nav.assets"), icon: CoinsIcon },
       ],
@@ -136,6 +138,7 @@ export function Layout({ children }: PropsWithChildren) {
     if (p.startsWith("/calendar")) return t("layout.nav.calendar");
     if (p.startsWith("/trades")) return t("layout.nav.trades");
     if (p.startsWith("/notes")) return t("layout.nav.notes");
+    if (p.startsWith("/analysis")) return t("layout.nav.analysis", "Analisi AI");
     if (p.startsWith("/portfolio")) return t("layout.nav.portfolio");
     if (p.startsWith("/performance")) return t("layout.nav.performance");
     if (p.startsWith("/assets")) return t("layout.nav.assets");

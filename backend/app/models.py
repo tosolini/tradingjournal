@@ -50,6 +50,7 @@ class User(TimestampMixin, Base):
     holdings: Mapped[list["Holding"]] = relationship(back_populates="owner")
     exchanges: Mapped[list["Exchange"]] = relationship(back_populates="owner")
     trade_ideas: Mapped[list["TradeIdea"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    analysis_reports: Mapped[list["AnalysisReport"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class AppSetting(TimestampMixin, Base):
@@ -397,3 +398,47 @@ class TradeIdea(TimestampMixin, Base):
 
     user: Mapped["User"] = relationship(back_populates="trade_ideas")
     trade: Mapped[Optional["Trade"]] = relationship()
+
+
+class AnalysisReport(TimestampMixin, Base):
+    __tablename__ = "analysis_reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    market: Mapped[str] = mapped_column(String(80), default="Euronext")
+    holding_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("holdings.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    trade_idea_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("trade_ideas.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    language: Mapped[str] = mapped_column(String(8), default="it")
+    trigger_mode: Mapped[str] = mapped_column(String(16), default="manual")  # "manual" | "scheduled"
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)  # "pending" | "running" | "completed" | "failed"
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Specialist reports
+    technical_report: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fundamental_report: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    cyclical_report: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Debate & Synthesis
+    bull_thesis: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    bear_thesis: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    lead_synthesis: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Coaching output
+    coaching_report: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    overall_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    action_suggestions: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    risk_warnings: Mapped[list[str]] = mapped_column(JSONB, default=list)
+
+    # Context snapshot
+    data_snapshot: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    llm_model_used: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    user: Mapped["User"] = relationship(back_populates="analysis_reports")
+    holding: Mapped[Optional["Holding"]] = relationship()
+    trade_idea: Mapped[Optional["TradeIdea"]] = relationship()

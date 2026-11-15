@@ -1,0 +1,291 @@
+import React, { useState } from "react";
+import { AnalysisReportDetail } from "../../lib/api";
+import { ScoreGauge } from "./ScoreGauge";
+
+interface ReportViewerProps {
+  report: AnalysisReportDetail;
+}
+
+export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
+  const [activeTab, setActiveTab] = useState<"coach" | "debate" | "lead" | "technical" | "fundamental" | "cyclical">("coach");
+
+  // Extract cyclical metrics if present in data snapshot
+  const cyclicalSnapshot = (report.data_snapshot?.cyclical as Record<string, unknown>) || {};
+  const hurstVal = typeof cyclicalSnapshot.hurst_exponent === "number" ? cyclicalSnapshot.hurst_exponent : null;
+  const regimeVal = typeof cyclicalSnapshot.regime === "string" ? cyclicalSnapshot.regime : null;
+  const dominantCycles = Array.isArray(cyclicalSnapshot.dominant_cycles) ? cyclicalSnapshot.dominant_cycles : [];
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Overview Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl font-bold text-white tracking-tight">{report.symbol}</span>
+              <span className="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-300 font-medium">
+                {report.market}
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded uppercase font-semibold bg-primary/20 text-primary border border-primary/30">
+                {report.language}
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded capitalize text-slate-400 bg-slate-800/80">
+                {report.trigger_mode}
+              </span>
+            </div>
+            <p className="text-sm text-slate-400">
+              Analisi completata il{" "}
+              {report.completed_at
+                ? new Date(report.completed_at).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" })
+                : "In corso..."}
+            </p>
+            {report.llm_model_used && (
+              <p className="text-xs text-slate-500 font-mono">Modello: {report.llm_model_used}</p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-8 self-center md:self-auto">
+            {hurstVal !== null && (
+              <div className="text-center px-4 py-2 rounded-lg bg-slate-800/60 border border-slate-700/50">
+                <span className="text-xs uppercase font-medium text-slate-400 block">Hurst Exponent</span>
+                <span className="text-lg font-bold text-sky-400">{hurstVal.toFixed(2)}</span>
+                <span className="text-[11px] block text-slate-400 capitalize">{regimeVal?.replace("_", " ")}</span>
+              </div>
+            )}
+            <div className="flex flex-col items-center">
+              <span className="text-xs uppercase font-medium text-slate-400 mb-1">Coach Score</span>
+              <ScoreGauge score={report.overall_score} size={84} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab("coach")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === "coach" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <span>🏋️ Coaching & Action</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("debate")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === "debate" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <span>⚔️ Dibattito Bull vs Bear</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("lead")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === "lead" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <span>🎓 Sintesi Lead</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("cyclical")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === "cyclical" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <span>🔄 Analisi Ciclica</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("technical")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === "technical" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <span>📈 Analisi Tecnica</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("fundamental")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === "fundamental" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <span>📋 Fondamentali / Bond</span>
+        </button>
+      </div>
+
+      {/* Tab 1: Coach & Action Items */}
+      {activeTab === "coach" && (
+        <div className="space-y-6">
+          {/* Action Suggestions & Risk Warnings Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-emerald-950/20 border border-emerald-900/40 rounded-xl p-5">
+              <h3 className="text-emerald-400 font-semibold flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Suggerimenti Operativi
+              </h3>
+              {report.action_suggestions && report.action_suggestions.length > 0 ? (
+                <ul className="space-y-2">
+                  {report.action_suggestions.map((sugg, idx) => (
+                    <li key={idx} className="text-sm text-slate-300 flex items-start gap-2">
+                      <span className="text-emerald-400 font-bold">•</span>
+                      <span>{sugg}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-400 italic">Nessun suggerimento specifico rilevato.</p>
+              )}
+            </div>
+
+            <div className="bg-rose-950/20 border border-rose-900/40 rounded-xl p-5">
+              <h3 className="text-rose-400 font-semibold flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Avvisi di Rischio & Bias
+              </h3>
+              {report.risk_warnings && report.risk_warnings.length > 0 ? (
+                <ul className="space-y-2">
+                  {report.risk_warnings.map((risk, idx) => (
+                    <li key={idx} className="text-sm text-slate-300 flex items-start gap-2">
+                      <span className="text-rose-400 font-bold">•</span>
+                      <span>{risk}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-400 italic">Nessun alert critico segnalato.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Full Coaching Reflection */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span>🏋️</span> Rapporto del Coach
+            </h3>
+            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+              {report.coaching_report || "Nessun testo di coaching disponibile."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Bull vs Bear Debate */}
+      {activeTab === "debate" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-emerald-950/10 border border-emerald-900/30 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
+              <span>🐂</span> Tesi Bull (Catalizzatori & Edge)
+            </h3>
+            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+              {report.bull_thesis || "Nessun report rialzista generato."}
+            </div>
+          </div>
+
+          <div className="bg-rose-950/10 border border-rose-900/30 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-rose-400 mb-4 flex items-center gap-2">
+              <span>🐻</span> Tesi Bear (Avvocato del Diavolo & Rischi)
+            </h3>
+            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+              {report.bear_thesis || "Nessun report ribassista generato."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Lead Researcher Synthesis */}
+      {activeTab === "lead" && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span>🎓</span> Sintesi della Commissione d'Investimento
+          </h3>
+          <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+            {report.lead_synthesis || "Nessuna sintesi disponibile."}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Cyclical Analysis */}
+      {activeTab === "cyclical" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <span className="text-xs uppercase font-medium text-slate-400 block mb-1">Hurst Exponent (H)</span>
+              <span className="text-2xl font-extrabold text-sky-400">
+                {hurstVal !== null ? hurstVal.toFixed(3) : "—"}
+              </span>
+              <p className="text-xs text-slate-400 mt-2">
+                {hurstVal !== null && hurstVal > 0.55
+                  ? "Regime persistente: trend forte e continuità di momentum."
+                  : hurstVal !== null && hurstVal < 0.45
+                  ? "Regime anti-persistente: oscillazione ciclica e ritorni verso la media."
+                  : "Cammino aleatorio (rumore browniano)."}
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <span className="text-xs uppercase font-medium text-slate-400 block mb-1">Regime Frattale</span>
+              <span className="text-2xl font-extrabold text-amber-400 capitalize">
+                {regimeVal?.replace("_", " ") || "Indeterminato"}
+              </span>
+              <p className="text-xs text-slate-400 mt-2">
+                Stato di memoria a lungo termine identificato con analisi R/S.
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <span className="text-xs uppercase font-medium text-slate-400 block mb-1">Cicli Rilevati (FFT)</span>
+              {dominantCycles.length > 0 ? (
+                <div className="space-y-1 mt-1">
+                  {dominantCycles.map((c: any, idx: number) => (
+                    <div key={idx} className="flex justify-between text-xs text-slate-300">
+                      <span>Ciclo {idx + 1}:</span>
+                      <span className="font-semibold text-white">{c.period_trading_days} giorni</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-sm text-slate-500">Nessuna armonica spettrale isolata</span>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span>🔄</span> Report Ciclico & Spettrale Completo
+            </h3>
+            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+              {report.cyclical_report || "Nessun report ciclico disponibile."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Technical Analysis */}
+      {activeTab === "technical" && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span>📈</span> Analisi Tecnica & Indicatori
+          </h3>
+          <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+            {report.technical_report || "Nessun report tecnico disponibile."}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 6: Fundamental Analysis */}
+      {activeTab === "fundamental" && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span>📋</span> Analisi Fondamentale & Obbligazionaria
+          </h3>
+          <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+            {report.fundamental_report || "Nessun report fondamentale disponibile."}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
