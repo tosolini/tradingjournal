@@ -188,6 +188,9 @@ def start_analysis_job(
     current_user: User = Depends(get_current_user),
 ):
     """Launch asynchronous multi-agent asset coaching analysis."""
+    lang = (payload.language or settings.analysis_default_language or "it").lower()
+    selected_language = "en" if lang.startswith("en") else "it"
+
     report = AnalysisReport(
         user_id=current_user.id,
         symbol=payload.symbol.strip().upper(),
@@ -195,7 +198,7 @@ def start_analysis_job(
         holding_id=payload.holding_id,
         trade_idea_id=payload.trade_idea_id,
         trade_id=payload.trade_id,
-        language=payload.language.lower() if payload.language in ("it", "en") else "it",
+        language=selected_language,
         trigger_mode="manual",
         status="pending",
     )

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { analysisApi, AnalysisReportDetail, AnalysisReportSummary, AnalysisTargetItem } from "../lib/api";
 import { ReportViewer } from "../components/analysis/ReportViewer";
 import { useToast } from "../contexts/ToastContext";
@@ -9,12 +10,19 @@ export const AnalysisPage: React.FC = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
   const [searchParams] = useSearchParams();
+  const { i18n } = useTranslation();
+
+  // Report language automatically inherits user base preference from settings
+  const appLanguage: "it" | "en" = (i18n.resolvedLanguage || i18n.language || "it")
+    .slice(0, 2)
+    .toLowerCase() === "en"
+    ? "en"
+    : "it";
 
   const [inputMode, setInputMode] = useState<"existing" | "custom">("existing");
   const [selectedTargetKey, setSelectedTargetKey] = useState<string>("");
   const [customSymbol, setCustomSymbol] = useState<string>("");
   const [customMarket, setCustomMarket] = useState<string>("NASDAQ");
-  const [language, setLanguage] = useState<"it" | "en">("it");
   const [activeReportId, setActiveReportId] = useState<number | null>(null);
 
   // 1. Fetch eligible targets
@@ -111,7 +119,7 @@ export const AnalysisPage: React.FC = () => {
       runMutation.mutate({
         symbol: customSymbol.trim().toUpperCase(),
         market: customMarket,
-        language: language,
+        language: appLanguage,
       });
       return;
     }
@@ -134,7 +142,7 @@ export const AnalysisPage: React.FC = () => {
       holding_id: target.holding_id,
       trade_idea_id: target.trade_idea_id,
       trade_id: target.trade_id,
-      language: language,
+      language: appLanguage,
     });
   };
 
@@ -190,8 +198,8 @@ export const AnalysisPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="flex-1">
             {inputMode === "existing" ? (
               /* Existing Inventory Selector */
               <div>
@@ -242,7 +250,7 @@ export const AnalysisPage: React.FC = () => {
               </div>
             ) : (
               /* Free-form Ticker Input */
-              <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
                     Simbolo Azionario (Ticker)
@@ -273,27 +281,12 @@ export const AnalysisPage: React.FC = () => {
                     <option value="London">LSE (Londra .L)</option>
                   </select>
                 </div>
-              </>
+              </div>
             )}
-
-            {/* Language Selector */}
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Lingua del Report
-              </label>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as "it" | "en")}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="it">Italiano 🇮🇹</option>
-                <option value="en">English 🇬🇧</option>
-              </select>
-            </div>
           </div>
 
           {/* Run Button */}
-          <div>
+          <div className="shrink-0">
             <button
               onClick={handleStartAnalysis}
               disabled={runMutation.isPending || (inputMode === "existing" && targets.length === 0)}

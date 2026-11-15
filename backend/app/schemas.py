@@ -932,8 +932,7 @@ class AnalysisRunRequest(BaseModel):
     holding_id: Optional[int] = None
     trade_idea_id: Optional[int] = None
     trade_id: Optional[int] = None
-    trade_id: Optional[int] = None
-    language: str = "it"  # "it" | "en"
+    language: Optional[str] = None
 
 
 class AnalysisReportSummary(BaseModel):
