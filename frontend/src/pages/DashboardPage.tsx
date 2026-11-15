@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { AllAssetsPnlPoint, DashboardAllocation, DashboardKpis, MonthlyPnlPoint, PortfolioHistoryPoint, TradeStat, WeeklyPnlPoint, api, dashboardKpis } from "../lib/api";
+import { DashboardSkeleton } from "../components/DashboardSkeleton";
 
 function asNumber(value: string | number | undefined): number {
   if (value === undefined) return 0;
@@ -1408,9 +1409,10 @@ function BestWorstTradesPanel({
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ["kpis"],
     queryFn: dashboardKpis,
+    staleTime: 60 * 1000,
   });
   const { data: userPreferences } = useQuery({
     queryKey: ["user-preferences"],
@@ -1535,22 +1537,26 @@ export function DashboardPage() {
           <h1 className="text-2xl font-semibold">{t("dashboard.title")}</h1>
           <p className="text-sm text-slate-400 dark:text-slate-500">{t("dashboard.subtitle")}</p>
         </div>
-        {lastSnapshotDate && (
-          <div className="text-xs text-slate-400 dark:text-slate-500">
-            {t("dashboard.updated")}{" "}
-            <span className="tabular-nums text-slate-300 dark:text-slate-700">{lastSnapshotDate}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+          {isFetching && !isLoading && (
+            <span className="flex items-center gap-1.5 text-teal-400 dark:text-teal-600">
+              <span className="inline-block h-2 w-2 rounded-full bg-teal-400 animate-ping" />
+              <span>{t("dashboard.syncing", "Sincronizzazione...")}</span>
+            </span>
+          )}
+          {lastSnapshotDate && (
+            <div>
+              {t("dashboard.updated")}{" "}
+              <span className="tabular-nums text-slate-300 dark:text-slate-700">{lastSnapshotDate}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="card h-24 animate-pulse" />
-          ))}
-        </div>
+        <DashboardSkeleton />
       ) : (
-        <>
+        <div className="fade-up space-y-5">
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {heroCards.map((card, i) => (
               <KpiCard key={card.label} {...card} delay={i * 60} />
@@ -1604,7 +1610,7 @@ export function DashboardPage() {
           </section>
 
           <TopTradesTable trades={data?.top_trades ?? []} />
-        </>
+        </div>
       )}
     </div>
   );
