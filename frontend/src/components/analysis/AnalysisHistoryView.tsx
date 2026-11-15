@@ -399,7 +399,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
               onClick={() => setIsPurgeModalOpen(true)}
               className="h-10 px-4 rounded-xl bg-slate-800 hover:bg-slate-700/90 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
             >
-              <span>🧹</span>
+              <span aria-hidden="true">🧹</span>
               <span>{t("analysis.history.purge_btn", "Gestione & Pulizia Storico")}</span>
               {stats.staleCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold">

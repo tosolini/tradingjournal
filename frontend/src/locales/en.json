@@ -1300,7 +1300,7 @@
       "filter_time_7d": "Last 7 days",
       "filter_time_30d": "Last 30 days",
       "filter_time_older": "Older than 30 days",
-      "purge_btn": "🧹 History Purge & Cleanup",
+      "purge_btn": "History Purge & Cleanup",
       "col_symbol": "Symbol / Asset",
       "col_source": "Source",
       "col_model": "AI Model",
