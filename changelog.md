@@ -16,6 +16,11 @@
   - Open Position & Equity Specialization:
     - Direct coaching on active open trades (`trades` table) evaluating entry price, unrealized PnL, Stop Loss, Target Price, and Risk/Reward (R:R) ratio.
     - Arbitrary stock ticker search on-demand with live database autocomplete (`/api/tickers/search`) matching symbols and corporate names.
+  - Analysis History 3rd Tab & Retention Purge Management:
+    - Moved analysis history from cramped left sidebar into a dedicated 3rd tab (`Analysis History`), freeing 100% of horizontal space for full-width ReportViewer and TradingView charts.
+    - Dedicated `AnalysisHistoryView` dashboard featuring 4 executive KPI metrics (Total, Average Score, Fresh <30d, Stale >30d), ticker search, status/timeframe filters, and pagination to prevent infinite scrolling.
+    - Retention Purge API (`POST /api/analysis/purge`) and interactive modal supporting deletion of stale reports (>30 days), failed runs, or full history reset with confirmation.
+    - Freshness warning banner and quick "Re-run with Today's Data" action for reports older than 30 days.
   - Smart Action Conversion Wizard:
     - Two-step micro-modal allowing one-click conversion of AI analyses into either a **Scouting Trade Idea** (with pre-filled triggers, SL, TP, and thesis) or a **Daily Journal Note** (with integrated native WYSIWYG editor, sentiment, and key bullet points).
   - Data & Infrastructure:
