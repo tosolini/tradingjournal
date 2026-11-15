@@ -1300,7 +1300,7 @@
       "filter_time_7d": "Ultimi 7 giorni",
       "filter_time_30d": "Ultimi 30 giorni",
       "filter_time_older": "Oltre 30 giorni",
-      "purge_btn": "🧹 Gestione & Pulizia Storico",
+      "purge_btn": "Gestione & Pulizia Storico",
       "col_symbol": "Simbolo / Titolo",
       "col_source": "Origine",
       "col_model": "Modello AI",
@@ -1382,17 +1382,17 @@
         "suggestions_empty": "Nessun suggerimento specifico rilevato.",
         "risks_title": "Avvisi di Rischio & Bias",
         "risks_empty": "Nessun alert critico segnalato.",
-        "report_title": "🏋️ Rapporto del Coach",
+        "report_title": "Rapporto del Coach",
         "report_empty": "Nessun testo di coaching disponibile."
       },
       "debate": {
-        "bull_title": "🐂 Tesi Bull (Catalizzatori & Edge)",
+        "bull_title": "Tesi Bull (Catalizzatori & Edge)",
         "bull_empty": "Nessun report rialzista generato.",
-        "bear_title": "🐻 Tesi Bear (Avvocato del Diavolo & Rischi)",
+        "bear_title": "Tesi Bear (Avvocato del Diavolo & Rischi)",
         "bear_empty": "Nessun report ribassista generato."
       },
       "lead": {
-        "title": "🎓 Sintesi della Commissione d'Investimento",
+        "title": "Sintesi della Commissione d'Investimento",
         "empty": "Nessuna sintesi disponibile."
       },
       "cyclical": {
@@ -1407,11 +1407,11 @@
         "cycle_label": "Ciclo {{index}}:",
         "days": "{{count}} giorni",
         "cycles_empty": "Nessuna armonica spettrale isolata",
-        "report_title": "🔄 Report Ciclico & Spettrale Completo",
+        "report_title": "Report Ciclico & Spettrale Completo",
         "report_empty": "Nessun report ciclico disponibile."
       },
       "technical": {
-        "title": "📈 Analisi Tecnica & Indicatori",
+        "title": "Analisi Tecnica & Indicatori",
         "empty": "Nessun report tecnico disponibile."
       },
       "fundamental": {
@@ -1423,7 +1423,7 @@
         "peg_ratio": "PEG Ratio: {{value}}",
         "operating_margins_title": "Margini Operativi",
         "gross_margin": "Margine Lordo: {{value}}%",
-        "report_title": "📋 Analisi Fondamentale & Obbligazionaria",
+        "report_title": "Analisi Fondamentale & Obbligazionaria",
         "report_empty": "Nessun report fondamentale disponibile."
       }
     },

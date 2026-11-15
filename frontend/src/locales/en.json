@@ -1300,7 +1300,7 @@
       "filter_time_7d": "Last 7 days",
       "filter_time_30d": "Last 30 days",
       "filter_time_older": "Older than 30 days",
-      "purge_btn": "🧹 History Purge & Cleanup",
+      "purge_btn": "History Purge & Cleanup",
       "col_symbol": "Symbol / Asset",
       "col_source": "Source",
       "col_model": "AI Model",
@@ -1382,17 +1382,17 @@
         "suggestions_empty": "No specific suggestions detected.",
         "risks_title": "Risk Warnings & Biases",
         "risks_empty": "No critical alerts reported.",
-        "report_title": "🏋️ Coach Report",
+        "report_title": "Coach Report",
         "report_empty": "No coaching text available."
       },
       "debate": {
-        "bull_title": "🐂 Bull Thesis (Catalysts & Edge)",
+        "bull_title": "Bull Thesis (Catalysts & Edge)",
         "bull_empty": "No bullish report generated.",
-        "bear_title": "🐻 Bear Thesis (Devil's Advocate & Risks)",
+        "bear_title": "Bear Thesis (Devil's Advocate & Risks)",
         "bear_empty": "No bearish report generated."
       },
       "lead": {
-        "title": "🎓 Investment Committee Synthesis",
+        "title": "Investment Committee Synthesis",
         "empty": "No synthesis available."
       },
       "cyclical": {
@@ -1407,11 +1407,11 @@
         "cycle_label": "Cycle {{index}}:",
         "days": "{{count}} days",
         "cycles_empty": "No spectral harmonic isolated",
-        "report_title": "🔄 Full Cyclical & Spectral Report",
+        "report_title": "Full Cyclical & Spectral Report",
         "report_empty": "No cyclical report available."
       },
       "technical": {
-        "title": "📈 Technical Analysis & Indicators",
+        "title": "Technical Analysis & Indicators",
         "empty": "No technical report available."
       },
       "fundamental": {
@@ -1423,7 +1423,7 @@
         "peg_ratio": "PEG Ratio: {{value}}",
         "operating_margins_title": "Operating Margins",
         "gross_margin": "Gross Margin: {{value}}%",
-        "report_title": "📋 Fundamental & Bond Analysis",
+        "report_title": "Fundamental & Bond Analysis",
         "report_empty": "No fundamental report available."
       }
     },

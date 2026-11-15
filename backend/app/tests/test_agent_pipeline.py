@@ -86,6 +86,8 @@ def test_run_agentic_analysis_with_mock():
     assert state.bear_thesis is not None
     assert state.lead_synthesis is not None
     assert state.coaching_report is not None
+    assert "```json" not in state.coaching_report
+    assert "Coaching: mantieni la calma" in state.coaching_report
     assert state.overall_score == 8
     assert "Monitorare area 7.10" in state.action_suggestions
     assert "Rifiutare overtrading" in state.risk_warnings

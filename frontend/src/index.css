@@ -309,3 +309,81 @@ a {
   stroke: #334155;
   fill: #334155;
 }
+
+/* ─── AI Analysis Report Markdown Styles ─────────────────── */
+.report-markdown-wrapper .wmde-markdown {
+  background-color: transparent !important;
+  font-family: inherit;
+  color: inherit;
+}
+
+.report-markdown-wrapper .wmde-markdown h1,
+.report-markdown-wrapper .wmde-markdown h2,
+.report-markdown-wrapper .wmde-markdown h3,
+.report-markdown-wrapper .wmde-markdown h4 {
+  color: #f8fafc;
+  border-bottom-color: rgba(51, 65, 85, 0.4);
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+:where([data-theme="light"], [data-theme="light"] *) .report-markdown-wrapper .wmde-markdown h1,
+:where([data-theme="light"], [data-theme="light"] *) .report-markdown-wrapper .wmde-markdown h2,
+:where([data-theme="light"], [data-theme="light"] *) .report-markdown-wrapper .wmde-markdown h3,
+:where([data-theme="light"], [data-theme="light"] *) .report-markdown-wrapper .wmde-markdown h4 {
+  color: #0f172a;
+  border-bottom-color: rgba(203, 213, 225, 0.6);
+}
+
+.report-markdown-wrapper .wmde-markdown p,
+.report-markdown-wrapper .wmde-markdown li {
+  line-height: 1.75;
+}
+
+.report-markdown-wrapper .wmde-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  display: table !important;
+}
+
+.report-markdown-wrapper .wmde-markdown table th,
+.report-markdown-wrapper .wmde-markdown table td {
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  padding: 0.6rem 0.85rem;
+  font-size: 0.875rem;
+}
+
+.report-markdown-wrapper .wmde-markdown table th {
+  background-color: rgba(30, 41, 59, 0.6);
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+:where([data-theme="light"], [data-theme="light"] *) .report-markdown-wrapper .wmde-markdown table th {
+  background-color: rgba(241, 245, 249, 0.9);
+  color: #0f172a;
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+:where([data-theme="light"], [data-theme="light"] *) .report-markdown-wrapper .wmde-markdown table td {
+  border-color: rgba(226, 232, 240, 0.9);
+}
+
+.report-markdown-wrapper .wmde-markdown pre {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+}
+
+:where([data-theme="light"], [data-theme="light"] *) .report-markdown-wrapper .wmde-markdown pre {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+.report-markdown-wrapper .wmde-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
