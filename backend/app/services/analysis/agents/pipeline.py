@@ -244,7 +244,7 @@ def run_agentic_analysis(
         cleaned_coaching = re.sub(
             r"\{\s*\"overall_score\"[\s\S]*\}\s*$", "", cleaned_coaching, flags=re.IGNORECASE
         ).strip()
-        state.coaching_report = cleaned_coaching if cleaned_coaching else coaching_raw
+state.coaching_report = cleaned_coaching
 
         # Fallback score if parser missed it
         if state.overall_score is None:
