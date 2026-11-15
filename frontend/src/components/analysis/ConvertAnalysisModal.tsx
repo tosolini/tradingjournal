@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { AnalysisReportDetail, api, tradeIdeasApi } from "../../lib/api";
 import { useToast } from "../../contexts/ToastContext";
+import { RichTextEditor } from "../RichTextEditor";
 
 interface ConvertAnalysisModalProps {
   isOpen: boolean;
@@ -180,7 +181,11 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div
+        className={`relative w-full ${
+          step === 2 && destination === "note" ? "max-w-2xl" : "max-w-lg"
+        } bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all`}
+      >
         {/* Accent top gradient bar */}
         <div className="h-1.5 w-full bg-gradient-to-r from-violet-600 via-indigo-500 to-teal-400" />
 
@@ -428,13 +433,13 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
 
               <div>
                 <label className="block font-semibold uppercase text-slate-400 mb-1">
-                  Contenuto della Nota (HTML / Testo)
+                  Contenuto della Nota (WYSIWYG)
                 </label>
-                <textarea
-                  rows={5}
+                <RichTextEditor
                   value={noteContent}
-                  onChange={(e) => setNoteContent(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 text-xs font-mono focus:ring-1 focus:ring-violet-400 focus:outline-none leading-relaxed"
+                  onChange={setNoteContent}
+                  placeholder="Scrivi o perfeziona i dettagli della tua nota..."
+                  minHeight="180px"
                 />
               </div>
             </div>
