@@ -13,6 +13,7 @@ import itAccounts from "../docs/it/accounts.md?raw";
 import itTickers from "../docs/it/tickers.md?raw";
 import itCalendar from "../docs/it/calendar.md?raw";
 import itSettings from "../docs/it/settings.md?raw";
+import itAnalysis from "../docs/it/analysis.md?raw";
 import enDashboard from "../docs/en/dashboard.md?raw";
 import enGettingStarted from "../docs/en/getting-started.md?raw";
 import enTrades from "../docs/en/trades.md?raw";
@@ -21,6 +22,7 @@ import enNotes from "../docs/en/notes.md?raw";
 import enTickers from "../docs/en/tickers.md?raw";
 import enCalendar from "../docs/en/calendar.md?raw";
 import enSettings from "../docs/en/settings.md?raw";
+import enAnalysis from "../docs/en/analysis.md?raw";
 
 type SectionDef = {
   id: string;
@@ -34,6 +36,7 @@ const SECTIONS: SectionDef[] = [
   { id: "getting-started", labelKey: "help.nav.getting_started", icon: "🚀", it: itGettingStarted, en: enGettingStarted },
   { id: "dashboard",       labelKey: "help.nav.dashboard",       icon: "📊", it: itDashboard,       en: enDashboard },
   { id: "trades",          labelKey: "help.nav.trades",          icon: "📈", it: itTrades,         en: enTrades },
+  { id: "analysis",        labelKey: "help.nav.analysis",        icon: "🤖", it: itAnalysis,       en: enAnalysis },
   { id: "notes",           labelKey: "help.nav.notes",           icon: "🎯", it: itNotes,          en: enNotes },
   { id: "accounts",        labelKey: "help.nav.accounts",        icon: "🏦", it: itAccounts,       en: enAccounts },
   { id: "tickers",         labelKey: "help.nav.tickers",         icon: "🔍", it: itTickers,        en: enTickers },

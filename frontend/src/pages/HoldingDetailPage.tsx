@@ -440,6 +440,14 @@ export function HoldingDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            to="/analysis"
+            className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20 dark:text-indigo-800 transition-colors"
+            title="Apri l'Analisi Multi-Agente & Coaching per questo titolo"
+          >
+            <span>🤖</span>
+            <span>Analisi AI</span>
+          </Link>
           {isBond && (
             <button
               onClick={() => syncMutation.mutate()}

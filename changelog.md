@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.3.0] - 2026-11-15
+
+- Multi-Agent Asset Analysis & Coaching Engine
+  - Institutional multi-agent dialectical architecture inspired by TradingAgents (TauricResearch), providing third-party perspective across Technical, Fundamental, and Cyclical dimensions.
+  - Specialized Parallel Analysts:
+    - `Technical Analyst`: Vectorized Wilder RSI, MACD (12, 26, 9), Bollinger Bands, ATR, SMAs (20/50/200), pivot support/resistance, and trend alignment.
+    - `Fundamental & Fixed Income Analyst`: Equity valuation multiples (P/E, Forward P/E, PEG ratio), operating and gross margins, Free Cash Flow, analyst consensus recommendations, and Wall Street target prices (Mean/High/Low); bond yield to maturity, coupon schedule, and duration.
+    - `Cyclical & Fractal Analyst`: Hurst Exponent ($H$) via Rescaled Range (R/S analysis) to categorize market regimes (persistent trending $>0.55$, mean-reverting $<0.45$, or random walk $0.45-0.55$), paired with Fast Fourier Transform (FFT) spectral decomposition to isolate dominant trading-day cycles and phase states.
+  - Adversarial Dialectical Debate:
+    - `Bull Researcher`: Formulates optimistic catalysts, valuation upside, and operational strengths.
+    - `Bear Researcher`: Devil's advocate identifying bubble risks, margin contraction, macro headwinds, and overbought levels.
+    - `Lead Researcher`: Committee synthesis weighing arguments into balanced institutional thesis.
+    - `Personal Trading Coach`: Generates a 1-10 overall score, concrete operational suggestions (Stop Loss adjustment, profit-taking, sizing), and psychological risk alerts (FOMO, disposition effect, overtrading).
+  - Open Position & Equity Specialization:
+    - Direct coaching on active open trades (`trades` table) evaluating entry price, unrealized PnL, Stop Loss, Target Price, and Risk/Reward (R:R) ratio.
+    - Arbitrary stock ticker search on-demand with live database autocomplete (`/api/tickers/search`) matching symbols and corporate names.
+  - Smart Action Conversion Wizard:
+    - Two-step micro-modal allowing one-click conversion of AI analyses into either a **Scouting Trade Idea** (with pre-filled triggers, SL, TP, and thesis) or a **Daily Journal Note** (with integrated native WYSIWYG editor, sentiment, and key bullet points).
+  - Data & Infrastructure:
+    - Unified agnostic LLM factory supporting Gemini, OpenAI, Anthropic, Ollama, and Mock.
+    - New `analysis_reports` model and Alembic migration `20261115_0019_add_analysis_reports.py`.
+    - REST endpoints under `/api/analysis` (`targets`, `run`, `history`, `detail`, `delete`).
+    - Periodic background portfolio coaching evaluator via APScheduler.
+- Calendar & Dashboard Enhancements
+  - Monthly calendar view now computes and displays daily realized PnL breakdown categorized by asset class (Stocks, ETFs, Bonds).
+  - Added `DashboardSkeleton` animated loader component for smoother KPI loading transitions.
+- Documentation & Guides
+  - Added dedicated chapter for AI Analysis & Coaching in in-app user guide in both Italian and English (`docs/it/analysis.md`, `docs/en/analysis.md`, `frontend/src/docs/it/analysis.md`, `frontend/src/docs/en/analysis.md`).
+- Version bump to 0.3.0 (Backend 0.3.0 / Frontend 0.3.0)
+
 ## [0.2.1] - 2026-11-02
 
 - Version bump to 0.2.1 (Backend 0.2.1 / Frontend 0.2.1)

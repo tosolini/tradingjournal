@@ -1199,3 +1199,84 @@ export const tradeIdeasApi = {
     api("/api/trade-ideas/refresh-prices", { method: "POST" }),
   getAlerts: (): Promise<TradeIdeaAlertsResult> => api("/api/trade-ideas/alerts"),
 };
+
+export interface AnalysisTargetItem {
+  symbol: string;
+  name: string;
+  instrument_type: string;
+  market: string;
+  holding_id?: number | null;
+  trade_idea_id?: number | null;
+  trade_id?: number | null;
+  quantity?: number | null;
+  avg_cost?: number | null;
+  side?: string | null;
+  stop_loss?: number | null;
+  target_price?: number | null;
+  target_source: "holding" | "trade_idea" | "trade";
+}
+
+export interface AnalysisRunPayload {
+  symbol: string;
+  market?: string;
+  holding_id?: number | null;
+  trade_idea_id?: number | null;
+  trade_id?: number | null;
+  language?: "it" | "en";
+}
+
+export interface AnalysisReportSummary {
+  id: number;
+  symbol: string;
+  market: string;
+  status: "pending" | "running" | "completed" | "failed";
+  language: "it" | "en";
+  trigger_mode: "manual" | "scheduled";
+  overall_score?: number | null;
+  created_at: string;
+  completed_at?: string | null;
+}
+
+export interface AnalysisReportDetail {
+  id: number;
+  user_id: number;
+  symbol: string;
+  market: string;
+  holding_id?: number | null;
+  trade_idea_id?: number | null;
+  trade_id?: number | null;
+  language: "it" | "en";
+  trigger_mode: "manual" | "scheduled";
+  status: "pending" | "running" | "completed" | "failed";
+  completed_at?: string | null;
+  technical_report?: string | null;
+  fundamental_report?: string | null;
+  cyclical_report?: string | null;
+  bull_thesis?: string | null;
+  bear_thesis?: string | null;
+  lead_synthesis?: string | null;
+  coaching_report?: string | null;
+  overall_score?: number | null;
+  action_suggestions: string[];
+  risk_warnings: string[];
+  data_snapshot: Record<string, unknown>;
+  llm_model_used?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const analysisApi = {
+  getTargets: (): Promise<AnalysisTargetItem[]> => api("/api/analysis/targets"),
+  run: (payload: AnalysisRunPayload): Promise<AnalysisReportSummary> =>
+    api("/api/analysis/run", { method: "POST", body: JSON.stringify(payload) }),
+  getHistory: (symbol?: string, limit = 20): Promise<AnalysisReportSummary[]> => {
+    const q = new URLSearchParams();
+    if (symbol) q.set("symbol", symbol);
+    if (limit) q.set("limit", String(limit));
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return api(`/api/analysis/history${query}`);
+  },
+  get: (id: number): Promise<AnalysisReportDetail> => api(`/api/analysis/${id}`),
+  delete: (id: number): Promise<{ ok: boolean }> => api(`/api/analysis/${id}`, { method: "DELETE" }),
+};

@@ -16,6 +16,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import {
   ActivityIcon,
   BookOpenIcon,
+  BotIcon,
   Building2Icon,
   CalendarIcon,
   CoinsIcon,
@@ -98,7 +99,7 @@ export function Layout({ children }: PropsWithChildren) {
         { to: "/calendar", label: t("layout.nav.calendar"), icon: CalendarIcon },
         { to: "/trades", label: t("layout.nav.trades"), icon: TrendingUpIcon },
         { to: "/notes", label: t("layout.nav.notes"), icon: BookOpenIcon },
-        { to: "/help", label: t("layout.nav.help"), icon: HelpCircleIcon },
+        { to: "/analysis", label: t("layout.nav.analysis", "Analisi AI"), icon: BotIcon },
       ],
     },
     {
@@ -115,6 +116,7 @@ export function Layout({ children }: PropsWithChildren) {
         { to: "/accounts", label: t("layout.nav.accounts"), icon: WalletIcon },
         { to: "/brokers", label: t("layout.nav.brokers"), icon: Building2Icon },
         { to: "/tickers", label: t("layout.nav.tickers"), icon: SearchIcon },
+        { to: "/help", label: t("layout.nav.help"), icon: HelpCircleIcon },
         { to: "/settings", label: t("layout.nav.settings"), icon: SettingsIcon },
       ],
     },
@@ -136,6 +138,7 @@ export function Layout({ children }: PropsWithChildren) {
     if (p.startsWith("/calendar")) return t("layout.nav.calendar");
     if (p.startsWith("/trades")) return t("layout.nav.trades");
     if (p.startsWith("/notes")) return t("layout.nav.notes");
+    if (p.startsWith("/analysis")) return t("layout.nav.analysis", "Analisi AI");
     if (p.startsWith("/portfolio")) return t("layout.nav.portfolio");
     if (p.startsWith("/performance")) return t("layout.nav.performance");
     if (p.startsWith("/assets")) return t("layout.nav.assets");
