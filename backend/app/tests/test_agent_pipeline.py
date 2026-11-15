@@ -65,6 +65,13 @@ def test_run_agentic_analysis_with_mock():
         "lead": "Sintesi: probabilità a favore del trend.",
         "coach": """
             Coaching: mantieni la calma e rispetta il piano.
+            Esempio di alert:
+            ```json
+            {
+                "alert": "price > 7.00"
+            }
+            ```
+            Procedi con cautela.
             ```json
             {
                 "overall_score": 8,
@@ -86,8 +93,68 @@ def test_run_agentic_analysis_with_mock():
     assert state.bear_thesis is not None
     assert state.lead_synthesis is not None
     assert state.coaching_report is not None
-    assert "```json" not in state.coaching_report
+    assert "overall_score" not in state.coaching_report
+    assert "alert" in state.coaching_report
     assert "Coaching: mantieni la calma" in state.coaching_report
     assert state.overall_score == 8
     assert "Monitorare area 7.10" in state.action_suggestions
     assert "Rifiutare overtrading" in state.risk_warnings
+
+
+def test_coaching_strips_trailing_raw_json():
+    bundle = _make_dummy_bundle()
+    mock_responses = {
+        "coach": """
+            Coaching text without markdown code fences for machine json.
+            {
+                "overall_score": 9,
+                "action_suggestions": ["Take profit"],
+                "risk_warnings": ["High volatility"]
+            }
+        """,
+        "technical": "Tech report",
+        "fundamental": "Fund report",
+        "cyclical": "Cyc report",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="it", client=client)
+
+    assert state.error is None
+    assert state.overall_score == 9
+    assert "overall_score" not in state.coaching_report
+    assert "Coaching text without markdown code fences" in state.coaching_report
+    assert "Take profit" in state.action_suggestions
+
+
+def test_coaching_only_machine_json_does_not_fallback():
+    bundle = _make_dummy_bundle()
+    mock_responses = {
+        "coach": """
+            ```JSON
+            {
+                "overall_score": 7,
+                "action_suggestions": ["Pazienza"],
+                "risk_warnings": ["Nessuno"]
+            }
+            ```
+        """,
+        "technical": "Tech",
+        "fundamental": "Fund",
+        "cyclical": "Cyc",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="it", client=client)
+
+    assert state.error is None
+    assert state.overall_score == 7
+    # Verify that coaching_report is empty and does not fall back to raw JSON
+    assert state.coaching_report == ""
+    assert "overall_score" not in state.coaching_report
