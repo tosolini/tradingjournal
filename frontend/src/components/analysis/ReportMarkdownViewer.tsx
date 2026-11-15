@@ -1,5 +1,6 @@
 import React from "react";
 import MarkdownPreview from "@uiw/react-markdown-preview";
+import rehypeRaw from "rehype-raw";
 import { useTheme } from "../../contexts/ThemeContext";
 
 interface ReportMarkdownViewerProps {
@@ -57,10 +58,11 @@ export const ReportMarkdownViewer: React.FC<ReportMarkdownViewerProps> = ({
         wrapperElement={{ "data-color-mode": theme === "light" ? "light" : "dark" }}
         pluginsFilter={(type, list) => {
           if (type === "rehype") {
-            // Disable raw HTML interpretation (rehype-raw) to prevent XSS from untrusted LLM markdown
+            // Disable raw HTML interpretation (rehype-raw) by direct plugin reference (unaffected by minification)
+            // to prevent XSS from untrusted LLM markdown
             return list.filter((plugin) => {
               const fn = Array.isArray(plugin) ? plugin[0] : plugin;
-              return typeof fn === "function" ? fn.name !== "rehypeRaw" : true;
+              return fn !== rehypeRaw && (fn as { name?: string })?.name !== "rehypeRaw";
             });
           }
           return list;

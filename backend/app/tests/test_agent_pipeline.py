@@ -128,3 +128,33 @@ def test_coaching_strips_trailing_raw_json():
     assert "overall_score" not in state.coaching_report
     assert "Coaching text without markdown code fences" in state.coaching_report
     assert "Take profit" in state.action_suggestions
+
+
+def test_coaching_only_machine_json_does_not_fallback():
+    bundle = _make_dummy_bundle()
+    mock_responses = {
+        "coach": """
+            ```JSON
+            {
+                "overall_score": 7,
+                "action_suggestions": ["Pazienza"],
+                "risk_warnings": ["Nessuno"]
+            }
+            ```
+        """,
+        "technical": "Tech",
+        "fundamental": "Fund",
+        "cyclical": "Cyc",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="it", client=client)
+
+    assert state.error is None
+    assert state.overall_score == 7
+    # Verify that coaching_report is empty and does not fall back to raw JSON
+    assert state.coaching_report == ""
+    assert "overall_score" not in state.coaching_report

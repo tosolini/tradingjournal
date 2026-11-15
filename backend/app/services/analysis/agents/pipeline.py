@@ -31,7 +31,7 @@ def _extract_json_block(text: str) -> dict:
             pass
 
     # 2. General code fences: try all matches, prefer one with overall_score
-for m in re.finditer(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text, re.IGNORECASE):
+    for m in re.finditer(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text, flags=re.IGNORECASE):
         try:
             parsed = json.loads(m.group(1))
             if isinstance(parsed, dict) and "overall_score" in parsed:
@@ -244,7 +244,7 @@ def run_agentic_analysis(
         cleaned_coaching = re.sub(
             r"\{\s*\"overall_score\"[\s\S]*\}\s*$", "", cleaned_coaching, flags=re.IGNORECASE
         ).strip()
-state.coaching_report = cleaned_coaching
+        state.coaching_report = cleaned_coaching
 
         # Fallback score if parser missed it
         if state.overall_score is None:
