@@ -295,7 +295,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
           {/* Full Coaching Reflection */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span>🏋️</span> {t("analysis.viewer.coach.report_title", "Rapporto del Coach")}
+              <span aria-hidden="true">🏋️</span> {t("analysis.viewer.coach.report_title", "Rapporto del Coach")}
             </h3>
             <ReportMarkdownViewer
               content={report.coaching_report}
@@ -311,7 +311,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-emerald-950/10 border border-emerald-900/30 rounded-xl p-6">
             <h3 className="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
-              <span>🐂</span> {t("analysis.viewer.debate.bull_title", "Tesi Bull (Catalizzatori & Edge)")}
+              <span aria-hidden="true">🐂</span> {t("analysis.viewer.debate.bull_title", "Tesi Bull (Catalizzatori & Edge)")}
             </h3>
             <ReportMarkdownViewer
               content={report.bull_thesis}
@@ -321,7 +321,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
           <div className="bg-rose-950/10 border border-rose-900/30 rounded-xl p-6">
             <h3 className="text-lg font-bold text-rose-400 mb-4 flex items-center gap-2">
-              <span>🐻</span> {t("analysis.viewer.debate.bear_title", "Tesi Bear (Avvocato del Diavolo & Rischi)")}
+              <span aria-hidden="true">🐻</span> {t("analysis.viewer.debate.bear_title", "Tesi Bear (Avvocato del Diavolo & Rischi)")}
             </h3>
             <ReportMarkdownViewer
               content={report.bear_thesis}
@@ -335,7 +335,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
       {activeTab === "lead" && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span>🎓</span> {t("analysis.viewer.lead.title", "Sintesi della Commissione d'Investimento")}
+            <span aria-hidden="true">🎓</span> {t("analysis.viewer.lead.title", "Sintesi della Commissione d'Investimento")}
           </h3>
           <ReportMarkdownViewer
             content={report.lead_synthesis}
@@ -399,7 +399,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span>🔄</span> {t("analysis.viewer.cyclical.report_title", "Report Ciclico & Spettrale Completo")}
+              <span aria-hidden="true">🔄</span> {t("analysis.viewer.cyclical.report_title", "Report Ciclico & Spettrale Completo")}
             </h3>
             <ReportMarkdownViewer
               content={report.cyclical_report}
@@ -413,7 +413,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
       {activeTab === "technical" && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span>📈</span> {t("analysis.viewer.technical.title", "Analisi Tecnica & Indicatori")}
+            <span aria-hidden="true">📈</span> {t("analysis.viewer.technical.title", "Analisi Tecnica & Indicatori")}
           </h3>
           <ReportMarkdownViewer
             content={report.technical_report}
@@ -491,7 +491,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span>📋</span> {t("analysis.viewer.fundamental.report_title", "Analisi Fondamentale & Obbligazionaria")}
+              <span aria-hidden="true">📋</span> {t("analysis.viewer.fundamental.report_title", "Analisi Fondamentale & Obbligazionaria")}
             </h3>
             <ReportMarkdownViewer
               content={report.fundamental_report}
