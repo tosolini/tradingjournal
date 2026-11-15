@@ -202,13 +202,18 @@ def run_agentic_analysis(
             else f"Fornisci il coaching personalizzato per {bundle.symbol}:\n{coach_input}"
         )
         coaching_raw = client.generate(prompts["coach"], coach_msg)
-        state.coaching_report = coaching_raw
 
         # Extract structured outputs
         parsed_json = _extract_json_block(coaching_raw)
         state.overall_score = parsed_json.get("overall_score")
         state.action_suggestions = parsed_json.get("action_suggestions", [])
         state.risk_warnings = parsed_json.get("risk_warnings", [])
+
+        # Strip machine JSON block from coaching_report to keep the text clean
+        cleaned_coaching = re.sub(
+            r"```(?:json)?\s*\{[\s\S]*?\}\s*```", "", coaching_raw
+        ).strip()
+        state.coaching_report = cleaned_coaching if cleaned_coaching else coaching_raw
 
         # Fallback score if parser missed it
         if state.overall_score is None:

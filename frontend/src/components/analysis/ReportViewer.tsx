@@ -3,9 +3,36 @@ import { useTranslation } from "react-i18next";
 import { AnalysisReportDetail } from "../../lib/api";
 import { ScoreGauge } from "./ScoreGauge";
 import { ConvertAnalysisModal } from "./ConvertAnalysisModal";
+import { ReportMarkdownViewer } from "./ReportMarkdownViewer";
 
 interface ReportViewerProps {
   report: AnalysisReportDetail;
+}
+
+/**
+ * Lightweight inline markdown renderer for short action suggestions and risk items.
+ * Handles **bold**, *italic*, and `code` tags cleanly.
+ */
+function renderInlineMarkdown(text: string): React.ReactNode {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={i} className="font-semibold text-white">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+      return (
+        <code key={i} className="px-1.5 py-0.5 rounded bg-slate-800 text-xs font-mono text-primary">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return part;
+  });
 }
 
 export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
@@ -234,7 +261,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                   {report.action_suggestions.map((sugg, idx) => (
                     <li key={idx} className="text-sm text-slate-300 flex items-start gap-2">
                       <span className="text-emerald-400 font-bold">•</span>
-                      <span>{sugg}</span>
+                      <span className="leading-snug">{renderInlineMarkdown(sugg)}</span>
                     </li>
                   ))}
                 </ul>
@@ -255,7 +282,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                   {report.risk_warnings.map((risk, idx) => (
                     <li key={idx} className="text-sm text-slate-300 flex items-start gap-2">
                       <span className="text-rose-400 font-bold">•</span>
-                      <span>{risk}</span>
+                      <span className="leading-snug">{renderInlineMarkdown(risk)}</span>
                     </li>
                   ))}
                 </ul>
@@ -270,9 +297,11 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <span>🏋️</span> {t("analysis.viewer.coach.report_title", "Rapporto del Coach")}
             </h3>
-            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-              {report.coaching_report || t("analysis.viewer.coach.report_empty", "Nessun testo di coaching disponibile.")}
-            </div>
+            <ReportMarkdownViewer
+              content={report.coaching_report}
+              emptyText={t("analysis.viewer.coach.report_empty", "Nessun testo di coaching disponibile.")}
+              stripJsonBlock
+            />
           </div>
         </div>
       )}
@@ -284,18 +313,20 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             <h3 className="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
               <span>🐂</span> {t("analysis.viewer.debate.bull_title", "Tesi Bull (Catalizzatori & Edge)")}
             </h3>
-            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-              {report.bull_thesis || t("analysis.viewer.debate.bull_empty", "Nessun report rialzista generato.")}
-            </div>
+            <ReportMarkdownViewer
+              content={report.bull_thesis}
+              emptyText={t("analysis.viewer.debate.bull_empty", "Nessun report rialzista generato.")}
+            />
           </div>
 
           <div className="bg-rose-950/10 border border-rose-900/30 rounded-xl p-6">
             <h3 className="text-lg font-bold text-rose-400 mb-4 flex items-center gap-2">
               <span>🐻</span> {t("analysis.viewer.debate.bear_title", "Tesi Bear (Avvocato del Diavolo & Rischi)")}
             </h3>
-            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-              {report.bear_thesis || t("analysis.viewer.debate.bear_empty", "Nessun report ribassista generato.")}
-            </div>
+            <ReportMarkdownViewer
+              content={report.bear_thesis}
+              emptyText={t("analysis.viewer.debate.bear_empty", "Nessun report ribassista generato.")}
+            />
           </div>
         </div>
       )}
@@ -306,9 +337,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <span>🎓</span> {t("analysis.viewer.lead.title", "Sintesi della Commissione d'Investimento")}
           </h3>
-          <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-            {report.lead_synthesis || t("analysis.viewer.lead.empty", "Nessuna sintesi disponibile.")}
-          </div>
+          <ReportMarkdownViewer
+            content={report.lead_synthesis}
+            emptyText={t("analysis.viewer.lead.empty", "Nessuna sintesi disponibile.")}
+          />
         </div>
       )}
 
@@ -369,9 +401,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <span>🔄</span> {t("analysis.viewer.cyclical.report_title", "Report Ciclico & Spettrale Completo")}
             </h3>
-            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-              {report.cyclical_report || t("analysis.viewer.cyclical.report_empty", "Nessun report ciclico disponibile.")}
-            </div>
+            <ReportMarkdownViewer
+              content={report.cyclical_report}
+              emptyText={t("analysis.viewer.cyclical.report_empty", "Nessun report ciclico disponibile.")}
+            />
           </div>
         </div>
       )}
@@ -382,9 +415,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <span>📈</span> {t("analysis.viewer.technical.title", "Analisi Tecnica & Indicatori")}
           </h3>
-          <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-            {report.technical_report || t("analysis.viewer.technical.empty", "Nessun report tecnico disponibile.")}
-          </div>
+          <ReportMarkdownViewer
+            content={report.technical_report}
+            emptyText={t("analysis.viewer.technical.empty", "Nessun report tecnico disponibile.")}
+          />
         </div>
       )}
 
@@ -459,9 +493,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <span>📋</span> {t("analysis.viewer.fundamental.report_title", "Analisi Fondamentale & Obbligazionaria")}
             </h3>
-            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-              {report.fundamental_report || t("analysis.viewer.fundamental.report_empty", "Nessun report fondamentale disponibile.")}
-            </div>
+            <ReportMarkdownViewer
+              content={report.fundamental_report}
+              emptyText={t("analysis.viewer.fundamental.report_empty", "Nessun report fondamentale disponibile.")}
+            />
           </div>
         </div>
       )}
