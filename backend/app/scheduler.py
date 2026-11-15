@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+import threading
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -77,6 +78,69 @@ def run_trade_ideas_evaluator_job() -> None:
     except Exception:
         pass
 
+
+def run_scheduled_portfolio_coaching_job() -> None:
+    """Periodic watchdog that analyzes active holdings for users with scheduled coaching enabled."""
+    try:
+        from app.models import AnalysisReport, Holding
+        from app.api.analysis import _execute_analysis_background
+
+        with SessionLocal() as db:
+            users = db.execute(select(User)).scalars().all()
+            for user in users:
+                prefs = user.preferences or {}
+                analysis_prefs = prefs.get("analysis", {}) if isinstance(prefs, dict) else {}
+                if not analysis_prefs.get("scheduled_enabled", False):
+                    continue
+
+                # Check active holdings
+                holdings = db.execute(
+                    select(Holding).where(
+                        Holding.user_id == user.id,
+                        Holding.closed_at.is_(None),
+                    )
+                ).scalars().all()
+
+                recent_cutoff = datetime.now(timezone.utc) - timedelta(hours=20)
+
+                for h in holdings:
+                    asset = h.asset
+                    if not asset:
+                        continue
+
+                    # Avoid redundant analyses if a report was completed or started recently
+                    recent_exists = db.execute(
+                        select(AnalysisReport.id).where(
+                            AnalysisReport.user_id == user.id,
+                            AnalysisReport.symbol == asset.symbol,
+                            AnalysisReport.created_at >= recent_cutoff,
+                            AnalysisReport.status.in_(["pending", "running", "completed"]),
+                        )
+                    ).scalar_one_or_none()
+                    if recent_exists:
+                        continue
+
+                    report = AnalysisReport(
+                        user_id=user.id,
+                        symbol=asset.symbol,
+                        market=asset.exchange or "Euronext",
+                        holding_id=h.id,
+                        language=analysis_prefs.get("language", "it"),
+                        trigger_mode="scheduled",
+                        status="pending",
+                    )
+                    db.add(report)
+                    db.commit()
+                    db.refresh(report)
+                    threading.Thread(
+                        target=_execute_analysis_background,
+                        args=(report.id,),
+                        daemon=True,
+                    ).start()
+    except Exception:
+        pass
+
+
 def start_scheduler() -> None:
     scheduler.add_job(
         run_daily_snapshot_job,
@@ -90,6 +154,13 @@ def start_scheduler() -> None:
         trigger="interval",
         minutes=15,
         id="trade_ideas_evaluator",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        run_scheduled_portfolio_coaching_job,
+        trigger="interval",
+        hours=24,
+        id="scheduled_portfolio_coaching",
         replace_existing=True,
     )
     scheduler.start()

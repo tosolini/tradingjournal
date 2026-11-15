@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     seed_admin_password: str = "password123"
     cors_origins: str = "http://localhost:15173,http://127.0.0.1:15173"
 
+    # Asset Analysis & Coaching LLM settings
+    analysis_llm_provider: str = "gemini"  # "gemini" | "openai" | "anthropic" | "ollama" | "openrouter" | "mock"
+    analysis_llm_model: str = "gemini-2.5-flash"
+    analysis_api_key: str = ""
+    analysis_base_url: str = ""
+    analysis_default_language: str = "it"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @model_validator(mode="after")

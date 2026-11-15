@@ -349,6 +349,14 @@ export function TradeDetailPage() {
           <Link to={`/trades/${trade.id}/images`} className="rounded bg-indigo-500 px-3 py-2 text-sm font-semibold text-white">
             {t("trade_detail.images")}
           </Link>
+          <Link
+            to={`/analysis?symbol=${encodeURIComponent(trade.symbol)}${trade.market ? `&market=${encodeURIComponent(trade.market)}` : ""}&tradeId=${trade.id}`}
+            className="rounded bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
+            title={t("trade_detail.ai_coaching_title", "Analisi & Coaching AI con Multi-Agent Debate")}
+          >
+            <span>🤖</span>
+            <span>{t("trade_detail.ai_coaching", "Coaching AI")}</span>
+          </Link>
         </div>
       </div>
 

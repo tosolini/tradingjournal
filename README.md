@@ -15,6 +15,8 @@ This project is a personal trading journal application designed to help traders 
 - **Performance** page with portfolio value evolution, daily PnL and a color-coded monthly calendar
 - **Fixed Income & Bond Accounting Engine** with dedicated bond parameters (`bond_type`, `maturity_date`, coupon schedules, step-up, bonus CUM), accrued interest (rateo passivo), net/gross YTM solver, Euronext live bond quote imports, and coupon cash flow calendar
 - **Stock Scouting & Trade Ideas Engine** with automated price triggers, proximity percentage delta, lifecycle state machine (`watching` → `triggered` → `stale` → `closed` / `converted`), in-app topbar notification bell, and one-click conversion into executed trades
+- **Multi-Agent Asset Analysis & AI Coaching Engine** with institutional dialectical debate (Technical, Fundamental/Equity Research, Cyclical/Hurst-FFT, Bull vs Bear adversarial debate, Lead Synthesis, and Personal Trading Coach with 1-10 scoring, behavioral bias alerts, and 1-click action conversion into scouting ideas or daily notes)
+- **Interactive LLM Setup Wizard** in Settings with live connection testing (latency in ms), model presets, protected API keys, and multi-provider support: Google Gemini, OpenAI, Anthropic Claude, Ollama (100% private local), and Mock simulation
 - **Daily Notes & Psychology Journal** with an integrated, zero-dependency WYSIWYG editor (forced word-wrapping and line break safety), emotional mood tracker, and **trading discipline checklist** (pre/post-trade psychology)
 - Image uploads for trade annotations (PNG/JPEG/GIF/WebP) with a dedicated serving endpoint
 - Broker-level commission and capital-gain tax configuration
@@ -35,8 +37,8 @@ The entire project is meant to be used on localhost or private networks. **Do no
 
 ## Current version
 
-- Backend: `0.2.1` (`backend/pyproject.toml`)
-- Frontend: `0.2.1` (`frontend/package.json`)
+- Backend: `0.3.0` (`backend/pyproject.toml`)
+- Frontend: `0.3.0` (`frontend/package.json`)
 
 More details on change log and versioning strategy in the [changelog.md](changelog.md) file.
 

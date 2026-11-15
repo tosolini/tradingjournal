@@ -8,6 +8,7 @@ import {
   adminCreateUser, adminDeleteUser, adminGetSettings, adminListUsers, adminUpdateSettings, adminUpdateUser,
   exportAllData, getMe, importAllData, updateMe, api,
 } from "../lib/api";
+import { LlmSettingsWizard } from "../components/settings/LlmSettingsWizard";
 
 type UserPreferencesPayload = {
   preferences?: {
@@ -980,12 +981,14 @@ export function SettingsPage() {
       </section>
 
 
-      <DataSection />
-
       <SnapshotSettingsSection />
 
       <DashboardSettingsSection />
       <PortfolioSettingsSection />
+
+      <LlmSettingsWizard />
+
+      <DataSection />
 
       <section className="card p-4">
         <h2 className="mb-2 text-lg font-semibold">{t("settings.session.title")}</h2>

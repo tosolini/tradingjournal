@@ -13,10 +13,18 @@ import {
   XIcon,
 } from "../components/icons";
 
+export type CalendarDayPnl = {
+  stock: number;
+  etf: number;
+  bond?: number;
+  total: number;
+};
+
 type CalendarExecution = {
   id: number;
   trade_id: number;
   symbol: string;
+  instrument_type?: string;
   action: string;
   executed_at: string;
   quantity: number;
@@ -37,12 +45,14 @@ type CalendarDayData = {
   date: string;
   notes: CalendarNote[];
   executions: CalendarExecution[];
+  pnl?: CalendarDayPnl;
 };
 
 type CalendarMonthResponse = {
   year: number;
   month: number;
   days: CalendarDayData[];
+  month_pnl?: CalendarDayPnl;
 };
 
 function asNumber(value: string | number | undefined): number {
@@ -89,6 +99,7 @@ export function CalendarPage() {
 
   const [activeTab, setActiveTab] = useState<"calendar" | "markets">("calendar");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [assetFilter, setAssetFilter] = useState<"all" | "stock" | "etf">("all");
 
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
@@ -140,6 +151,19 @@ export function CalendarPage() {
     return index;
   }, [monthData]);
 
+  const getPnlValue = (
+    dayData: CalendarDayData | undefined,
+    fallbackVal: number,
+    filter: "all" | "stock" | "etf"
+  ): number => {
+    if (dayData?.pnl) {
+      if (filter === "stock") return dayData.pnl.stock;
+      if (filter === "etf") return dayData.pnl.etf;
+      return dayData.pnl.total;
+    }
+    return filter === "all" ? fallbackVal : 0;
+  };
+
   // Compute month summary statistics
   const monthKpis = useMemo(() => {
     let totalPnl = 0;
@@ -147,21 +171,35 @@ export function CalendarPage() {
     let redDays = 0;
     let executionsCount = 0;
 
-    // Check PnL for current month
-    if (dailyPnlList) {
+    if (monthData?.days && monthData.days.length > 0) {
+      for (const d of monthData.days) {
+        const fallback = pnlByDate.get(d.date) ? asNumber(pnlByDate.get(d.date)?.day_pnl) : 0;
+        const val = getPnlValue(d, fallback, assetFilter);
+        totalPnl += val;
+        if (val > 0.001) greenDays += 1;
+        else if (val < -0.001) redDays += 1;
+
+        for (const exec of d.executions) {
+          const instType = exec.instrument_type || "stock";
+          if (assetFilter === "all") {
+            executionsCount += 1;
+          } else if (assetFilter === "stock" && instType === "stock") {
+            executionsCount += 1;
+          } else if (assetFilter === "etf" && instType === "etf") {
+            executionsCount += 1;
+          }
+        }
+      }
+    } else if (dailyPnlList) {
       for (const item of dailyPnlList) {
         if (item.date.startsWith(monthKey)) {
           const pnl = asNumber(item.day_pnl);
-          totalPnl += pnl;
-          if (pnl > 0.001) greenDays += 1;
-          else if (pnl < -0.001) redDays += 1;
+          if (assetFilter === "all") {
+            totalPnl += pnl;
+            if (pnl > 0.001) greenDays += 1;
+            else if (pnl < -0.001) redDays += 1;
+          }
         }
-      }
-    }
-
-    if (monthData?.days) {
-      for (const d of monthData.days) {
-        executionsCount += d.executions.length;
       }
     }
 
@@ -175,7 +213,7 @@ export function CalendarPage() {
       winRate,
       executionsCount,
     };
-  }, [dailyPnlList, monthData, monthKey]);
+  }, [monthData, dailyPnlList, monthKey, assetFilter, pnlByDate]);
 
   const monthGrid = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
@@ -202,6 +240,9 @@ export function CalendarPage() {
     const rows: Array<{
       days: typeof monthGrid;
       weekPnl: number;
+      weekTotalPnl: number;
+      weekStockPnl: number;
+      weekEtfPnl: number;
       greenDays: number;
       redDays: number;
       executionsCount: number;
@@ -210,7 +251,9 @@ export function CalendarPage() {
 
     for (let i = 0; i < monthGrid.length; i += 7) {
       const daysChunk = monthGrid.slice(i, i + 7);
-      let weekPnl = 0;
+      let weekTotalPnl = 0;
+      let weekStockPnl = 0;
+      let weekEtfPnl = 0;
       let greenDays = 0;
       let redDays = 0;
       let executionsCount = 0;
@@ -219,19 +262,42 @@ export function CalendarPage() {
       for (const cell of daysChunk) {
         if (cell.isoDate) {
           if (!refDate) refDate = new Date(cell.isoDate);
-          const pnlPoint = pnlByDate.get(cell.isoDate);
-          if (pnlPoint) {
-            const val = asNumber(pnlPoint.day_pnl);
-            weekPnl += val;
-            if (val > 0.001) greenDays += 1;
-            else if (val < -0.001) redDays += 1;
-          }
           const dayData = byDate.get(cell.isoDate);
+          const fallback = pnlByDate.get(cell.isoDate) ? asNumber(pnlByDate.get(cell.isoDate)?.day_pnl) : 0;
+
+          if (dayData?.pnl) {
+            weekTotalPnl += dayData.pnl.total;
+            weekStockPnl += dayData.pnl.stock;
+            weekEtfPnl += dayData.pnl.etf;
+          } else {
+            weekTotalPnl += fallback;
+          }
+
+          const activeVal = getPnlValue(dayData, fallback, assetFilter);
+          if (activeVal > 0.001) greenDays += 1;
+          else if (activeVal < -0.001) redDays += 1;
+
           if (dayData) {
-            executionsCount += dayData.executions.length;
+            for (const exec of dayData.executions) {
+              const instType = exec.instrument_type || "stock";
+              if (assetFilter === "all") {
+                executionsCount += 1;
+              } else if (assetFilter === "stock" && instType === "stock") {
+                executionsCount += 1;
+              } else if (assetFilter === "etf" && instType === "etf") {
+                executionsCount += 1;
+              }
+            }
           }
         }
       }
+
+      const activeWeekPnl =
+        assetFilter === "stock"
+          ? weekStockPnl
+          : assetFilter === "etf"
+          ? weekEtfPnl
+          : weekTotalPnl;
 
       // Compute ISO week number
       const target = refDate || new Date(year, month - 1, 1);
@@ -243,7 +309,10 @@ export function CalendarPage() {
 
       rows.push({
         days: daysChunk,
-        weekPnl,
+        weekPnl: activeWeekPnl,
+        weekTotalPnl,
+        weekStockPnl,
+        weekEtfPnl,
         greenDays,
         redDays,
         executionsCount,
@@ -251,10 +320,19 @@ export function CalendarPage() {
       });
     }
     return rows;
-  }, [monthGrid, pnlByDate, byDate, month, year]);
+  }, [monthGrid, byDate, pnlByDate, assetFilter, month, year]);
 
   const selectedDayData = selectedDay ? byDate.get(selectedDay) : null;
-  const selectedDayPnl = selectedDay ? pnlByDate.get(selectedDay) : null;
+  const selectedDayFallback = selectedDay && pnlByDate.get(selectedDay) ? asNumber(pnlByDate.get(selectedDay)?.day_pnl) : 0;
+  const selectedDayPnlVal = selectedDayData ? getPnlValue(selectedDayData, selectedDayFallback, assetFilter) : selectedDayFallback;
+  const displayedExecutions = useMemo(() => {
+    if (!selectedDayData?.executions) return [];
+    return selectedDayData.executions.filter((exec) => {
+      if (assetFilter === "all") return true;
+      const it = exec.instrument_type || "stock";
+      return assetFilter === "stock" ? it === "stock" : it === "etf";
+    });
+  }, [selectedDayData, assetFilter]);
 
   return (
     <div className="space-y-5">
@@ -388,6 +466,43 @@ export function CalendarPage() {
             <div className="text-base font-bold capitalize text-slate-100 dark:text-slate-900">
               {toMonthLabel(monthCursor, locale)}
             </div>
+
+            {/* Asset Class Filter */}
+            <div className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-950/60 p-1 text-xs dark:border-slate-200 dark:bg-slate-100">
+              <button
+                type="button"
+                onClick={() => setAssetFilter("all")}
+                className={`rounded-lg px-3 py-1 font-semibold transition cursor-pointer ${
+                  assetFilter === "all"
+                    ? "bg-teal-500 text-slate-950 shadow-xs"
+                    : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
+                }`}
+              >
+                {t("calendar.filter_all", "Tutti")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssetFilter("stock")}
+                className={`rounded-lg px-3 py-1 font-semibold transition cursor-pointer ${
+                  assetFilter === "stock"
+                    ? "bg-teal-500 text-slate-950 shadow-xs"
+                    : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
+                }`}
+              >
+                {t("calendar.filter_stock", "Azionario")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssetFilter("etf")}
+                className={`rounded-lg px-3 py-1 font-semibold transition cursor-pointer ${
+                  assetFilter === "etf"
+                    ? "bg-teal-500 text-slate-950 shadow-xs"
+                    : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
+                }`}
+              >
+                {t("calendar.filter_etf", "ETF")}
+              </button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -433,14 +548,20 @@ export function CalendarPage() {
                       }
 
                       const dayData = byDate.get(cell.isoDate);
-                      const pnlPoint = pnlByDate.get(cell.isoDate);
-                      const executions = dayData?.executions || [];
-                      const notes = dayData?.notes || [];
+                      const fallback = pnlByDate.get(cell.isoDate) ? asNumber(pnlByDate.get(cell.isoDate)?.day_pnl) : 0;
+                      const dayPnlVal = getPnlValue(dayData, fallback, assetFilter);
+                      const hasDayPnl = dayData?.pnl !== undefined || pnlByDate.has(cell.isoDate);
+                      const isProfit = dayPnlVal > 0.001;
+                      const isLoss = dayPnlVal < -0.001;
 
-                      const dayPnlVal = pnlPoint ? asNumber(pnlPoint.day_pnl) : null;
-                      const isProfit = dayPnlVal !== null && dayPnlVal > 0.001;
-                      const isLoss = dayPnlVal !== null && dayPnlVal < -0.001;
-                      const hasActivity = executions.length > 0 || notes.length > 0 || dayPnlVal !== null;
+                      const allExecutions = dayData?.executions || [];
+                      const executions = allExecutions.filter((exec) => {
+                        if (assetFilter === "all") return true;
+                        const it = exec.instrument_type || "stock";
+                        return assetFilter === "stock" ? it === "stock" : it === "etf";
+                      });
+                      const notes = dayData?.notes || [];
+                      const hasActivity = executions.length > 0 || notes.length > 0 || (hasDayPnl && Math.abs(dayPnlVal) > 0.001);
 
                       return (
                         <div
@@ -485,7 +606,7 @@ export function CalendarPage() {
                             </div>
 
                             {/* Daily PnL prominent badge */}
-                            {dayPnlVal !== null && (
+                            {hasDayPnl && (
                               <div
                                 className={`mb-2 rounded-lg px-2 py-1 text-center font-bold tabular-nums text-xs shadow-xs ${
                                   isProfit
@@ -496,12 +617,6 @@ export function CalendarPage() {
                                 }`}
                               >
                                 <div>{formatSignedMoney(dayPnlVal, "EUR", locale)}</div>
-                                {pnlPoint?.day_pnl_pct && (
-                                  <div className="text-[10px] opacity-80 font-normal">
-                                    {asNumber(pnlPoint.day_pnl_pct) >= 0 ? "+" : ""}
-                                    {asNumber(pnlPoint.day_pnl_pct).toFixed(2)}%
-                                  </div>
-                                )}
                               </div>
                             )}
                           </div>
@@ -512,12 +627,19 @@ export function CalendarPage() {
                               <div
                                 key={execution.id}
                                 className="flex items-center justify-between rounded-md border border-slate-700/60 bg-slate-800/70 px-1.5 py-0.5 text-[10px] text-slate-200 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-800 truncate"
-                                title={`${execution.symbol} ${execution.action} ${execution.quantity} @ ${execution.price}`}
+                                title={`${execution.symbol} (${execution.instrument_type || "stock"}) ${execution.action} ${execution.quantity} @ ${execution.price}`}
                               >
-                                <span className="font-semibold text-teal-300 dark:text-teal-800">
-                                  {execution.symbol}
-                                </span>
-                                <span className="text-[9px] uppercase font-medium text-slate-400 dark:text-slate-500">
+                                <div className="flex items-center gap-1 min-w-0">
+                                  <span className="font-semibold text-teal-300 dark:text-teal-800 truncate">
+                                    {execution.symbol}
+                                  </span>
+                                  {assetFilter === "all" && execution.instrument_type === "etf" && (
+                                    <span className="rounded bg-sky-500/20 px-1 text-[8px] font-mono text-sky-300 dark:text-sky-700">
+                                      ETF
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[9px] uppercase font-medium text-slate-400 dark:text-slate-500 shrink-0 ml-1">
                                   {execution.action}
                                 </span>
                               </div>
@@ -547,11 +669,11 @@ export function CalendarPage() {
                           Sett. {weekRow.weekNumber}
                         </span>
                         <span className="rounded bg-slate-800/80 px-1 py-0.2 text-[9px] font-mono text-slate-400 dark:bg-slate-200 dark:text-slate-600">
-                          W{weekRow.weekNumber}
+                          {assetFilter === "all" ? `W${weekRow.weekNumber}` : assetFilter === "stock" ? "AZIONI" : "ETF"}
                         </span>
                       </div>
 
-                      <div className="my-auto py-2 text-center">
+                      <div className="my-auto py-1 text-center">
                         <div
                           className={`text-sm font-black tabular-nums ${
                             weekRow.weekPnl > 0.001
@@ -570,17 +692,96 @@ export function CalendarPage() {
                         </div>
                       </div>
 
+                      {/* Breakdown when "all" is selected */}
+                      {assetFilter === "all" && (
+                        <div className="space-y-0.5 border-t border-slate-800/60 dark:border-slate-200/60 pt-1 pb-0.5 text-[9px] text-slate-400 dark:text-slate-500">
+                          <div className="flex items-center justify-between">
+                            <span>{t("calendar.breakdown_stock", "Azioni")}:</span>
+                            <span
+                              className={`font-semibold tabular-nums ${
+                                weekRow.weekStockPnl > 0.001
+                                  ? "text-emerald-400 dark:text-emerald-700"
+                                  : weekRow.weekStockPnl < -0.001
+                                  ? "text-red-400 dark:text-red-600"
+                                  : "text-slate-400"
+                              }`}
+                            >
+                              {formatSignedMoney(weekRow.weekStockPnl, "EUR", locale)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>{t("calendar.breakdown_etf", "ETF")}:</span>
+                            <span
+                              className={`font-semibold tabular-nums ${
+                                weekRow.weekEtfPnl > 0.001
+                                  ? "text-emerald-400 dark:text-emerald-700"
+                                  : weekRow.weekEtfPnl < -0.001
+                                  ? "text-red-400 dark:text-red-600"
+                                  : "text-slate-400"
+                              }`}
+                            >
+                              {formatSignedMoney(weekRow.weekEtfPnl, "EUR", locale)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="text-[10px] text-slate-400 dark:text-slate-500 text-center border-t border-slate-800/60 dark:border-slate-200/60 pt-1">
                         {weekRow.executionsCount} {t("dashboard.cards.trades", "trade")}
                       </div>
                     </div>
 
                     {/* Mobile Week Summary Banner */}
-                    <div className="lg:hidden flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs dark:border-slate-200 dark:bg-slate-100">
-                      <span className="font-semibold text-slate-400 dark:text-slate-600">Settimana {weekRow.weekNumber}</span>
-                      <span className={`font-bold tabular-nums ${weekRow.weekPnl > 0.001 ? "text-emerald-400 dark:text-emerald-700" : weekRow.weekPnl < -0.001 ? "text-red-400 dark:text-red-600" : "text-slate-400"}`}>
-                        {formatSignedMoney(weekRow.weekPnl, "EUR", locale)} ({weekRow.greenDays}W - {weekRow.redDays}L)
-                      </span>
+                    <div className="lg:hidden flex flex-col gap-1 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-xs dark:border-slate-200 dark:bg-slate-100">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-slate-400 dark:text-slate-600">
+                          Settimana {weekRow.weekNumber}
+                          {assetFilter !== "all" && ` (${assetFilter === "stock" ? t("calendar.filter_stock", "Azionario") : "ETF"})`}
+                        </span>
+                        <span
+                          className={`font-bold tabular-nums ${
+                            weekRow.weekPnl > 0.001
+                              ? "text-emerald-400 dark:text-emerald-700"
+                              : weekRow.weekPnl < -0.001
+                              ? "text-red-400 dark:text-red-600"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {formatSignedMoney(weekRow.weekPnl, "EUR", locale)} ({weekRow.greenDays}W - {weekRow.redDays}L)
+                        </span>
+                      </div>
+                      {assetFilter === "all" && (
+                        <div className="flex items-center justify-end gap-3 text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-800/60 dark:border-slate-200/60">
+                          <span>
+                            {t("calendar.breakdown_stock", "Azioni")}:{" "}
+                            <strong
+                              className={
+                                weekRow.weekStockPnl > 0.001
+                                  ? "text-emerald-400 dark:text-emerald-600"
+                                  : weekRow.weekStockPnl < -0.001
+                                  ? "text-red-400 dark:text-red-600"
+                                  : ""
+                              }
+                            >
+                              {formatSignedMoney(weekRow.weekStockPnl, "EUR", locale)}
+                            </strong>
+                          </span>
+                          <span>
+                            {t("calendar.breakdown_etf", "ETF")}:{" "}
+                            <strong
+                              className={
+                                weekRow.weekEtfPnl > 0.001
+                                  ? "text-emerald-400 dark:text-emerald-600"
+                                  : weekRow.weekEtfPnl < -0.001
+                                  ? "text-red-400 dark:text-red-600"
+                                  : ""
+                              }
+                            >
+                              {formatSignedMoney(weekRow.weekEtfPnl, "EUR", locale)}
+                            </strong>
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -621,35 +822,64 @@ export function CalendarPage() {
                   </button>
                 </div>
 
-                {/* Day PnL Hero if available */}
-                {selectedDayPnl && (
-                  <div className="my-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4 dark:border-slate-200 dark:bg-slate-50 flex items-center justify-between">
-                    <div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                        {isItalian ? "PnL Giornaliero" : "Day PnL"}
-                      </div>
-                      <div
-                        className={`text-2xl font-bold tabular-nums mt-0.5 ${
-                          asNumber(selectedDayPnl.day_pnl) > 0
-                            ? "text-emerald-400 dark:text-emerald-700"
-                            : asNumber(selectedDayPnl.day_pnl) < 0
-                            ? "text-red-400 dark:text-red-600"
-                            : "text-slate-200 dark:text-slate-800"
-                        }`}
-                      >
-                        {formatSignedMoney(asNumber(selectedDayPnl.day_pnl), "EUR", locale)}
+                {/* Day PnL Hero */}
+                {(selectedDayData?.pnl || selectedDayFallback !== 0) && (
+                  <div className="my-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4 dark:border-slate-200 dark:bg-slate-50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+                          {isItalian ? "PnL Giornaliero" : "Day PnL"}
+                          {assetFilter !== "all" && ` · ${assetFilter === "stock" ? (isItalian ? "Azionario" : "Stocks") : "ETF"}`}
+                        </div>
+                        <div
+                          className={`text-2xl font-bold tabular-nums mt-0.5 ${
+                            selectedDayPnlVal > 0.001
+                              ? "text-emerald-400 dark:text-emerald-700"
+                              : selectedDayPnlVal < -0.001
+                              ? "text-red-400 dark:text-red-600"
+                              : "text-slate-200 dark:text-slate-800"
+                          }`}
+                        >
+                          {formatSignedMoney(selectedDayPnlVal, "EUR", locale)}
+                        </div>
                       </div>
                     </div>
-                    {selectedDayPnl.day_pnl_pct && (
-                      <div
-                        className={`rounded-lg px-2.5 py-1 text-sm font-bold tabular-nums ${
-                          asNumber(selectedDayPnl.day_pnl_pct) >= 0
-                            ? "bg-emerald-500/15 text-emerald-300 dark:bg-emerald-100 dark:text-emerald-800"
-                            : "bg-red-500/15 text-red-300 dark:bg-red-100 dark:text-red-800"
-                        }`}
-                      >
-                        {asNumber(selectedDayPnl.day_pnl_pct) >= 0 ? "+" : ""}
-                        {asNumber(selectedDayPnl.day_pnl_pct).toFixed(2)}%
+
+                    {/* Breakdown by instrument type if available */}
+                    {selectedDayData?.pnl && (
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 dark:border-slate-200/80 text-xs">
+                        <div className="rounded-lg bg-slate-900/80 p-2 border border-slate-800/60 dark:bg-slate-100 dark:border-slate-200/60">
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold">
+                            {isItalian ? "Azionario" : "Stocks"}
+                          </div>
+                          <div
+                            className={`text-sm font-bold tabular-nums ${
+                              selectedDayData.pnl.stock > 0.001
+                                ? "text-emerald-400 dark:text-emerald-700"
+                                : selectedDayData.pnl.stock < -0.001
+                                ? "text-red-400 dark:text-red-600"
+                                : "text-slate-300 dark:text-slate-700"
+                            }`}
+                          >
+                            {formatSignedMoney(selectedDayData.pnl.stock, "EUR", locale)}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-slate-900/80 p-2 border border-slate-800/60 dark:bg-slate-100 dark:border-slate-200/60">
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold">
+                            ETF
+                          </div>
+                          <div
+                            className={`text-sm font-bold tabular-nums ${
+                              selectedDayData.pnl.etf > 0.001
+                                ? "text-emerald-400 dark:text-emerald-700"
+                                : selectedDayData.pnl.etf < -0.001
+                                ? "text-red-400 dark:text-red-600"
+                                : "text-slate-300 dark:text-slate-700"
+                            }`}
+                          >
+                            {formatSignedMoney(selectedDayData.pnl.etf, "EUR", locale)}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -659,16 +889,16 @@ export function CalendarPage() {
                 <div className="mt-5">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5 flex items-center gap-2">
                     <TrendingUpIcon className="h-4 w-4 text-teal-400" />
-                    <span>{t("calendar.latest_executions")} ({selectedDayData?.executions.length || 0})</span>
+                    <span>{t("calendar.latest_executions")} ({displayedExecutions.length})</span>
                   </h3>
 
-                  {!selectedDayData?.executions.length ? (
+                  {!displayedExecutions.length ? (
                     <div className="rounded-xl border border-dashed border-slate-800 p-4 text-center text-xs text-slate-500 dark:border-slate-200">
                       {isItalian ? "Nessuna operazione registrata in questa data" : "No executions recorded on this date"}
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {selectedDayData.executions.map((exec) => (
+                      {displayedExecutions.map((exec) => (
                         <div
                           key={exec.id}
                           className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs dark:border-slate-200 dark:bg-slate-50"
@@ -686,6 +916,9 @@ export function CalendarPage() {
                                 }`}
                               >
                                 {exec.action}
+                              </span>
+                              <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono uppercase text-slate-400 dark:bg-slate-200 dark:text-slate-600">
+                                {exec.instrument_type === "etf" ? "ETF" : isItalian ? "Azione" : "Stock"}
                               </span>
                             </div>
                             <div className="mt-1 text-slate-400 dark:text-slate-500">

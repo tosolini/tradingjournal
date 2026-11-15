@@ -1199,3 +1199,123 @@ export const tradeIdeasApi = {
     api("/api/trade-ideas/refresh-prices", { method: "POST" }),
   getAlerts: (): Promise<TradeIdeaAlertsResult> => api("/api/trade-ideas/alerts"),
 };
+
+export interface AnalysisTargetItem {
+  symbol: string;
+  name: string;
+  instrument_type: string;
+  market: string;
+  holding_id?: number | null;
+  trade_idea_id?: number | null;
+  trade_id?: number | null;
+  quantity?: number | null;
+  avg_cost?: number | null;
+  side?: string | null;
+  stop_loss?: number | null;
+  target_price?: number | null;
+  target_source: "holding" | "trade_idea" | "trade";
+}
+
+export interface AnalysisRunPayload {
+  symbol: string;
+  market?: string;
+  holding_id?: number | null;
+  trade_idea_id?: number | null;
+  trade_id?: number | null;
+  language?: "it" | "en";
+}
+
+export interface AnalysisReportSummary {
+  id: number;
+  symbol: string;
+  market: string;
+  status: "pending" | "running" | "completed" | "failed";
+  language: "it" | "en";
+  trigger_mode: "manual" | "scheduled";
+  overall_score?: number | null;
+  llm_model_used?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  completed_at?: string | null;
+}
+
+export interface AnalysisReportDetail {
+  id: number;
+  user_id: number;
+  symbol: string;
+  market: string;
+  holding_id?: number | null;
+  trade_idea_id?: number | null;
+  trade_id?: number | null;
+  language: "it" | "en";
+  trigger_mode: "manual" | "scheduled";
+  status: "pending" | "running" | "completed" | "failed";
+  completed_at?: string | null;
+  technical_report?: string | null;
+  fundamental_report?: string | null;
+  cyclical_report?: string | null;
+  bull_thesis?: string | null;
+  bear_thesis?: string | null;
+  lead_synthesis?: string | null;
+  coaching_report?: string | null;
+  overall_score?: number | null;
+  action_suggestions: string[];
+  risk_warnings: string[];
+  data_snapshot: Record<string, unknown>;
+  llm_model_used?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LlmConfig {
+  provider: "gemini" | "openai" | "anthropic" | "ollama" | "openrouter" | "mock";
+  model?: string;
+  api_key?: string;
+  base_url?: string;
+}
+
+export interface TestLlmPayload {
+  provider: string;
+  model?: string;
+  api_key?: string;
+  base_url?: string;
+}
+
+export interface TestLlmResult {
+  success: boolean;
+  latency_ms?: number | null;
+  message: string;
+  error?: string | null;
+}
+
+export interface AnalysisPurgePayload {
+  older_than_days?: number;
+  only_failed?: boolean;
+  all_reports?: boolean;
+}
+
+export interface AnalysisPurgeResult {
+  deleted_count: number;
+  message: string;
+}
+
+export const analysisApi = {
+  getTargets: (): Promise<AnalysisTargetItem[]> => api("/api/analysis/targets"),
+  run: (payload: AnalysisRunPayload): Promise<AnalysisReportSummary> =>
+    api("/api/analysis/run", { method: "POST", body: JSON.stringify(payload) }),
+  getHistory: (symbol?: string, limit = 100, status?: string): Promise<AnalysisReportSummary[]> => {
+    const q = new URLSearchParams();
+    if (symbol) q.set("symbol", symbol);
+    if (limit) q.set("limit", String(limit));
+    if (status) q.set("status", status);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return api(`/api/analysis/history${query}`);
+  },
+  get: (id: number): Promise<AnalysisReportDetail> => api(`/api/analysis/${id}`),
+  delete: (id: number): Promise<{ ok: boolean }> => api(`/api/analysis/${id}`, { method: "DELETE" }),
+  purge: (payload: AnalysisPurgePayload): Promise<AnalysisPurgeResult> =>
+    api("/api/analysis/purge", { method: "POST", body: JSON.stringify(payload) }),
+  testLlm: (payload: TestLlmPayload): Promise<TestLlmResult> =>
+    api("/api/analysis/test-llm", { method: "POST", body: JSON.stringify(payload) }),
+};

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
-from app.api import accounts, assets, auth, admin, bonds, brokers, calendar, dashboard, data, exchanges, holdings, ledger, notes, portfolio, snapshots, tickers, trades, trade_ideas, uploads
+from app.api import accounts, analysis, assets, auth, admin, bonds, brokers, calendar, dashboard, data, exchanges, holdings, ledger, notes, portfolio, snapshots, tickers, trades, trade_ideas, uploads
 from app.bootstrap import ensure_seed_admin, ensure_seed_exchanges
 from app.config import settings
 from app.database import Base, engine
@@ -125,6 +125,13 @@ def ensure_runtime_schema_compatibility() -> None:
                 conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS accrued_interest_in NUMERIC(18, 6) NOT NULL DEFAULT 0"))
                 conn.execute(text("ALTER TABLE holdings ADD COLUMN IF NOT EXISTS eligible_for_bonus BOOLEAN NOT NULL DEFAULT FALSE"))
 
+    if "analysis_reports" in table_names:
+        report_columns = {column["name"] for column in inspector.get_columns("analysis_reports")}
+        with engine.begin() as conn:
+            if "trade_id" not in report_columns:
+                conn.execute(text("ALTER TABLE analysis_reports ADD COLUMN IF NOT EXISTS trade_id INTEGER REFERENCES trades(id) ON DELETE SET NULL"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_analysis_reports_trade_id ON analysis_reports(trade_id)"))
+
     # The table is created by Base.metadata.create_all, no ALTER needed
 
 
@@ -189,6 +196,7 @@ app.include_router(portfolio.router)
 app.include_router(trades.router)
 app.include_router(notes.router)
 app.include_router(trade_ideas.router)
+app.include_router(analysis.router)
 app.include_router(uploads.router)
 app.include_router(dashboard.router)
 app.include_router(calendar.router)

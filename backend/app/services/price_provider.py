@@ -7,7 +7,7 @@ import yfinance as yf
 
 # In-memory TTL cache: {normalized_symbol: (timestamp, price_or_None)}
 _price_cache: dict[str, tuple[float, Optional[Decimal]]] = {}
-CACHE_TTL = 300  # 5 minutes
+CACHE_TTL = 900  # 15 minutes
 
 # Hardcoded market → yfinance suffix mapping (covers common cases; Exchange model's
 # `suffix` field is the canonical source but requires DB access per call).

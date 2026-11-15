@@ -907,3 +907,102 @@ class TradeIdeaListResponse(BaseModel):
 class TradeIdeaAlertsResponse(BaseModel):
     unread_count: int
     items: list[TradeIdeaResponse]
+
+
+class AnalysisTargetItem(BaseModel):
+    symbol: str
+    name: str
+    instrument_type: str
+    market: str
+    holding_id: Optional[int] = None
+    trade_idea_id: Optional[int] = None
+    trade_id: Optional[int] = None
+    quantity: Optional[Decimal] = None
+    avg_cost: Optional[Decimal] = None
+    side: Optional[str] = None
+    stop_loss: Optional[Decimal] = None
+    target_price: Optional[Decimal] = None
+    target_source: str  # "holding" | "trade_idea" | "trade"
+
+
+class AnalysisRunRequest(BaseModel):
+    symbol: str
+    market: str = "Euronext"
+    holding_id: Optional[int] = None
+    trade_idea_id: Optional[int] = None
+    trade_id: Optional[int] = None
+    language: Optional[str] = None
+
+
+class TestLlmRequest(BaseModel):
+    __test__ = False
+    provider: str  # "gemini" | "openai" | "anthropic" | "ollama" | "openrouter" | "mock"
+    model: Optional[str] = None
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+
+
+class TestLlmResponse(BaseModel):
+    __test__ = False
+    success: bool
+    latency_ms: Optional[int] = None
+    message: str
+    error: Optional[str] = None
+
+
+class AnalysisReportSummary(BaseModel):
+    id: int
+    symbol: str
+    market: str
+    status: str
+    language: str
+    trigger_mode: str
+    overall_score: Optional[int] = None
+    llm_model_used: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AnalysisPurgeRequest(BaseModel):
+    older_than_days: Optional[int] = None
+    only_failed: bool = False
+    all_reports: bool = False
+
+
+class AnalysisPurgeResponse(BaseModel):
+    deleted_count: int
+    message: str
+
+
+class AnalysisReportDetail(BaseModel):
+    id: int
+    user_id: int
+    symbol: str
+    market: str
+    holding_id: Optional[int] = None
+    trade_idea_id: Optional[int] = None
+    trade_id: Optional[int] = None
+    language: str
+    trigger_mode: str
+    status: str
+    completed_at: Optional[datetime] = None
+    technical_report: Optional[str] = None
+    fundamental_report: Optional[str] = None
+    cyclical_report: Optional[str] = None
+    bull_thesis: Optional[str] = None
+    bear_thesis: Optional[str] = None
+    lead_synthesis: Optional[str] = None
+    coaching_report: Optional[str] = None
+    overall_score: Optional[int] = None
+    action_suggestions: list[str] = Field(default_factory=list)
+    risk_warnings: list[str] = Field(default_factory=list)
+    data_snapshot: dict[str, Any] = Field(default_factory=dict)
+    llm_model_used: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

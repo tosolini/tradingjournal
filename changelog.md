@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.3.0] - 2026-11-15
+
+- Multi-Agent Asset Analysis & Coaching Engine
+  - Institutional multi-agent dialectical architecture inspired by TradingAgents (TauricResearch), providing third-party perspective across Technical, Fundamental, and Cyclical dimensions.
+  - Specialized Parallel Analysts:
+    - `Technical Analyst`: Vectorized Wilder RSI, MACD (12, 26, 9), Bollinger Bands, ATR, SMAs (20/50/200), pivot support/resistance, and trend alignment.
+    - `Fundamental & Fixed Income Analyst`: Equity valuation multiples (P/E, Forward P/E, PEG ratio), operating and gross margins, Free Cash Flow, analyst consensus recommendations, and Wall Street target prices (Mean/High/Low); bond yield to maturity, coupon schedule, and duration.
+    - `Cyclical & Fractal Analyst`: Hurst Exponent ($H$) via Rescaled Range (R/S analysis) to categorize market regimes (persistent trending $>0.55$, mean-reverting $<0.45$, or random walk $0.45-0.55$), paired with Fast Fourier Transform (FFT) spectral decomposition to isolate dominant trading-day cycles and phase states.
+  - Adversarial Dialectical Debate:
+    - `Bull Researcher`: Formulates optimistic catalysts, valuation upside, and operational strengths.
+    - `Bear Researcher`: Devil's advocate identifying bubble risks, margin contraction, macro headwinds, and overbought levels.
+    - `Lead Researcher`: Committee synthesis weighing arguments into balanced institutional thesis.
+    - `Personal Trading Coach`: Generates a 1-10 overall score, concrete operational suggestions (Stop Loss adjustment, profit-taking, sizing), and psychological risk alerts (FOMO, disposition effect, overtrading).
+  - Open Position & Equity Specialization:
+    - Direct coaching on active open trades (`trades` table) evaluating entry price, unrealized PnL, Stop Loss, Target Price, and Risk/Reward (R:R) ratio.
+    - Arbitrary stock ticker search on-demand with live database autocomplete (`/api/tickers/search`) matching symbols and corporate names.
+  - Analysis History 3rd Tab & Retention Purge Management:
+    - Moved analysis history from cramped left sidebar into a dedicated 3rd tab (`Analysis History`), freeing 100% of horizontal space for full-width ReportViewer and TradingView charts.
+    - Dedicated `AnalysisHistoryView` dashboard featuring 4 executive KPI metrics (Total, Average Score, Fresh <30d, Stale >30d), ticker search, status/timeframe filters, and pagination to prevent infinite scrolling.
+    - Retention Purge API (`POST /api/analysis/purge`) and interactive modal supporting deletion of stale reports (>30 days), failed runs, or full history reset with confirmation.
+    - Freshness warning banner and quick "Re-run with Today's Data" action for reports older than 30 days.
+  - Smart Action Conversion Wizard:
+    - Two-step micro-modal allowing one-click conversion of AI analyses into either a **Scouting Trade Idea** (with pre-filled triggers, SL, TP, and thesis) or a **Daily Journal Note** (with integrated native WYSIWYG editor, sentiment, and key bullet points).
+  - Data & Infrastructure:
+    - Unified agnostic LLM factory supporting Gemini, OpenAI, Anthropic, Ollama, and Mock.
+    - New `analysis_reports` model and Alembic migration `20261115_0019_add_analysis_reports.py`.
+    - REST endpoints under `/api/analysis` (`targets`, `run`, `history`, `detail`, `delete`).
+    - LLM Setup Wizard & Per-User Configuration:
+    - Interactive LLM Setup Wizard in Settings (`/settings`) allowing users to choose their preferred provider: Google Gemini, OpenAI, Anthropic Claude, Ollama (100% private local), or Mock simulation.
+    - Real-time connection ping (`POST /api/analysis/test-llm`) validating API credentials and reporting network latency (ms) before saving.
+    - Direct persistence in PostgreSQL user preferences (`user.preferences.llm_config`) with zero database schema migrations or Docker restarts required.
+    - Automatic fallback hierarchy: User Preferences → Environment Variables (`.env`) → MockChatClient.
+    - Comprehensive `.env.example` reference documenting every server setting and AI parameter.
+    - In-app Mock mode banner in Analysis page offering a direct one-click link to Settings.
+  - Periodic background portfolio coaching evaluator via APScheduler.
+- Calendar & Dashboard Enhancements
+  - Monthly calendar view now computes and displays daily realized PnL breakdown categorized by asset class (Stocks, ETFs, Bonds).
+  - Added `DashboardSkeleton` animated loader component for smoother KPI loading transitions.
+- Documentation & Guides
+  - Added dedicated chapter for AI Analysis & Coaching in in-app user guide in both Italian and English (`docs/it/analysis.md`, `docs/en/analysis.md`, `frontend/src/docs/it/analysis.md`, `frontend/src/docs/en/analysis.md`).
+- Version bump to 0.3.0 (Backend 0.3.0 / Frontend 0.3.0)
+
 ## [0.2.1] - 2026-11-02
 
 - Version bump to 0.2.1 (Backend 0.2.1 / Frontend 0.2.1)
