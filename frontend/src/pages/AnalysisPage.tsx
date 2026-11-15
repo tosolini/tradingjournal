@@ -12,6 +12,7 @@ import {
 } from "../lib/api";
 import { ReportViewer } from "../components/analysis/ReportViewer";
 import { useToast } from "../contexts/ToastContext";
+import { SearchIcon } from "../components/icons";
 
 export const AnalysisPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -228,98 +229,163 @@ export const AnalysisPage: React.FC = () => {
       </div>
 
       {/* Control Panel: Target Selection & Run Trigger */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
-        {/* Mode Selector Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <button
-            type="button"
-            onClick={() => setInputMode("existing")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-              inputMode === "existing"
-                ? "bg-primary text-white"
-                : "text-slate-400 hover:text-white hover:bg-slate-800"
-            }`}
-          >
-            <span>📁 I miei Asset & Trade</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800/80 text-slate-300">
-              {targets.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setInputMode("custom")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-              inputMode === "custom"
-                ? "bg-primary text-white"
-                : "text-slate-400 hover:text-white hover:bg-slate-800"
-            }`}
-          >
-            <span>🔍 Cerca Qualsiasi Azione (Ticker Libero)</span>
-          </button>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+        {/* Segmented Mode Selector Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+          <div className="inline-flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 self-start">
+            <button
+              type="button"
+              onClick={() => setInputMode("existing")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                inputMode === "existing"
+                  ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700/60"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <span>📁 I miei Asset & Trade</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-900 text-slate-300 font-mono">
+                {targets.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode("custom")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                inputMode === "custom"
+                  ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700/60"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <span>🔍 Cerca Qualsiasi Azione (Ticker Libero)</span>
+            </button>
+          </div>
+          <span className="text-xs text-slate-400 hidden sm:inline font-medium">
+            {inputMode === "existing"
+              ? "Analizza posizioni a mercato, holdings ed idee attive"
+              : "Ricerca titolo globale per analisi tecnica, fondamentale e ciclica"}
+          </span>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div className="flex-1">
-            {inputMode === "existing" ? (
-              /* Existing Inventory Selector */
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Seleziona Titolo o Posizione Aperta
+        {/* Input & Action Grid - Perfect Horizontal Alignment */}
+        {inputMode === "existing" ? (
+          /* Existing Mode: 8/9 cols for select, 4/3 cols for button */
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+              <div className="md:col-span-8 lg:col-span-9">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 h-4 flex items-center gap-1.5">
+                  <span>Seleziona Titolo o Posizione Aperta</span>
                 </label>
                 {targetsLoading ? (
-                  <div className="h-10 bg-slate-800 animate-pulse rounded-lg" />
+                  <div className="h-11 bg-slate-800 animate-pulse rounded-xl" />
                 ) : targets.length === 0 ? (
-                  <div className="text-sm text-slate-400 py-2">
-                    Nessun trade aperto o asset in portafoglio. Passa a "Cerca Qualsiasi Azione" sopra!
+                  <div className="h-11 flex items-center px-4 rounded-xl border border-dashed border-slate-800 text-xs text-slate-400">
+                    Nessun trade aperto o asset in portafoglio. Passa alla scheda "Cerca Qualsiasi Azione" sopra!
                   </div>
                 ) : (
-                  <select
-                    value={selectedTargetKey}
-                    onChange={(e) => setSelectedTargetKey(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    {openTrades.length > 0 && (
-                      <optgroup label="⚡ Posizioni Azionarie Aperte (Trades)">
-                        {openTrades.map((t) => (
-                          <option key={`trade:${t.trade_id}`} value={`trade:${t.trade_id}`}>
-                            {t.symbol} — {t.side?.toUpperCase()} #{t.trade_id} ({t.quantity ? `${Number(t.quantity)} pz` : ""}{t.avg_cost ? ` @ €${Number(t.avg_cost).toFixed(2)}` : ""})
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {holdings.length > 0 && (
-                      <optgroup label="📊 Holdings di Portafoglio (ETF & Bond)">
-                        {holdings.map((t) => (
-                          <option key={`holding:${t.symbol}`} value={`holding:${t.symbol}`}>
-                            {t.symbol} — {t.name} ({t.quantity ? `${Number(t.quantity)} pz` : ""})
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {tradeIdeas.length > 0 && (
-                      <optgroup label="💡 Trade Ideas & Scouting">
-                        {tradeIdeas.map((t) => (
-                          <option key={`trade_idea:${t.symbol}`} value={`trade_idea:${t.symbol}`}>
-                            {t.symbol} (Setup Scouting)
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
+                  <div className="h-11 rounded-xl border border-slate-700/80 bg-slate-950/60 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all flex items-center px-3.5">
+                    <span className="text-slate-400 mr-2.5 text-sm shrink-0">📁</span>
+                    <select
+                      value={selectedTargetKey}
+                      onChange={(e) => setSelectedTargetKey(e.target.value)}
+                      className="w-full bg-transparent border-0 p-0 text-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-0 cursor-pointer"
+                    >
+                      {openTrades.length > 0 && (
+                        <optgroup label="⚡ Posizioni Azionarie Aperte (Trades)">
+                          {openTrades.map((t) => (
+                            <option key={`trade:${t.trade_id}`} value={`trade:${t.trade_id}`} className="bg-slate-900 text-white">
+                              {t.symbol} — {t.side?.toUpperCase()} #{t.trade_id} ({t.quantity ? `${Number(t.quantity)} pz` : ""}{t.avg_cost ? ` @ €${Number(t.avg_cost).toFixed(2)}` : ""})
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {holdings.length > 0 && (
+                        <optgroup label="📊 Holdings di Portafoglio (ETF & Bond)">
+                          {holdings.map((t) => (
+                            <option key={`holding:${t.symbol}`} value={`holding:${t.symbol}`} className="bg-slate-900 text-white">
+                              {t.symbol} — {t.name} ({t.quantity ? `${Number(t.quantity)} pz` : ""})
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {tradeIdeas.length > 0 && (
+                        <optgroup label="💡 Trade Ideas & Scouting">
+                          {tradeIdeas.map((t) => (
+                            <option key={`trade_idea:${t.symbol}`} value={`trade_idea:${t.symbol}`} className="bg-slate-900 text-white">
+                              {t.symbol} (Setup Scouting)
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                  </div>
                 )}
               </div>
-            ) : (
-              /* Free-form Ticker Input with Internal DB Autocomplete */
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div ref={autocompleteRef} className="relative">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold uppercase text-slate-400">
-                      Simbolo Azionario o Nome
-                    </label>
-                    {isSearchingTickers && (
-                      <span className="text-[10px] text-teal-400 animate-pulse">Cerca nel database...</span>
-                    )}
-                  </div>
+
+              <div className="md:col-span-4 lg:col-span-3">
+                <div className="h-4 hidden md:block mb-1.5" />
+                <button
+                  type="button"
+                  onClick={handleStartAnalysis}
+                  disabled={runMutation.isPending || targets.length === 0}
+                  className="w-full h-11 px-5 rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary-hover hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center gap-2 cursor-pointer group active:scale-[0.99]"
+                >
+                  {runMutation.isPending ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      <span>Analisi in corso...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="group-hover:scale-110 transition-transform">🚀</span>
+                      <span>Genera Coaching AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Selected Target Information Strip */}
+            {selectedTarget && (
+              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-400">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-950/40 border border-slate-800">
+                  <span className="font-semibold text-white">{selectedTarget.symbol}</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">{selectedTarget.name}</span>
+                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700/50">
+                    {selectedTarget.market}
+                  </span>
+                </div>
+                {selectedTarget.target_source === "trade" && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-medium">
+                    ⚡ Posizione a mercato: {selectedTarget.side?.toUpperCase()} #{selectedTarget.trade_id}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Custom Mode: 5 cols for ticker, 4 cols for market, 3 cols for button */
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+              {/* Col 1: Ticker Input */}
+              <div ref={autocompleteRef} className="md:col-span-5 relative">
+                <div className="flex items-center justify-between mb-1.5 h-4">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Simbolo o Nome Azione
+                  </label>
+                  {isSearchingTickers && (
+                    <span className="text-[10px] text-teal-400 font-mono animate-pulse flex items-center gap-1">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal-400 animate-ping" />
+                      Ricerca...
+                    </span>
+                  )}
+                </div>
+
+                <div className="h-11 rounded-xl border border-slate-700/80 bg-slate-950/60 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all flex items-center px-3.5">
+                  <SearchIcon className="h-4 w-4 text-slate-400 shrink-0 mr-2.5" />
                   <input
                     type="text"
                     value={customSymbol}
@@ -329,63 +395,72 @@ export const AnalysisPage: React.FC = () => {
                     }}
                     placeholder="Es. NVDA, PLTR, Ferrari, Eni..."
                     autoComplete="off"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full bg-transparent border-0 p-0 text-white font-mono text-xs sm:text-sm uppercase placeholder:text-slate-500 placeholder:font-sans focus:outline-none focus:ring-0"
                   />
-
-                  {/* Autocomplete Dropdown from Internal DB */}
-                  {showSuggestions && tickerSuggestions.length > 0 && (
-                    <ul className="absolute left-0 top-full z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 shadow-2xl divide-y divide-slate-800/80">
-                      {tickerSuggestions.map((tk) => (
-                        <li
-                          key={tk.id}
-                          onMouseDown={() => handleSelectTicker(tk)}
-                          className="flex cursor-pointer items-baseline justify-between gap-2 px-3 py-2.5 hover:bg-slate-800/80 transition-colors"
-                        >
-                          <div className="flex items-baseline gap-2 min-w-0">
-                            <span className="font-mono font-bold text-teal-400 text-sm shrink-0">
-                              {tk.symbol}
-                            </span>
-                            <span className="truncate text-xs text-slate-300">
-                              {tk.name}
-                            </span>
-                          </div>
-                          <span className="shrink-0 text-[10px] uppercase font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700/50">
-                            {tk.market}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {/* Selected Ticker Pill */}
-                  {selectedDbTicker && (
-                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-teal-300 bg-teal-950/40 border border-teal-800/40 rounded-md px-2 py-1">
-                      <span className="text-teal-400">✓</span>
-                      <span className="font-semibold">{selectedDbTicker.symbol}</span>
-                      <span className="text-slate-400 truncate max-w-[180px]">— {selectedDbTicker.name}</span>
-                    </div>
+                  {customSymbol && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomSymbol("");
+                        setSelectedDbTicker(null);
+                        setTickerSuggestions([]);
+                        setShowSuggestions(false);
+                      }}
+                      className="text-slate-500 hover:text-slate-300 text-xs px-1 cursor-pointer"
+                    >
+                      ✕
+                    </button>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Mercato Principale
-                  </label>
+                {/* Autocomplete Dropdown from Internal DB */}
+                {showSuggestions && tickerSuggestions.length > 0 && (
+                  <ul className="absolute left-0 top-full z-50 mt-1.5 w-full max-h-56 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 shadow-2xl divide-y divide-slate-800/80">
+                    {tickerSuggestions.map((tk) => (
+                      <li
+                        key={tk.id}
+                        onMouseDown={() => handleSelectTicker(tk)}
+                        className="flex cursor-pointer items-baseline justify-between gap-2 px-3.5 py-2.5 hover:bg-slate-800/80 transition-colors"
+                      >
+                        <div className="flex items-baseline gap-2 min-w-0">
+                          <span className="font-mono font-bold text-teal-400 text-sm shrink-0">
+                            {tk.symbol}
+                          </span>
+                          <span className="truncate text-xs text-slate-300">
+                            {tk.name}
+                          </span>
+                        </div>
+                        <span className="shrink-0 text-[10px] uppercase font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700/50">
+                          {tk.market}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Col 2: Market Selector */}
+              <div className="md:col-span-4">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 h-4">
+                  Mercato di Borsa
+                </label>
+                <div className="h-11 rounded-xl border border-slate-700/80 bg-slate-950/60 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all flex items-center px-3">
+                  <span className="text-slate-400 mr-2 text-sm shrink-0">🌐</span>
                   <select
                     value={customMarket}
                     onChange={(e) => setCustomMarket(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full bg-transparent border-0 p-0 text-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-0 cursor-pointer"
                   >
-                    <option value="NASDAQ">NASDAQ (USA)</option>
-                    <option value="NYSE">NYSE (USA)</option>
-                    <option value="Euronext Milan">Euronext Milan / Borsa Italiana</option>
-                    <option value="Euronext Growth Milan">Euronext Growth Milan</option>
-                    <option value="Euronext Global Equity Market">Euronext Global Equity Market</option>
-                    <option value="EuroTLX">EuroTLX</option>
-                    <option value="Euronext Paris">Euronext Paris (.PA)</option>
-                    <option value="Euronext Amsterdam">Euronext Amsterdam (.AS)</option>
-                    <option value="Xetra">XETRA (Germania .DE)</option>
-                    <option value="London">LSE (Londra .L)</option>
+                    <option value="NASDAQ" className="bg-slate-900 text-white">NASDAQ (USA)</option>
+                    <option value="NYSE" className="bg-slate-900 text-white">NYSE (USA)</option>
+                    <option value="Euronext Milan" className="bg-slate-900 text-white">Euronext Milan / Borsa Italiana</option>
+                    <option value="Euronext Growth Milan" className="bg-slate-900 text-white">Euronext Growth Milan</option>
+                    <option value="Euronext Global Equity Market" className="bg-slate-900 text-white">Euronext GEM</option>
+                    <option value="EuroTLX" className="bg-slate-900 text-white">EuroTLX</option>
+                    <option value="Euronext Paris" className="bg-slate-900 text-white">Euronext Paris (.PA)</option>
+                    <option value="Euronext Amsterdam" className="bg-slate-900 text-white">Euronext Amsterdam (.AS)</option>
+                    <option value="Xetra" className="bg-slate-900 text-white">XETRA (Germania .DE)</option>
+                    <option value="London" className="bg-slate-900 text-white">LSE (Londra .L)</option>
                     {![
                       "NASDAQ",
                       "NYSE",
@@ -398,56 +473,55 @@ export const AnalysisPage: React.FC = () => {
                       "Xetra",
                       "London",
                     ].includes(customMarket) && (
-                      <option value={customMarket}>{customMarket}</option>
+                      <option value={customMarket} className="bg-slate-900 text-white">{customMarket}</option>
                     )}
                   </select>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Run Button */}
-          <div className="shrink-0">
-            <button
-              onClick={handleStartAnalysis}
-              disabled={runMutation.isPending || (inputMode === "existing" && targets.length === 0)}
-              className="w-full sm:w-auto px-6 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-semibold text-sm rounded-lg shadow transition-all flex items-center justify-center gap-2"
-            >
-              {runMutation.isPending ? (
-                <>
-                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  <span>Analisi in corso...</span>
-                </>
-              ) : (
-                <>
-                  <span>🚀</span>
-                  <span>Genera Coaching AI</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+              {/* Col 3: Action Button */}
+              <div className="md:col-span-3">
+                <div className="h-4 hidden md:block mb-1.5" />
+                <button
+                  type="button"
+                  onClick={handleStartAnalysis}
+                  disabled={runMutation.isPending || !customSymbol.trim()}
+                  className="w-full h-11 px-5 rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary-hover hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center gap-2 cursor-pointer group active:scale-[0.99]"
+                >
+                  {runMutation.isPending ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      <span>Analisi in corso...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="group-hover:scale-110 transition-transform">🚀</span>
+                      <span>Genera Coaching AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
 
-        {/* Selected Target Info Bar */}
-        {inputMode === "existing" && selectedTarget && (
-          <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-4 text-xs text-slate-400">
-            <span className="font-semibold text-slate-200">
-              {selectedTarget.target_source === "trade"
-                ? `Trade Aperto ${selectedTarget.side?.toUpperCase()} #${selectedTarget.trade_id}`
-                : selectedTarget.instrument_type.toUpperCase()}
-            </span>
-            <span>Mercato: <strong className="text-slate-300">{selectedTarget.market}</strong></span>
-            {selectedTarget.avg_cost && (
-              <span>Prezzo Carico: <strong className="text-slate-300">€{Number(selectedTarget.avg_cost).toFixed(2)}</strong></span>
-            )}
-            {selectedTarget.stop_loss && (
-              <span>Stop Loss: <strong className="text-rose-400">€{Number(selectedTarget.stop_loss).toFixed(2)}</strong></span>
-            )}
-            {selectedTarget.target_price && (
-              <span>Target: <strong className="text-emerald-400">€{Number(selectedTarget.target_price).toFixed(2)}</strong></span>
+            {/* Selected DB Ticker Metadata Pill */}
+            {selectedDbTicker && (
+              <div className="flex items-center gap-2 pt-1 text-xs text-slate-400 animate-fade-in">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-300 font-medium">
+                  <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
+                  <span className="font-mono font-bold">{selectedDbTicker.symbol}</span>
+                  <span className="text-slate-400">•</span>
+                  <span className="truncate max-w-[280px]">{selectedDbTicker.name}</span>
+                  <span className="text-[10px] uppercase font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700/50">
+                    {selectedDbTicker.market}
+                  </span>
+                </span>
+                <span className="text-[11px] text-slate-500 hidden sm:inline">
+                  Titolo verificato da database
+                </span>
+              </div>
             )}
           </div>
         )}
