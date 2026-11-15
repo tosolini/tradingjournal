@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { AnalysisReportDetail } from "../../lib/api";
 import { ScoreGauge } from "./ScoreGauge";
+import { ConvertAnalysisModal } from "./ConvertAnalysisModal";
 
 interface ReportViewerProps {
   report: AnalysisReportDetail;
@@ -8,6 +9,7 @@ interface ReportViewerProps {
 
 export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
   const [activeTab, setActiveTab] = useState<"coach" | "debate" | "lead" | "technical" | "fundamental" | "cyclical">("coach");
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState<boolean>(false);
 
   // Extract cyclical metrics if present in data snapshot
   const cyclicalSnapshot = (report.data_snapshot?.cyclical as Record<string, unknown>) || {};
@@ -60,6 +62,19 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             {report.llm_model_used && (
               <p className="text-xs text-slate-500 font-mono">Modello: {report.llm_model_used}</p>
             )}
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setIsConvertModalOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-950/40 transition-all cursor-pointer group"
+                title="Converti questa analisi in un'Idea di Scouting o in una Nota di Diario"
+              >
+                <span className="group-hover:scale-110 transition-transform">⚡</span>
+                <span>Trasforma in Azione</span>
+                <span className="text-[10px] opacity-75 font-normal">(Scouting / Nota)</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-8 self-center md:self-auto">
@@ -418,6 +433,13 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
           </div>
         </div>
       )}
+
+      {/* Convert into Action Modal */}
+      <ConvertAnalysisModal
+        isOpen={isConvertModalOpen}
+        onClose={() => setIsConvertModalOpen(false)}
+        report={report}
+      />
     </div>
   );
 };
