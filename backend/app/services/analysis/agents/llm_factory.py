@@ -1,8 +1,9 @@
 """Agnostic LLM Provider supporting Gemini, OpenAI, Anthropic, and Ollama."""
 import json
 import logging
+import time
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, Optional
 import requests
 
 from app.config import settings
@@ -159,3 +160,139 @@ def get_llm_client(
 
     # Default fallback
     return MockChatClient()
+
+
+def get_user_llm_client(user_llm_config: Optional[dict[str, Any]] = None) -> BaseChatClient:
+    """Return LLM client resolved from user preferences or global settings."""
+    if user_llm_config and isinstance(user_llm_config, dict):
+        provider = user_llm_config.get("provider")
+        model = user_llm_config.get("model")
+        api_key = user_llm_config.get("api_key")
+        base_url = user_llm_config.get("base_url")
+        return get_llm_client(provider=provider, model=model, api_key=api_key, base_url=base_url)
+
+    return get_llm_client()
+
+
+def test_llm_connection(
+    provider: str,
+    model: Optional[str] = None,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> tuple[bool, Optional[int], str, Optional[str]]:
+    """
+    Test real-time connectivity and credentials for an LLM provider.
+    Returns (success, latency_ms, message, error_message).
+    """
+    prov = (provider or "mock").strip().lower()
+    t_start = time.perf_counter()
+
+    if prov == "mock":
+        latency_ms = max(1, int((time.perf_counter() - t_start) * 1000))
+        return True, latency_ms, "Provider Mock (Offline) pronto all'uso.", None
+
+    effective_key = (api_key or "").strip() or settings.analysis_api_key
+
+    try:
+        if prov == "gemini":
+            if not effective_key:
+                return False, None, "Connessione fallita", "API Key mancante per Google Gemini."
+            eff_model = (model or settings.analysis_llm_model or "gemini-2.5-flash").replace("models/", "")
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/{eff_model}:generateContent"
+                f"?key={effective_key}"
+            )
+            payload = {
+                "contents": [{"role": "user", "parts": [{"text": "Ping"}]}],
+                "generationConfig": {"maxOutputTokens": 5, "temperature": 0.1},
+            }
+            resp = requests.post(url, json=payload, timeout=12)
+            latency_ms = int((time.perf_counter() - t_start) * 1000)
+            if resp.status_code == 200:
+                return True, latency_ms, f"Connessione a Gemini ({eff_model}) riuscita!", None
+            else:
+                err_detail = resp.text[:200]
+                try:
+                    err_json = resp.json()
+                    err_detail = err_json.get("error", {}).get("message", err_detail)
+                except Exception:
+                    pass
+                return False, latency_ms, "Errore API Gemini", f"HTTP {resp.status_code}: {err_detail}"
+
+        elif prov == "openai":
+            if not effective_key:
+                return False, None, "Connessione fallita", "API Key mancante per OpenAI."
+            eff_model = model or settings.analysis_llm_model or "gpt-4o-mini"
+            eff_base_url = (base_url or settings.analysis_base_url or "https://api.openai.com/v1").rstrip("/")
+            url = f"{eff_base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {effective_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": eff_model,
+                "messages": [{"role": "user", "content": "Ping"}],
+                "max_tokens": 5,
+            }
+            resp = requests.post(url, headers=headers, json=payload, timeout=12)
+            latency_ms = int((time.perf_counter() - t_start) * 1000)
+            if resp.status_code == 200:
+                return True, latency_ms, f"Connessione a OpenAI ({eff_model}) riuscita!", None
+            else:
+                err_detail = resp.text[:200]
+                try:
+                    err_json = resp.json()
+                    err_detail = err_json.get("error", {}).get("message", err_detail)
+                except Exception:
+                    pass
+                return False, latency_ms, "Errore API OpenAI", f"HTTP {resp.status_code}: {err_detail}"
+
+        elif prov == "anthropic":
+            if not effective_key:
+                return False, None, "Connessione fallita", "API Key mancante per Anthropic."
+            eff_model = model or settings.analysis_llm_model or "claude-3-5-sonnet-20241022"
+            url = "https://api.anthropic.com/v1/messages"
+            headers = {
+                "x-api-key": effective_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": eff_model,
+                "messages": [{"role": "user", "content": "Ping"}],
+                "max_tokens": 5,
+            }
+            resp = requests.post(url, headers=headers, json=payload, timeout=12)
+            latency_ms = int((time.perf_counter() - t_start) * 1000)
+            if resp.status_code == 200:
+                return True, latency_ms, f"Connessione ad Anthropic ({eff_model}) riuscita!", None
+            else:
+                err_detail = resp.text[:200]
+                try:
+                    err_json = resp.json()
+                    err_detail = err_json.get("error", {}).get("message", err_detail)
+                except Exception:
+                    pass
+                return False, latency_ms, "Errore API Anthropic", f"HTTP {resp.status_code}: {err_detail}"
+
+        elif prov == "ollama":
+            eff_base_url = (base_url or settings.analysis_base_url or "http://localhost:11434").rstrip("/")
+            # Remove trailing /v1 if present for tags check
+            root_url = eff_base_url[:-3] if eff_base_url.endswith("/v1") else eff_base_url
+            tags_url = f"{root_url}/api/tags"
+            resp = requests.get(tags_url, timeout=6)
+            latency_ms = int((time.perf_counter() - t_start) * 1000)
+            if resp.status_code == 200:
+                return True, latency_ms, f"Connessione a Ollama riuscita ({root_url})!", None
+            else:
+                return False, latency_ms, "Errore Ollama", f"HTTP {resp.status_code}: {resp.text[:200]}"
+
+        else:
+            return False, None, "Provider non supportato", f"Provider sconosciuto: {provider}"
+
+    except requests.exceptions.ConnectionError as err:
+        return False, None, "Errore di connessione", f"Impossibile raggiungere il server host: {str(err)[:200]}"
+    except requests.exceptions.Timeout:
+        return False, None, "Timeout connessione", "La richiesta ha impiegato più di 12 secondi."
+    except Exception as exc:
+        return False, None, "Errore imprevisto", str(exc)[:250]

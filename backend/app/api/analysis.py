@@ -14,7 +14,10 @@ from app.schemas import (
     AnalysisReportSummary,
     AnalysisRunRequest,
     AnalysisTargetItem,
+    TestLlmRequest,
+    TestLlmResponse,
 )
+from app.services.analysis.agents.llm_factory import get_user_llm_client, test_llm_connection
 from app.services.analysis.agents.pipeline import run_agentic_analysis
 from app.services.analysis.data_collector import collect_analysis_data
 
@@ -45,8 +48,13 @@ def _execute_analysis_background(report_id: int):
                 trade_id=report.trade_id,
             )
 
-            # 2. Run multi-agent pipeline
-            state = run_agentic_analysis(bundle, language=report.language)
+            # 2. Resolve client from user preferences or system fallback
+            user = db.get(User, report.user_id)
+            user_llm_cfg = (user.preferences or {}).get("llm_config") if user else None
+            llm_client = get_user_llm_client(user_llm_cfg)
+
+            # 3. Run multi-agent pipeline
+            state = run_agentic_analysis(bundle, language=report.language, client=llm_client)
 
             if state.error:
                 report.status = "failed"
@@ -265,4 +273,36 @@ def delete_analysis_report(
         raise HTTPException(status_code=404, detail="Analysis report not found")
     db.delete(report)
     db.commit()
+    return {"ok": True}
+
+
+@router.post("/test-llm", response_model=TestLlmResponse)
+def test_llm_endpoint(
+    payload: TestLlmRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Test connection and credentials for an LLM provider."""
+    api_key = payload.api_key
+    base_url = payload.base_url
+
+    # Fallback to saved user preferences if field was left blank
+    if not api_key and current_user.preferences:
+        saved_cfg = current_user.preferences.get("llm_config")
+        if isinstance(saved_cfg, dict) and saved_cfg.get("provider") == payload.provider:
+            api_key = saved_cfg.get("api_key")
+            if not base_url:
+                base_url = saved_cfg.get("base_url")
+
+    success, latency_ms, message, error = test_llm_connection(
+        provider=payload.provider,
+        model=payload.model,
+        api_key=api_key,
+        base_url=base_url,
+    )
+    return TestLlmResponse(
+        success=success,
+        latency_ms=latency_ms,
+        message=message,
+        error=error,
+    )
     return {"ok": True}

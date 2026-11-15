@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  api,
   analysisApi,
   AnalysisReportDetail,
   AnalysisReportSummary,
   AnalysisTargetItem,
+  LlmConfig,
   Ticker,
   tickersApi,
 } from "../lib/api";
@@ -91,6 +93,13 @@ export const AnalysisPage: React.FC = () => {
     queryKey: ["analysisTargets"],
     queryFn: analysisApi.getTargets,
   });
+
+  // Fetch user LLM preferences to check if running in Mock mode
+  const { data: prefData } = useQuery({
+    queryKey: ["user-preferences"],
+    queryFn: () => api<{ preferences?: { llm_config?: LlmConfig } }>("/api/auth/preferences"),
+  });
+  const isMockProvider = prefData?.preferences?.llm_config?.provider === "mock";
 
   // 2. Fetch history
   const { data: history = [], isLoading: historyLoading } = useQuery<AnalysisReportSummary[]>({
@@ -227,6 +236,25 @@ export const AnalysisPage: React.FC = () => {
           Analisi tecnica, fondamentale (Equity Research) e ciclica (Hurst & FFT) per azioni, trade aperti e portafoglio con dibattito dialettico Bull vs Bear.
         </p>
       </div>
+
+      {/* Mock Mode Notice Banner */}
+      {isMockProvider && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <span className="text-base">🧪</span>
+            <span>
+              <strong>Modalità Simulazione (Mock) attiva:</strong> I report vengono generati offline con dati simulati senza connettersi ad un LLM reale.
+            </span>
+          </div>
+          <Link
+            to="/settings"
+            className="inline-flex items-center gap-1 shrink-0 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 px-3 py-1.5 text-xs font-semibold text-amber-100 transition-colors"
+          >
+            <span>Configura Provider AI (Gemini, Claude, OpenAI, Ollama)</span>
+            <span>→</span>
+          </Link>
+        </div>
+      )}
 
       {/* Control Panel: Target Selection & Run Trigger */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">

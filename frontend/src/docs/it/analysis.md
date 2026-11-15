@@ -77,3 +77,22 @@ Nella sezione **Analisi AI** della barra laterale puoi operare in due modalità:
 Dall'intestazione del report generato, puoi convertire immediatamente le conclusioni dell'AI con il pulsante **`⚡ Trasforma in Azione`**:
 1. **Idea di Scouting**: salva il titolo nella tua Watchlist con il prezzo trigger, lo Stop Loss (supporto tecnico) e il Target Price (consensus Wall Street) pre-compilati dall'AI.
 2. **Nota di Trading**: registra le riflessioni nel diario giornaliero; include un editor **WYSIWYG** per rifinire il testo prima del salvataggio.
+
+---
+
+## ⚙️ Configurazione Provider LLM & Credenziali
+
+Non è necessario modificare file di sistema o riavviare Docker per abilitare l'AI. Puoi configurare il tuo modello preferito direttamente dall'interfaccia:
+
+1. Vai in **Impostazioni (`/settings`) -> Motore AI & Coaching (LLM)**.
+2. Scegli il tuo provider preferito tra le card interattive:
+   - **Google Gemini** *(Consigliato)*: chiavi gratuite/a consumo su [Google AI Studio](https://aistudio.google.com/app/apikey). Modello consigliato: `gemini-2.5-flash` o `gemini-1.5-pro`.
+   - **OpenAI**: chiavi su [OpenAI Platform](https://platform.openai.com/api-keys). Modello consigliato: `gpt-4o` o `gpt-4o-mini`.
+   - **Anthropic Claude**: chiavi su [Anthropic Console](https://console.anthropic.com/). Modello consigliato: `claude-3-5-sonnet-20241022`.
+   - **Ollama (Locale / Self-Hosted)**: 100% privato e gratuito sul tuo computer. Modello consigliato: `llama3.3` o `deepseek-r1:8b`. Endpoint: `http://localhost:11434/v1` (o `http://host.docker.internal:11434/v1` in Docker).
+   - **Simulazione (Mock)**: modalità dimostrativa offline senza API key né costi.
+3. Inserisci la tua API Key (con tasto di visibilità 👁️).
+4. Clicca su **🔌 Testa Connessione** per validare in tempo reale le credenziali e verificare la latenza di rete (ms).
+5. Clicca su **💾 Salva configurazione AI**: le credenziali vengono memorizzate nelle preferenze utente nel tuo database protetto.
+
+> **Nota per amministratori di sistema**: Se desideri impostare credenziali predefinite per l'intera istanza, consulta il file `.env.example` alle voci `ANALYSIS_LLM_PROVIDER`, `ANALYSIS_LLM_MODEL`, `ANALYSIS_API_KEY` e `ANALYSIS_BASE_URL`. Le preferenze personali dell'utente hanno sempre la precedenza sul file `.env`.

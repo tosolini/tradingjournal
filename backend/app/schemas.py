@@ -917,7 +917,6 @@ class AnalysisTargetItem(BaseModel):
     holding_id: Optional[int] = None
     trade_idea_id: Optional[int] = None
     trade_id: Optional[int] = None
-    trade_id: Optional[int] = None
     quantity: Optional[Decimal] = None
     avg_cost: Optional[Decimal] = None
     side: Optional[str] = None
@@ -933,6 +932,22 @@ class AnalysisRunRequest(BaseModel):
     trade_idea_id: Optional[int] = None
     trade_id: Optional[int] = None
     language: Optional[str] = None
+
+
+class TestLlmRequest(BaseModel):
+    __test__ = False
+    provider: str  # "gemini" | "openai" | "anthropic" | "ollama" | "mock"
+    model: Optional[str] = None
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+
+
+class TestLlmResponse(BaseModel):
+    __test__ = False
+    success: bool
+    latency_ms: Optional[int] = None
+    message: str
+    error: Optional[str] = None
 
 
 class AnalysisReportSummary(BaseModel):

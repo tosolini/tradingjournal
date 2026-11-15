@@ -22,7 +22,14 @@
     - Unified agnostic LLM factory supporting Gemini, OpenAI, Anthropic, Ollama, and Mock.
     - New `analysis_reports` model and Alembic migration `20261115_0019_add_analysis_reports.py`.
     - REST endpoints under `/api/analysis` (`targets`, `run`, `history`, `detail`, `delete`).
-    - Periodic background portfolio coaching evaluator via APScheduler.
+    - LLM Setup Wizard & Per-User Configuration:
+    - Interactive LLM Setup Wizard in Settings (`/settings`) allowing users to choose their preferred provider: Google Gemini, OpenAI, Anthropic Claude, Ollama (100% private local), or Mock simulation.
+    - Real-time connection ping (`POST /api/analysis/test-llm`) validating API credentials and reporting network latency (ms) before saving.
+    - Direct persistence in PostgreSQL user preferences (`user.preferences.llm_config`) with zero database schema migrations or Docker restarts required.
+    - Automatic fallback hierarchy: User Preferences → Environment Variables (`.env`) → MockChatClient.
+    - Comprehensive `.env.example` reference documenting every server setting and AI parameter.
+    - In-app Mock mode banner in Analysis page offering a direct one-click link to Settings.
+  - Periodic background portfolio coaching evaluator via APScheduler.
 - Calendar & Dashboard Enhancements
   - Monthly calendar view now computes and displays daily realized PnL breakdown categorized by asset class (Stocks, ETFs, Bonds).
   - Added `DashboardSkeleton` animated loader component for smoother KPI loading transitions.

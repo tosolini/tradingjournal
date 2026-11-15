@@ -77,3 +77,22 @@ From the **Analisi AI** menu in the sidebar, choose between two modes:
 From the overview card of any analysis report, click **`⚡ Trasforma in Azione`**:
 1. **Scouting Idea**: Save the stock to your Watchlist with pre-filled trigger prices, Stop Loss (technical support), Target Price (Wall Street consensus), and researcher thesis.
 2. **Trading Note**: Add the reflection to your daily journal with emotion/mood sentiment and an integrated **WYSIWYG** rich text editor.
+
+---
+
+## ⚙️ LLM Provider & Credentials Setup
+
+You do not need to edit system configuration files or restart Docker containers to enable AI coaching. Configure your preferred model directly from the UI:
+
+1. Navigate to **Settings (`/settings`) -> AI Engine & Coaching (LLM)**.
+2. Select your provider card:
+   - **Google Gemini** *(Recommended)*: Free-tier / pay-as-you-go keys from [Google AI Studio](https://aistudio.google.com/app/apikey). Recommended model: `gemini-2.5-flash` or `gemini-1.5-pro`.
+   - **OpenAI**: API keys from [OpenAI Platform](https://platform.openai.com/api-keys). Recommended model: `gpt-4o` or `gpt-4o-mini`.
+   - **Anthropic Claude**: API keys from [Anthropic Console](https://console.anthropic.com/). Recommended model: `claude-3-5-sonnet-20241022`.
+   - **Ollama (Local / Self-Hosted)**: 100% private, runs entirely on your local machine. Recommended model: `llama3.3` or `deepseek-r1:8b`. Endpoint: `http://localhost:11434/v1` (or `http://host.docker.internal:11434/v1` inside Docker).
+   - **Simulation (Mock)**: Offline demonstration mode requiring no API key or costs.
+3. Enter your API Key (with visibility toggle 👁️).
+4. Click **🔌 Test Connection** to verify credentials and measure network latency (ms) in real-time.
+5. Click **💾 Save AI Configuration**: Credentials are encrypted and stored in your user preferences in the local database.
+
+> **System Administrators**: To configure server-wide fallback credentials, refer to `.env.example` under `ANALYSIS_LLM_PROVIDER`, `ANALYSIS_LLM_MODEL`, `ANALYSIS_API_KEY`, and `ANALYSIS_BASE_URL`. Personal user settings always take precedence over `.env` defaults.

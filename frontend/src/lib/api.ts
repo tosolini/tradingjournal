@@ -1266,6 +1266,27 @@ export interface AnalysisReportDetail {
   updated_at: string;
 }
 
+export interface LlmConfig {
+  provider: "gemini" | "openai" | "anthropic" | "ollama" | "mock";
+  model?: string;
+  api_key?: string;
+  base_url?: string;
+}
+
+export interface TestLlmPayload {
+  provider: string;
+  model?: string;
+  api_key?: string;
+  base_url?: string;
+}
+
+export interface TestLlmResult {
+  success: boolean;
+  latency_ms?: number | null;
+  message: string;
+  error?: string | null;
+}
+
 export const analysisApi = {
   getTargets: (): Promise<AnalysisTargetItem[]> => api("/api/analysis/targets"),
   run: (payload: AnalysisRunPayload): Promise<AnalysisReportSummary> =>
@@ -1279,4 +1300,6 @@ export const analysisApi = {
   },
   get: (id: number): Promise<AnalysisReportDetail> => api(`/api/analysis/${id}`),
   delete: (id: number): Promise<{ ok: boolean }> => api(`/api/analysis/${id}`, { method: "DELETE" }),
+  testLlm: (payload: TestLlmPayload): Promise<TestLlmResult> =>
+    api("/api/analysis/test-llm", { method: "POST", body: JSON.stringify(payload) }),
 };
