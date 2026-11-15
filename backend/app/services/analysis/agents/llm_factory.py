@@ -197,7 +197,9 @@ def test_llm_connection(
         if prov == "gemini":
             if not effective_key:
                 return False, None, "Connessione fallita", "API Key mancante per Google Gemini."
-            eff_model = (model or settings.analysis_llm_model or "gemini-2.5-flash").replace("models/", "")
+            eff_model = (model or settings.analysis_llm_model or "").strip().replace("models/", "")
+            if not eff_model:
+                return False, None, "Connessione fallita", "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
             url = (
                 f"https://generativelanguage.googleapis.com/v1beta/models/{eff_model}:generateContent"
                 f"?key={effective_key}"
@@ -222,7 +224,9 @@ def test_llm_connection(
         elif prov == "openai":
             if not effective_key:
                 return False, None, "Connessione fallita", "API Key mancante per OpenAI."
-            eff_model = model or settings.analysis_llm_model or "gpt-4o-mini"
+            eff_model = (model or settings.analysis_llm_model or "").strip()
+            if not eff_model:
+                return False, None, "Connessione fallita", "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
             eff_base_url = (base_url or settings.analysis_base_url or "https://api.openai.com/v1").rstrip("/")
             url = f"{eff_base_url}/chat/completions"
             headers = {
@@ -250,7 +254,9 @@ def test_llm_connection(
         elif prov == "anthropic":
             if not effective_key:
                 return False, None, "Connessione fallita", "API Key mancante per Anthropic."
-            eff_model = model or settings.analysis_llm_model or "claude-3-5-sonnet-20241022"
+            eff_model = (model or settings.analysis_llm_model or "").strip()
+            if not eff_model:
+                return False, None, "Connessione fallita", "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
             url = "https://api.anthropic.com/v1/messages"
             headers = {
                 "x-api-key": effective_key,

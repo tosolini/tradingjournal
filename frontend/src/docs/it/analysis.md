@@ -86,12 +86,12 @@ Non è necessario modificare file di sistema o riavviare Docker per abilitare l'
 
 1. Vai in **Impostazioni (`/settings`) -> Motore AI & Coaching (LLM)**.
 2. Scegli il tuo provider preferito tra le card interattive:
-   - **Google Gemini** *(Consigliato)*: chiavi gratuite/a consumo su [Google AI Studio](https://aistudio.google.com/app/apikey). Modello consigliato: `gemini-2.5-flash` o `gemini-1.5-pro`.
-   - **OpenAI**: chiavi su [OpenAI Platform](https://platform.openai.com/api-keys). Modello consigliato: `gpt-4o` o `gpt-4o-mini`.
-   - **Anthropic Claude**: chiavi su [Anthropic Console](https://console.anthropic.com/). Modello consigliato: `claude-3-5-sonnet-20241022`.
-   - **Ollama (Locale / Self-Hosted)**: 100% privato e gratuito sul tuo computer. Modello consigliato: `llama3.3` o `deepseek-r1:8b`. Endpoint: `http://localhost:11434/v1` (o `http://host.docker.internal:11434/v1` in Docker).
+   - **Google Gemini**: console [Google AI Studio](https://aistudio.google.com/app/apikey).
+   - **OpenAI**: console [OpenAI Platform](https://platform.openai.com/api-keys).
+   - **Anthropic Claude**: console [Anthropic Console](https://console.anthropic.com/).
+   - **Ollama (Locale / Self-Hosted)**: 100% privato e gratuito sul tuo computer (endpoint predefinito `http://localhost:11434/v1` o `http://host.docker.internal:11434/v1` in Docker).
    - **Simulazione (Mock)**: modalità dimostrativa offline senza API key né costi.
-3. Inserisci la tua API Key (con tasto di visibilità 👁️).
+3. Inserisci l'identificativo esatto del modello desiderato (es. consultando la documentazione del tuo provider) e la tua API Key (con tasto di visibilità 👁️).
 4. Clicca su **🔌 Testa Connessione** per validare in tempo reale le credenziali e verificare la latenza di rete (ms).
 5. Clicca su **💾 Salva configurazione AI**: le credenziali vengono memorizzate nelle preferenze utente nel tuo database protetto.
 

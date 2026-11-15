@@ -67,6 +67,17 @@ def test_connectivity_gemini_missing_key():
         assert "mancante" in (err or "").lower()
 
 
+def test_connectivity_gemini_missing_model():
+    with patch("app.services.analysis.agents.llm_factory.settings.analysis_llm_model", ""):
+        success, latency, message, err = execute_test_connection(
+            provider="gemini",
+            api_key="valid-key",
+            model=""
+        )
+        assert success is False
+        assert "modello" in (err or "").lower()
+
+
 def test_connectivity_gemini_success():
     mock_resp = MagicMock()
     mock_resp.status_code = 200

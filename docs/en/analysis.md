@@ -86,12 +86,12 @@ You do not need to edit system configuration files or restart Docker containers 
 
 1. Navigate to **Settings (`/settings`) -> AI Engine & Coaching (LLM)**.
 2. Select your provider card:
-   - **Google Gemini** *(Recommended)*: Free-tier / pay-as-you-go keys from [Google AI Studio](https://aistudio.google.com/app/apikey). Recommended model: `gemini-2.5-flash` or `gemini-1.5-pro`.
-   - **OpenAI**: API keys from [OpenAI Platform](https://platform.openai.com/api-keys). Recommended model: `gpt-4o` or `gpt-4o-mini`.
-   - **Anthropic Claude**: API keys from [Anthropic Console](https://console.anthropic.com/). Recommended model: `claude-3-5-sonnet-20241022`.
-   - **Ollama (Local / Self-Hosted)**: 100% private, runs entirely on your local machine. Recommended model: `llama3.3` or `deepseek-r1:8b`. Endpoint: `http://localhost:11434/v1` (or `http://host.docker.internal:11434/v1` inside Docker).
+   - **Google Gemini**: [Google AI Studio](https://aistudio.google.com/app/apikey).
+   - **OpenAI**: [OpenAI Platform](https://platform.openai.com/api-keys).
+   - **Anthropic Claude**: [Anthropic Console](https://console.anthropic.com/).
+   - **Ollama (Local / Self-Hosted)**: 100% private and runs locally on your machine (default endpoint `http://localhost:11434/v1` or `http://host.docker.internal:11434/v1` in Docker).
    - **Simulation (Mock)**: Offline demonstration mode requiring no API key or costs.
-3. Enter your API Key (with visibility toggle 👁️).
+3. Enter your exact model identifier (from your provider's documentation) and your API Key (with visibility toggle 👁️).
 4. Click **🔌 Test Connection** to verify credentials and measure network latency (ms) in real-time.
 5. Click **💾 Save AI Configuration**: Credentials are encrypted and stored in your user preferences in the local database.
 

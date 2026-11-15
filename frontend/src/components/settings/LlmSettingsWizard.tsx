@@ -19,8 +19,6 @@ interface ProviderPreset {
   descKey: string;
   linkKey?: string;
   linkUrl?: string;
-  defaultModel: string;
-  modelPresets: string[];
   defaultBaseUrl?: string;
   requiresKey: boolean;
 }
@@ -29,13 +27,9 @@ const PROVIDERS: ProviderPreset[] = [
   {
     id: "gemini",
     titleKey: "settings.llm.gemini_title",
-    badgeKey: "settings.llm.gemini_badge",
-    badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
     descKey: "settings.llm.gemini_desc",
     linkKey: "settings.llm.gemini_link",
     linkUrl: "https://aistudio.google.com/app/apikey",
-    defaultModel: "gemini-2.5-flash",
-    modelPresets: ["gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
     requiresKey: true,
   },
   {
@@ -44,8 +38,6 @@ const PROVIDERS: ProviderPreset[] = [
     descKey: "settings.llm.openai_desc",
     linkKey: "settings.llm.openai_link",
     linkUrl: "https://platform.openai.com/api-keys",
-    defaultModel: "gpt-4o",
-    modelPresets: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
     requiresKey: true,
   },
   {
@@ -54,8 +46,6 @@ const PROVIDERS: ProviderPreset[] = [
     descKey: "settings.llm.anthropic_desc",
     linkKey: "settings.llm.anthropic_link",
     linkUrl: "https://console.anthropic.com/settings/keys",
-    defaultModel: "claude-3-5-sonnet-20241022",
-    modelPresets: ["claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"],
     requiresKey: true,
   },
   {
@@ -66,8 +56,6 @@ const PROVIDERS: ProviderPreset[] = [
     descKey: "settings.llm.ollama_desc",
     linkKey: "settings.llm.ollama_link",
     linkUrl: "https://ollama.com",
-    defaultModel: "llama3.3",
-    modelPresets: ["llama3.3", "llama3.2", "deepseek-r1:8b", "mistral"],
     defaultBaseUrl: "http://localhost:11434/v1",
     requiresKey: false,
   },
@@ -77,8 +65,6 @@ const PROVIDERS: ProviderPreset[] = [
     badgeKey: "settings.llm.mock_badge",
     badgeColor: "bg-slate-700/40 text-slate-300 border-slate-600/40",
     descKey: "settings.llm.mock_desc",
-    defaultModel: "mock-v1",
-    modelPresets: ["mock-v1"],
     requiresKey: false,
   },
 ];
@@ -96,7 +82,7 @@ export function LlmSettingsWizard() {
   const savedConfig = prefData?.preferences?.llm_config;
 
   const [provider, setProvider] = useState<"gemini" | "openai" | "anthropic" | "ollama" | "mock">("gemini");
-  const [model, setModel] = useState("gemini-2.5-flash");
+  const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -125,24 +111,22 @@ export function LlmSettingsWizard() {
     setProvider(newProvId);
     setTestResult(null);
     const def = PROVIDERS.find((p) => p.id === newProvId);
-    if (def) {
-      // If current model is not in new provider's presets, set default
-      if (!def.modelPresets.includes(model)) {
-        setModel(def.defaultModel);
-      }
-      if (def.defaultBaseUrl && !baseUrl) {
-        setBaseUrl(def.defaultBaseUrl);
-      }
+    if (def?.defaultBaseUrl && !baseUrl) {
+      setBaseUrl(def.defaultBaseUrl);
     }
   };
 
   const handleTestConnection = async () => {
+    if (provider !== "mock" && !model.trim()) {
+      toast.error(t("settings.llm.model_required"));
+      return;
+    }
     setIsTesting(true);
     setTestResult(null);
     try {
       const res = await analysisApi.testLlm({
         provider,
-        model,
+        model: model.trim() || undefined,
         api_key: apiKey.trim(),
         base_url: baseUrl.trim() || undefined,
       });
@@ -186,9 +170,13 @@ export function LlmSettingsWizard() {
   });
 
   const handleSave = () => {
+    if (provider !== "mock" && !model.trim()) {
+      toast.error(t("settings.llm.model_required"));
+      return;
+    }
     const payload: LlmConfig = {
       provider,
-      model: model.trim() || activeProviderDef.defaultModel,
+      model: model.trim() || undefined,
       api_key: apiKey.trim() || undefined,
       base_url: baseUrl.trim() || undefined,
     };
@@ -199,7 +187,7 @@ export function LlmSettingsWizard() {
     if (window.confirm(t("settings.llm.reset_confirm"))) {
       saveMutation.mutate(null);
       setProvider("gemini");
-      setModel("gemini-2.5-flash");
+      setModel("");
       setApiKey("");
       setBaseUrl("");
       setTestResult(null);
@@ -278,52 +266,41 @@ export function LlmSettingsWizard() {
 
       {/* Provider Details & Credentials Form */}
       <div className="mt-6 rounded-xl border border-slate-800/80 bg-slate-950/50 p-5 space-y-4">
-        {/* Model Presets & Input */}
-        <div>
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-              {t("settings.llm.model_label")}
-            </label>
-            {activeProviderDef.linkUrl && (
-              <a
-                href={activeProviderDef.linkUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 underline"
-              >
-                <span>{activeProviderDef.linkKey ? t(activeProviderDef.linkKey) : "Console API"}</span>
-                <span className="text-[10px]">↗</span>
-              </a>
-            )}
-          </div>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+        {/* Model Input */}
+        {provider !== "mock" ? (
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {t("settings.llm.model_label")}
+              </label>
+              {activeProviderDef.linkUrl && (
+                <a
+                  href={activeProviderDef.linkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 underline"
+                >
+                  <span>{activeProviderDef.linkKey ? t(activeProviderDef.linkKey) : "Console API"}</span>
+                  <span className="text-[10px]">↗</span>
+                </a>
+              )}
+            </div>
             <input
               type="text"
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder={t("settings.llm.model_placeholder")}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
             />
+            <p className="mt-1.5 text-xs text-slate-400">
+              {t("settings.llm.model_hint")}
+            </p>
           </div>
-          {/* Preset Buttons */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="text-slate-400">{t("settings.llm.model_presets")}</span>
-            {activeProviderDef.modelPresets.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setModel(preset)}
-                className={`rounded-md px-2.5 py-1 text-xs font-mono transition-colors ${
-                  model === preset
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                    : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
-                }`}
-              >
-                {preset}
-              </button>
-            ))}
+        ) : (
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-400">
+            {t("settings.llm.mock_info")}
           </div>
-        </div>
+        )}
 
         {/* API Key Field (if required by provider) */}
         {activeProviderDef.requiresKey && (
