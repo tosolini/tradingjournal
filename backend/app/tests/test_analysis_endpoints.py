@@ -8,10 +8,11 @@ from app.api.analysis import (
     get_analysis_report,
     get_analysis_targets,
     list_analysis_history,
+    purge_analysis_history,
     start_analysis_job,
 )
 from app.models import Account, AnalysisReport, Asset, Holding, Trade, TradeIdea, User
-from app.schemas import AnalysisRunRequest
+from app.schemas import AnalysisPurgeRequest, AnalysisRunRequest
 
 
 @pytest.fixture
@@ -155,3 +156,81 @@ def test_list_history_and_delete(db, test_user):
             current_user=test_user,
         )
     assert exc_info.value.status_code == 404
+
+
+def test_purge_analysis_history(db, test_user):
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+
+    # 1. Old report (40 days ago)
+    old_report = AnalysisReport(
+        user_id=test_user.id,
+        symbol="OLD.MI",
+        market="Borsa Italiana",
+        language="it",
+        status="completed",
+        overall_score=6,
+        created_at=now - timedelta(days=40),
+    )
+    # 2. Recent report (2 days ago)
+    recent_report = AnalysisReport(
+        user_id=test_user.id,
+        symbol="NEW.MI",
+        market="Borsa Italiana",
+        language="it",
+        status="completed",
+        overall_score=8,
+        created_at=now - timedelta(days=2),
+    )
+    # 3. Failed report
+    failed_report = AnalysisReport(
+        user_id=test_user.id,
+        symbol="ERR.MI",
+        market="NASDAQ",
+        language="it",
+        status="failed",
+        error_message="Simulated error",
+        created_at=now - timedelta(days=5),
+    )
+    db.add_all([old_report, recent_report, failed_report])
+    db.commit()
+
+    # Purge only failed
+    res_failed = purge_analysis_history(
+        payload=AnalysisPurgeRequest(only_failed=True),
+        db=db,
+        current_user=test_user,
+    )
+    assert res_failed.deleted_count == 1
+
+    # Verify failed report deleted
+    items = list_analysis_history(symbol=None, limit=10, db=db, current_user=test_user)
+    symbols = [item.symbol for item in items]
+    assert "ERR.MI" not in symbols
+    assert "OLD.MI" in symbols
+    assert "NEW.MI" in symbols
+
+    # Purge older than 30 days
+    res_old = purge_analysis_history(
+        payload=AnalysisPurgeRequest(older_than_days=30),
+        db=db,
+        current_user=test_user,
+    )
+    assert res_old.deleted_count == 1
+
+    items_after_old = list_analysis_history(symbol=None, limit=10, db=db, current_user=test_user)
+    symbols_after = [item.symbol for item in items_after_old]
+    assert "OLD.MI" not in symbols_after
+    assert "NEW.MI" in symbols_after
+
+    # Purge all
+    res_all = purge_analysis_history(
+        payload=AnalysisPurgeRequest(all_reports=True),
+        db=db,
+        current_user=test_user,
+    )
+    assert res_all.deleted_count == 1
+
+    items_empty = list_analysis_history(symbol=None, limit=10, db=db, current_user=test_user)
+    assert len(items_empty) == 0

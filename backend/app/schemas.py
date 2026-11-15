@@ -958,10 +958,23 @@ class AnalysisReportSummary(BaseModel):
     language: str
     trigger_mode: str
     overall_score: Optional[int] = None
+    llm_model_used: Optional[str] = None
+    error_message: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AnalysisPurgeRequest(BaseModel):
+    older_than_days: Optional[int] = None
+    only_failed: bool = False
+    all_reports: bool = False
+
+
+class AnalysisPurgeResponse(BaseModel):
+    deleted_count: int
+    message: str
 
 
 class AnalysisReportDetail(BaseModel):

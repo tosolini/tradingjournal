@@ -1233,6 +1233,8 @@ export interface AnalysisReportSummary {
   language: "it" | "en";
   trigger_mode: "manual" | "scheduled";
   overall_score?: number | null;
+  llm_model_used?: string | null;
+  error_message?: string | null;
   created_at: string;
   completed_at?: string | null;
 }
@@ -1287,19 +1289,33 @@ export interface TestLlmResult {
   error?: string | null;
 }
 
+export interface AnalysisPurgePayload {
+  older_than_days?: number;
+  only_failed?: boolean;
+  all_reports?: boolean;
+}
+
+export interface AnalysisPurgeResult {
+  deleted_count: number;
+  message: string;
+}
+
 export const analysisApi = {
   getTargets: (): Promise<AnalysisTargetItem[]> => api("/api/analysis/targets"),
   run: (payload: AnalysisRunPayload): Promise<AnalysisReportSummary> =>
     api("/api/analysis/run", { method: "POST", body: JSON.stringify(payload) }),
-  getHistory: (symbol?: string, limit = 20): Promise<AnalysisReportSummary[]> => {
+  getHistory: (symbol?: string, limit = 100, status?: string): Promise<AnalysisReportSummary[]> => {
     const q = new URLSearchParams();
     if (symbol) q.set("symbol", symbol);
     if (limit) q.set("limit", String(limit));
+    if (status) q.set("status", status);
     const query = q.toString() ? `?${q.toString()}` : "";
     return api(`/api/analysis/history${query}`);
   },
   get: (id: number): Promise<AnalysisReportDetail> => api(`/api/analysis/${id}`),
   delete: (id: number): Promise<{ ok: boolean }> => api(`/api/analysis/${id}`, { method: "DELETE" }),
+  purge: (payload: AnalysisPurgePayload): Promise<AnalysisPurgeResult> =>
+    api("/api/analysis/purge", { method: "POST", body: JSON.stringify(payload) }),
   testLlm: (payload: TestLlmPayload): Promise<TestLlmResult> =>
     api("/api/analysis/test-llm", { method: "POST", body: JSON.stringify(payload) }),
 };

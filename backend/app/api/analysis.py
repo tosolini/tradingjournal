@@ -1,5 +1,5 @@
 """REST API endpoints for multi-agent asset analysis and coaching."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -10,6 +10,8 @@ from app.database import SessionLocal, get_db
 from app.deps import get_current_user
 from app.models import AnalysisReport, Asset, Holding, Trade, TradeIdea, User
 from app.schemas import (
+    AnalysisPurgeRequest,
+    AnalysisPurgeResponse,
     AnalysisReportDetail,
     AnalysisReportSummary,
     AnalysisRunRequest,
@@ -221,7 +223,8 @@ def start_analysis_job(
 @router.get("/history", response_model=list[AnalysisReportSummary])
 def list_analysis_history(
     symbol: Optional[str] = None,
-    limit: int = Query(default=20, le=100),
+    status: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -234,8 +237,49 @@ def list_analysis_history(
     )
     if symbol:
         stmt = stmt.where(AnalysisReport.symbol == symbol.strip().upper())
+    if status:
+        stmt = stmt.where(AnalysisReport.status == status.strip().lower())
 
     return db.execute(stmt).scalars().all()
+
+
+@router.post("/purge", response_model=AnalysisPurgeResponse)
+def purge_analysis_history(
+    payload: AnalysisPurgeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Purge analysis reports based on criteria: older than N days, only failed, or all."""
+    if not payload.all_reports and payload.older_than_days is None and not payload.only_failed:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one purge criterion must be specified (older_than_days, only_failed, or all_reports)."
+        )
+
+    stmt = select(AnalysisReport).where(AnalysisReport.user_id == current_user.id)
+
+    if payload.all_reports:
+        pass
+    elif payload.only_failed:
+        stmt = stmt.where(AnalysisReport.status == "failed")
+    elif payload.older_than_days is not None:
+        if payload.older_than_days < 0:
+            raise HTTPException(status_code=400, detail="older_than_days cannot be negative")
+        cutoff = datetime.now(timezone.utc) - timedelta(days=payload.older_than_days)
+        stmt = stmt.where(AnalysisReport.created_at < cutoff)
+
+    reports_to_delete = db.execute(stmt).scalars().all()
+    count = len(reports_to_delete)
+
+    for r in reports_to_delete:
+        db.delete(r)
+
+    db.commit()
+
+    return AnalysisPurgeResponse(
+        deleted_count=count,
+        message=f"{count} report eliminati con successo." if count > 0 else "Nessun report corrisponde ai criteri di eliminazione."
+    )
 
 
 @router.get("/{analysis_id}", response_model=AnalysisReportDetail)

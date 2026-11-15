@@ -13,6 +13,7 @@ import {
   tickersApi,
 } from "../lib/api";
 import { ReportViewer } from "../components/analysis/ReportViewer";
+import { AnalysisHistoryView } from "../components/analysis/AnalysisHistoryView";
 import { useToast } from "../contexts/ToastContext";
 import { SearchIcon } from "../components/icons";
 
@@ -31,7 +32,7 @@ export const AnalysisPage: React.FC = () => {
     ? "en"
     : "it";
 
-  const [inputMode, setInputMode] = useState<"existing" | "custom">("existing");
+  const [inputMode, setInputMode] = useState<"existing" | "custom" | "history">("existing");
   const [selectedTargetKey, setSelectedTargetKey] = useState<string>("");
   const [customSymbol, setCustomSymbol] = useState<string>("");
   const [customMarket, setCustomMarket] = useState<string>("NASDAQ");
@@ -43,6 +44,13 @@ export const AnalysisPage: React.FC = () => {
 
   const autocompleteRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSelectForReanalysis = (symbol: string, market?: string) => {
+    setInputMode("custom");
+    setCustomSymbol(symbol);
+    if (market) setCustomMarket(market);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -288,15 +296,31 @@ export const AnalysisPage: React.FC = () => {
             >
               <span>🔍 {t("analysis.modes.custom_ticker", "Cerca Qualsiasi Azione (Ticker Libero)")}</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setInputMode("history")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                inputMode === "history"
+                  ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700/60"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <span>📜 {t("analysis.modes.history_archive", "Storico Analisi")}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-900 text-slate-300 font-mono">
+                {history.length}
+              </span>
+            </button>
           </div>
           <span className="text-xs text-slate-400 hidden sm:inline font-medium">
             {inputMode === "existing"
               ? t("analysis.modes.existing_hint", "Analizza posizioni a mercato, holdings ed idee attive")
-              : t("analysis.modes.custom_hint", "Ricerca titolo globale per analisi tecnica, fondamentale e ciclica")}
+              : inputMode === "custom"
+              ? t("analysis.modes.custom_hint", "Ricerca titolo globale per analisi tecnica, fondamentale e ciclica")
+              : t("analysis.modes.history_hint", "Archivio completo delle analisi passate con filtri, statistiche e pulizia")}
           </span>
         </div>
 
-        {/* Input & Action Grid - Perfect Horizontal Alignment */}
+        {/* Input & Action Grid - Hidden when in History tab */}
         {inputMode === "existing" ? (
           /* Existing Mode: 8/9 cols for select, 4/3 cols for button */
           <div className="space-y-3">
@@ -400,7 +424,7 @@ export const AnalysisPage: React.FC = () => {
               </div>
             )}
           </div>
-        ) : (
+        ) : inputMode === "custom" ? (
           /* Custom Mode: 5 cols for ticker, 4 cols for market, 3 cols for button */
           <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
@@ -558,83 +582,44 @@ export const AnalysisPage: React.FC = () => {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Main Content Area: Active Report + History Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left Column: Historical Reports List */}
-        <div className="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("analysis.history.title", "Storico Analisi")}</h2>
-            <span className="text-xs text-slate-500 font-mono">{history.length}</span>
-          </div>
-
-          {historyLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-14 bg-slate-800 animate-pulse rounded-lg" />
-              ))}
-            </div>
-          ) : history.length === 0 ? (
-            <p className="text-xs text-slate-500 py-4 text-center">{t("analysis.history.empty", "Nessuna analisi passata presente.")}</p>
-          ) : (
-            <div className="space-y-2 max-h-[550px] overflow-y-auto pr-1">
-              {history.map((rep) => {
-                const isSelected = rep.id === activeReportId;
-                const isRunning = rep.status === "pending" || rep.status === "running";
-                return (
-                  <div
-                    key={rep.id}
-                    onClick={() => setActiveReportId(rep.id)}
-                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                      isSelected
-                        ? "bg-slate-800 border-primary shadow-sm"
-                        : "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white text-sm">{rep.symbol}</span>
-                      {rep.overall_score !== null && rep.overall_score !== undefined ? (
-                        <span className="text-xs font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
-                          {rep.overall_score}/10
-                        </span>
-                      ) : isRunning ? (
-                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 animate-pulse">
-                          {t("analysis.history.in_progress", "In corso...")}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-slate-500">{rep.status}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1.5">
-                      <span>{new Date(rep.created_at).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}</span>
-                      <span className="uppercase text-[10px] text-slate-500 font-semibold">{rep.language}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Active Report Display */}
-        <div className="lg:col-span-3">
+      {/* Main Content Area: Dedicated History View OR Full-Width Active Report Display */}
+      {inputMode === "history" ? (
+        <AnalysisHistoryView
+          onSelectForReanalysis={handleSelectForReanalysis}
+          dateLocale={dateLocale}
+        />
+      ) : (
+        <div className="w-full">
           {reportLoading ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center space-y-4">
-              <div className="inline-block animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center space-y-4">
+              <div className="inline-block animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full" />
               <p className="text-sm text-slate-400">{t("analysis.display.loading", "Caricamento del report in corso...")}</p>
             </div>
           ) : !activeReport ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center space-y-2">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center space-y-4">
               <span className="text-4xl block mb-2">📊</span>
               <h3 className="text-lg font-bold text-white">{t("analysis.display.no_selection_title", "Nessuna analisi selezionata")}</h3>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-400 max-w-md mx-auto">
                 {t("analysis.display.no_selection_subtitle", "Seleziona una posizione azionaria o digita qualsiasi simbolo sopra per avviare il coaching multi-agente.")}
               </p>
+              {history.length > 0 && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("history")}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    <span>📜 Sfoglia le {history.length} analisi nello storico</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : activeReport.status === "pending" || activeReport.status === "running" ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center space-y-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center space-y-4">
               <div className="inline-block animate-spin h-10 w-10 border-4 border-amber-500 border-t-transparent rounded-full" />
               <h3 className="text-lg font-bold text-white">{t("analysis.display.running_title", "Analisi Multi-Agente in corso...")}</h3>
               <p className="text-sm text-slate-400 max-w-md mx-auto">
@@ -643,15 +628,16 @@ export const AnalysisPage: React.FC = () => {
               <div className="text-xs font-mono text-slate-500">{t("analysis.display.running_refresh_hint", "Aggiornamento automatico ogni 3 secondi")}</div>
             </div>
           ) : activeReport.status === "failed" ? (
-            <div className="bg-rose-950/20 border border-rose-900/50 rounded-xl p-8 text-center space-y-4">
+            <div className="bg-rose-950/20 border border-rose-900/50 rounded-2xl p-10 text-center space-y-4">
               <span className="text-4xl block">⚠️</span>
               <h3 className="text-lg font-bold text-rose-400">{t("analysis.display.failed_title", "Analisi non riuscita")}</h3>
               <p className="text-sm text-slate-300 max-w-md mx-auto">
                 {activeReport.error_message || t("analysis.display.failed_default_message", "Si è verificato un errore durante l'esecuzione del team di analisi.")}
               </p>
               <button
+                type="button"
                 onClick={() => deleteMutation.mutate(activeReport.id)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg transition-colors"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-xl transition-colors cursor-pointer"
               >
                 {t("analysis.display.remove_failed", "Rimuovi report con errore")}
               </button>
@@ -661,12 +647,13 @@ export const AnalysisPage: React.FC = () => {
               <ReportViewer report={activeReport} />
               <div className="flex justify-end pt-2">
                 <button
+                  type="button"
                   onClick={() => {
                     if (window.confirm(t("analysis.display.confirm_delete", "Sei sicuro di voler eliminare questo report?"))) {
                       deleteMutation.mutate(activeReport.id);
                     }
                   }}
-                  className="text-xs text-rose-400 hover:text-rose-300 hover:underline"
+                  className="text-xs text-rose-400 hover:text-rose-300 hover:underline cursor-pointer"
                 >
                   {t("analysis.display.delete_report", "Elimina questo report")}
                 </button>
@@ -674,7 +661,7 @@ export const AnalysisPage: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 };
