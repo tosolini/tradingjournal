@@ -15,13 +15,20 @@ interface ReportViewerProps {
  */
 function renderInlineMarkdown(text: string): React.ReactNode {
   if (!text) return null;
-  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  const parts = text.split(/(\*\*[^*]+?\*\*|\*[^*\s](?:[^*\n]*?[^*\s])?\*|`[^`]+?`)/g);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
       return (
         <strong key={i} className="font-semibold text-white">
           {part.slice(2, -2)}
         </strong>
+      );
+    }
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2 && !part.startsWith("**")) {
+      return (
+        <em key={i} className="italic text-slate-200">
+          {part.slice(1, -1)}
+        </em>
       );
     }
     if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {

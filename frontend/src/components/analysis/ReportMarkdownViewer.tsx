@@ -17,8 +17,8 @@ export function sanitizeReportMarkdown(text?: string | null, stripJson = false):
   if (!text) return "";
   let clean = text.trim();
   if (stripJson) {
-    // 1. Remove markdown fences containing overall_score
-    clean = clean.replace(/```(?:json)?\s*\{[\s\S]*?"overall_score"[\s\S]*?\}\s*```/gi, "").trim();
+    // 1. Remove markdown fences containing overall_score without crossing code blocks
+    clean = clean.replace(/```(?:json)?\s*\{(?:(?!```)[\s\S])*?"overall_score"(?:(?!```)[\s\S])*?\}\s*```/gi, "").trim();
     // 2. Remove raw trailing json containing overall_score if present at the end
     clean = clean.replace(/\{\s*"overall_score"[\s\S]*\}\s*$/gi, "").trim();
   }
@@ -55,6 +55,16 @@ export const ReportMarkdownViewer: React.FC<ReportMarkdownViewerProps> = ({
           lineHeight: "1.75",
         }}
         wrapperElement={{ "data-color-mode": theme === "light" ? "light" : "dark" }}
+        pluginsFilter={(type, list) => {
+          if (type === "rehype") {
+            // Disable raw HTML interpretation (rehype-raw) to prevent XSS from untrusted LLM markdown
+            return list.filter((plugin) => {
+              const fn = Array.isArray(plugin) ? plugin[0] : plugin;
+              return typeof fn === "function" ? fn.name !== "rehypeRaw" : true;
+            });
+          }
+          return list;
+        }}
       />
     </div>
   );

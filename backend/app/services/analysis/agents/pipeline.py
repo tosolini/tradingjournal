@@ -17,14 +17,37 @@ def _extract_json_block(text: str) -> dict:
     """Robust extractor of JSON objects inside Markdown code fences or raw text."""
     if not text:
         return {}
-    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if match:
+
+    # 1. Search for code fence specifically containing overall_score
+    score_fence = re.search(
+        r"```(?:json)?\s*(\{(?:(?!```)[\s\S])*?\"overall_score\"(?:(?!```)[\s\S])*?\})\s*```",
+        text,
+        re.IGNORECASE,
+    )
+    if score_fence:
         try:
-            return json.loads(match.group(1))
+            return json.loads(score_fence.group(1))
         except Exception:
             pass
 
-    # Fallback: search for first '{' and last '}'
+    # 2. General code fences: try all matches, prefer one with overall_score
+    for m in re.finditer(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text):
+        try:
+            parsed = json.loads(m.group(1))
+            if isinstance(parsed, dict) and "overall_score" in parsed:
+                return parsed
+        except Exception:
+            pass
+
+    # 3. Trailing raw JSON containing overall_score
+    trailing = re.search(r"(\{\s*\"overall_score\"[\s\S]*\})\s*$", text, re.IGNORECASE)
+    if trailing:
+        try:
+            return json.loads(trailing.group(1))
+        except Exception:
+            pass
+
+    # 4. Fallback: search between first '{' and last '}'
     start = text.find("{")
     end = text.rfind("}")
     if start != -1 and end != -1 and end > start:
@@ -209,9 +232,17 @@ def run_agentic_analysis(
         state.action_suggestions = parsed_json.get("action_suggestions", [])
         state.risk_warnings = parsed_json.get("risk_warnings", [])
 
-        # Strip machine JSON block from coaching_report to keep the text clean
+        # Strip machine JSON block from coaching_report to keep the text clean:
+        # specifically remove the overall_score block (both fenced and trailing raw JSON),
+        # without deleting legitimate examples or code blocks.
         cleaned_coaching = re.sub(
-            r"```(?:json)?\s*\{[\s\S]*?\}\s*```", "", coaching_raw
+            r"```(?:json)?\s*\{(?:(?!```)[\s\S])*?\"overall_score\"(?:(?!```)[\s\S])*?\}\s*```",
+            "",
+            coaching_raw,
+            flags=re.IGNORECASE,
+        ).strip()
+        cleaned_coaching = re.sub(
+            r"\{\s*\"overall_score\"[\s\S]*\}\s*$", "", cleaned_coaching, flags=re.IGNORECASE
         ).strip()
         state.coaching_report = cleaned_coaching if cleaned_coaching else coaching_raw
 
