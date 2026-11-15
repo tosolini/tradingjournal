@@ -20,7 +20,9 @@ export const AnalysisPage: React.FC = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const dateLocale = (i18n.resolvedLanguage || i18n.language || "it").startsWith("it") ? "it-IT" : "en-US";
 
   // Report language automatically inherits user base preference from settings
   const appLanguage: "it" | "en" = (i18n.resolvedLanguage || i18n.language || "it")
@@ -161,12 +163,12 @@ export const AnalysisPage: React.FC = () => {
   const runMutation = useMutation({
     mutationFn: analysisApi.run,
     onSuccess: (newReport) => {
-      toast.success(`L'analisi multi-agente per ${newReport.symbol} è in elaborazione.`);
+      toast.success(t("analysis.toasts.run_success", { symbol: newReport.symbol, defaultValue: `L'analisi multi-agente per ${newReport.symbol} è in elaborazione.` }));
       queryClient.invalidateQueries({ queryKey: ["analysisHistory"] });
       setActiveReportId(newReport.id);
     },
     onError: (err: any) => {
-      toast.error(err.message || "Impossibile avviare l'analisi.");
+      toast.error(err.message || t("analysis.toasts.run_error", "Impossibile avviare l'analisi."));
     },
   });
 
@@ -174,7 +176,7 @@ export const AnalysisPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: analysisApi.delete,
     onSuccess: () => {
-      toast.info("Il report è stato rimosso dallo storico.");
+      toast.info(t("analysis.toasts.delete_success", "Il report è stato rimosso dallo storico."));
       queryClient.invalidateQueries({ queryKey: ["analysisHistory"] });
       setActiveReportId(null);
     },
@@ -183,7 +185,7 @@ export const AnalysisPage: React.FC = () => {
   const handleStartAnalysis = () => {
     if (inputMode === "custom") {
       if (!customSymbol.trim()) {
-        toast.error("Inserisci un ticker azionario valido (es. AAPL, NVDA, RACE.MI).");
+        toast.error(t("analysis.toasts.invalid_symbol", "Inserisci un ticker azionario valido (es. AAPL, NVDA, RACE.MI)."));
         return;
       }
       runMutation.mutate({
@@ -230,10 +232,10 @@ export const AnalysisPage: React.FC = () => {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-          <span>🤖</span> Asset & Equity Coaching Multi-Agente
+          <span>🤖</span> {t("analysis.page_title", "Asset & Equity Coaching Multi-Agente")}
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          Analisi tecnica, fondamentale (Equity Research) e ciclica (Hurst & FFT) per azioni, trade aperti e portafoglio con dibattito dialettico Bull vs Bear.
+          {t("analysis.page_subtitle", "Analisi tecnica, fondamentale (Equity Research) e ciclica (Hurst & FFT) per azioni, trade aperti e portafoglio con dibattito dialettico Bull vs Bear.")}
         </p>
       </div>
 
@@ -270,7 +272,7 @@ export const AnalysisPage: React.FC = () => {
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <span>📁 I miei Asset & Trade</span>
+              <span>📁 {t("analysis.modes.existing_assets", "I miei Asset & Trade")}</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-900 text-slate-300 font-mono">
                 {targets.length}
               </span>
@@ -284,13 +286,13 @@ export const AnalysisPage: React.FC = () => {
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <span>🔍 Cerca Qualsiasi Azione (Ticker Libero)</span>
+              <span>🔍 {t("analysis.modes.custom_ticker", "Cerca Qualsiasi Azione (Ticker Libero)")}</span>
             </button>
           </div>
           <span className="text-xs text-slate-400 hidden sm:inline font-medium">
             {inputMode === "existing"
-              ? "Analizza posizioni a mercato, holdings ed idee attive"
-              : "Ricerca titolo globale per analisi tecnica, fondamentale e ciclica"}
+              ? t("analysis.modes.existing_hint", "Analizza posizioni a mercato, holdings ed idee attive")
+              : t("analysis.modes.custom_hint", "Ricerca titolo globale per analisi tecnica, fondamentale e ciclica")}
           </span>
         </div>
 
@@ -301,13 +303,13 @@ export const AnalysisPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
               <div className="md:col-span-8 lg:col-span-9">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 h-4 flex items-center gap-1.5">
-                  <span>Seleziona Titolo o Posizione Aperta</span>
+                  <span>{t("analysis.existing.select_label", "Seleziona Titolo o Posizione Aperta")}</span>
                 </label>
                 {targetsLoading ? (
                   <div className="h-11 bg-slate-800 animate-pulse rounded-xl" />
                 ) : targets.length === 0 ? (
                   <div className="h-11 flex items-center px-4 rounded-xl border border-dashed border-slate-800 text-xs text-slate-400">
-                    Nessun trade aperto o asset in portafoglio. Passa alla scheda "Cerca Qualsiasi Azione" sopra!
+                    {t("analysis.existing.empty", "Nessun trade aperto o asset in portafoglio. Passa alla scheda \"Cerca Qualsiasi Azione\" sopra!")}
                   </div>
                 ) : (
                   <div className="h-11 rounded-xl border border-slate-700/80 bg-slate-950/60 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all flex items-center px-3.5">
@@ -318,28 +320,28 @@ export const AnalysisPage: React.FC = () => {
                       className="w-full bg-transparent border-0 p-0 text-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-0 cursor-pointer"
                     >
                       {openTrades.length > 0 && (
-                        <optgroup label="⚡ Posizioni Azionarie Aperte (Trades)">
-                          {openTrades.map((t) => (
-                            <option key={`trade:${t.trade_id}`} value={`trade:${t.trade_id}`} className="bg-slate-900 text-white">
-                              {t.symbol} — {t.side?.toUpperCase()} #{t.trade_id} ({t.quantity ? `${Number(t.quantity)} pz` : ""}{t.avg_cost ? ` @ €${Number(t.avg_cost).toFixed(2)}` : ""})
+                        <optgroup label={t("analysis.existing.group_trades", "⚡ Posizioni Azionarie Aperte (Trades)")}>
+                          {openTrades.map((tItem) => (
+                            <option key={`trade:${tItem.trade_id}`} value={`trade:${tItem.trade_id}`} className="bg-slate-900 text-white">
+                              {tItem.symbol} — {tItem.side?.toUpperCase()} #{tItem.trade_id} ({tItem.quantity ? `${Number(tItem.quantity)} ${t("analysis.existing.pcs", "pz")}` : ""}{tItem.avg_cost ? ` @ €${Number(tItem.avg_cost).toFixed(2)}` : ""})
                             </option>
                           ))}
                         </optgroup>
                       )}
                       {holdings.length > 0 && (
-                        <optgroup label="📊 Holdings di Portafoglio (ETF & Bond)">
-                          {holdings.map((t) => (
-                            <option key={`holding:${t.symbol}`} value={`holding:${t.symbol}`} className="bg-slate-900 text-white">
-                              {t.symbol} — {t.name} ({t.quantity ? `${Number(t.quantity)} pz` : ""})
+                        <optgroup label={t("analysis.existing.group_holdings", "📊 Holdings di Portafoglio (ETF & Bond)")}>
+                          {holdings.map((tItem) => (
+                            <option key={`holding:${tItem.symbol}`} value={`holding:${tItem.symbol}`} className="bg-slate-900 text-white">
+                              {tItem.symbol} — {tItem.name} ({tItem.quantity ? `${Number(tItem.quantity)} ${t("analysis.existing.pcs", "pz")}` : ""})
                             </option>
                           ))}
                         </optgroup>
                       )}
                       {tradeIdeas.length > 0 && (
-                        <optgroup label="💡 Trade Ideas & Scouting">
-                          {tradeIdeas.map((t) => (
-                            <option key={`trade_idea:${t.symbol}`} value={`trade_idea:${t.symbol}`} className="bg-slate-900 text-white">
-                              {t.symbol} (Setup Scouting)
+                        <optgroup label={t("analysis.existing.group_trade_ideas", "💡 Trade Ideas & Scouting")}>
+                          {tradeIdeas.map((tItem) => (
+                            <option key={`trade_idea:${tItem.symbol}`} value={`trade_idea:${tItem.symbol}`} className="bg-slate-900 text-white">
+                              {tItem.symbol} ({t("analysis.existing.scouting_setup", "Setup Scouting")})
                             </option>
                           ))}
                         </optgroup>
@@ -363,12 +365,12 @@ export const AnalysisPage: React.FC = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                       </svg>
-                      <span>Analisi in corso...</span>
+                      <span>{t("analysis.actions.running", "Analisi in corso...")}</span>
                     </>
                   ) : (
                     <>
                       <span className="group-hover:scale-110 transition-transform">🚀</span>
-                      <span>Genera Coaching AI</span>
+                      <span>{t("analysis.actions.generate", "Genera Coaching AI")}</span>
                     </>
                   )}
                 </button>
@@ -388,7 +390,11 @@ export const AnalysisPage: React.FC = () => {
                 </div>
                 {selectedTarget.target_source === "trade" && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-medium">
-                    ⚡ Posizione a mercato: {selectedTarget.side?.toUpperCase()} #{selectedTarget.trade_id}
+                    {t("analysis.existing.market_position_badge", {
+                      side: selectedTarget.side?.toUpperCase(),
+                      id: selectedTarget.trade_id,
+                      defaultValue: `⚡ Posizione a mercato: ${selectedTarget.side?.toUpperCase()} #${selectedTarget.trade_id}`,
+                    })}
                   </span>
                 )}
               </div>
@@ -402,12 +408,12 @@ export const AnalysisPage: React.FC = () => {
               <div ref={autocompleteRef} className="md:col-span-5 relative">
                 <div className="flex items-center justify-between mb-1.5 h-4">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Simbolo o Nome Azione
+                    {t("analysis.custom.symbol_label", "Simbolo o Nome Azione")}
                   </label>
                   {isSearchingTickers && (
                     <span className="text-[10px] text-teal-400 font-mono animate-pulse flex items-center gap-1">
                       <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal-400 animate-ping" />
-                      Ricerca...
+                      {t("analysis.custom.searching", "Ricerca...")}
                     </span>
                   )}
                 </div>
@@ -421,7 +427,7 @@ export const AnalysisPage: React.FC = () => {
                     onFocus={() => {
                       if (tickerSuggestions.length > 0) setShowSuggestions(true);
                     }}
-                    placeholder="Es. NVDA, PLTR, Ferrari, Eni..."
+                    placeholder={t("analysis.custom.symbol_placeholder", "Es. NVDA, PLTR, Ferrari, Eni...")}
                     autoComplete="off"
                     className="w-full bg-transparent border-0 p-0 text-white font-mono text-xs sm:text-sm uppercase placeholder:text-slate-500 placeholder:font-sans focus:outline-none focus:ring-0"
                   />
@@ -470,7 +476,7 @@ export const AnalysisPage: React.FC = () => {
               {/* Col 2: Market Selector */}
               <div className="md:col-span-4">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 h-4">
-                  Mercato di Borsa
+                  {t("analysis.custom.market_label", "Mercato di Borsa")}
                 </label>
                 <div className="h-11 rounded-xl border border-slate-700/80 bg-slate-950/60 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all flex items-center px-3">
                   <span className="text-slate-400 mr-2 text-sm shrink-0">🌐</span>
@@ -479,16 +485,16 @@ export const AnalysisPage: React.FC = () => {
                     onChange={(e) => setCustomMarket(e.target.value)}
                     className="w-full bg-transparent border-0 p-0 text-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-0 cursor-pointer"
                   >
-                    <option value="NASDAQ" className="bg-slate-900 text-white">NASDAQ (USA)</option>
-                    <option value="NYSE" className="bg-slate-900 text-white">NYSE (USA)</option>
-                    <option value="Euronext Milan" className="bg-slate-900 text-white">Euronext Milan / Borsa Italiana</option>
-                    <option value="Euronext Growth Milan" className="bg-slate-900 text-white">Euronext Growth Milan</option>
-                    <option value="Euronext Global Equity Market" className="bg-slate-900 text-white">Euronext GEM</option>
-                    <option value="EuroTLX" className="bg-slate-900 text-white">EuroTLX</option>
-                    <option value="Euronext Paris" className="bg-slate-900 text-white">Euronext Paris (.PA)</option>
-                    <option value="Euronext Amsterdam" className="bg-slate-900 text-white">Euronext Amsterdam (.AS)</option>
-                    <option value="Xetra" className="bg-slate-900 text-white">XETRA (Germania .DE)</option>
-                    <option value="London" className="bg-slate-900 text-white">LSE (Londra .L)</option>
+                    <option value="NASDAQ" className="bg-slate-900 text-white">{t("analysis.markets.nasdaq", "NASDAQ (USA)")}</option>
+                    <option value="NYSE" className="bg-slate-900 text-white">{t("analysis.markets.nyse", "NYSE (USA)")}</option>
+                    <option value="Euronext Milan" className="bg-slate-900 text-white">{t("analysis.markets.milan", "Euronext Milan / Borsa Italiana")}</option>
+                    <option value="Euronext Growth Milan" className="bg-slate-900 text-white">{t("analysis.markets.growth_milan", "Euronext Growth Milan")}</option>
+                    <option value="Euronext Global Equity Market" className="bg-slate-900 text-white">{t("analysis.markets.gem", "Euronext GEM")}</option>
+                    <option value="EuroTLX" className="bg-slate-900 text-white">{t("analysis.markets.eurotlx", "EuroTLX")}</option>
+                    <option value="Euronext Paris" className="bg-slate-900 text-white">{t("analysis.markets.paris", "Euronext Paris (.PA)")}</option>
+                    <option value="Euronext Amsterdam" className="bg-slate-900 text-white">{t("analysis.markets.amsterdam", "Euronext Amsterdam (.AS)")}</option>
+                    <option value="Xetra" className="bg-slate-900 text-white">{t("analysis.markets.xetra", "XETRA (Germania .DE)")}</option>
+                    <option value="London" className="bg-slate-900 text-white">{t("analysis.markets.london", "LSE (Londra .L)")}</option>
                     {![
                       "NASDAQ",
                       "NYSE",
@@ -522,12 +528,12 @@ export const AnalysisPage: React.FC = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                       </svg>
-                      <span>Analisi in corso...</span>
+                      <span>{t("analysis.actions.running", "Analisi in corso...")}</span>
                     </>
                   ) : (
                     <>
                       <span className="group-hover:scale-110 transition-transform">🚀</span>
-                      <span>Genera Coaching AI</span>
+                      <span>{t("analysis.actions.generate", "Genera Coaching AI")}</span>
                     </>
                   )}
                 </button>
@@ -547,7 +553,7 @@ export const AnalysisPage: React.FC = () => {
                   </span>
                 </span>
                 <span className="text-[11px] text-slate-500 hidden sm:inline">
-                  Titolo verificato da database
+                  {t("analysis.custom.verified_db_ticker", "Titolo verificato da database")}
                 </span>
               </div>
             )}
@@ -560,7 +566,7 @@ export const AnalysisPage: React.FC = () => {
         {/* Left Column: Historical Reports List */}
         <div className="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Storico Analisi</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("analysis.history.title", "Storico Analisi")}</h2>
             <span className="text-xs text-slate-500 font-mono">{history.length}</span>
           </div>
 
@@ -571,7 +577,7 @@ export const AnalysisPage: React.FC = () => {
               ))}
             </div>
           ) : history.length === 0 ? (
-            <p className="text-xs text-slate-500 py-4 text-center">Nessuna analisi passata presente.</p>
+            <p className="text-xs text-slate-500 py-4 text-center">{t("analysis.history.empty", "Nessuna analisi passata presente.")}</p>
           ) : (
             <div className="space-y-2 max-h-[550px] overflow-y-auto pr-1">
               {history.map((rep) => {
@@ -595,14 +601,14 @@ export const AnalysisPage: React.FC = () => {
                         </span>
                       ) : isRunning ? (
                         <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 animate-pulse">
-                          In corso...
+                          {t("analysis.history.in_progress", "In corso...")}
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-500">{rep.status}</span>
                       )}
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1.5">
-                      <span>{new Date(rep.created_at).toLocaleDateString("it-IT", { month: "short", day: "numeric" })}</span>
+                      <span>{new Date(rep.created_at).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}</span>
                       <span className="uppercase text-[10px] text-slate-500 font-semibold">{rep.language}</span>
                     </div>
                   </div>
@@ -617,37 +623,37 @@ export const AnalysisPage: React.FC = () => {
           {reportLoading ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center space-y-4">
               <div className="inline-block animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-              <p className="text-sm text-slate-400">Caricamento del report in corso...</p>
+              <p className="text-sm text-slate-400">{t("analysis.display.loading", "Caricamento del report in corso...")}</p>
             </div>
           ) : !activeReport ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center space-y-2">
               <span className="text-4xl block mb-2">📊</span>
-              <h3 className="text-lg font-bold text-white">Nessuna analisi selezionata</h3>
+              <h3 className="text-lg font-bold text-white">{t("analysis.display.no_selection_title", "Nessuna analisi selezionata")}</h3>
               <p className="text-sm text-slate-400">
-                Seleziona una posizione azionaria o digita qualsiasi simbolo sopra per avviare il coaching multi-agente.
+                {t("analysis.display.no_selection_subtitle", "Seleziona una posizione azionaria o digita qualsiasi simbolo sopra per avviare il coaching multi-agente.")}
               </p>
             </div>
           ) : activeReport.status === "pending" || activeReport.status === "running" ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center space-y-4">
               <div className="inline-block animate-spin h-10 w-10 border-4 border-amber-500 border-t-transparent rounded-full" />
-              <h3 className="text-lg font-bold text-white">Analisi Multi-Agente in corso...</h3>
+              <h3 className="text-lg font-bold text-white">{t("analysis.display.running_title", "Analisi Multi-Agente in corso...")}</h3>
               <p className="text-sm text-slate-400 max-w-md mx-auto">
-                La squadra di analisti (Tecnico, Equity Research Fondamentale e Ciclico con Hurst) sta raccogliendo i dati ed elaborando il dibattito con il Coach.
+                {t("analysis.display.running_subtitle", "La squadra di analisti (Tecnico, Equity Research Fondamentale e Ciclico con Hurst) sta raccogliendo i dati ed elaborando il dibattito con il Coach.")}
               </p>
-              <div className="text-xs font-mono text-slate-500">Aggiornamento automatico ogni 3 secondi</div>
+              <div className="text-xs font-mono text-slate-500">{t("analysis.display.running_refresh_hint", "Aggiornamento automatico ogni 3 secondi")}</div>
             </div>
           ) : activeReport.status === "failed" ? (
             <div className="bg-rose-950/20 border border-rose-900/50 rounded-xl p-8 text-center space-y-4">
               <span className="text-4xl block">⚠️</span>
-              <h3 className="text-lg font-bold text-rose-400">Analisi non riuscita</h3>
+              <h3 className="text-lg font-bold text-rose-400">{t("analysis.display.failed_title", "Analisi non riuscita")}</h3>
               <p className="text-sm text-slate-300 max-w-md mx-auto">
-                {activeReport.error_message || "Si è verificato un errore durante l'esecuzione del team di analisi."}
+                {activeReport.error_message || t("analysis.display.failed_default_message", "Si è verificato un errore durante l'esecuzione del team di analisi.")}
               </p>
               <button
                 onClick={() => deleteMutation.mutate(activeReport.id)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg transition-colors"
               >
-                Rimuovi report con errore
+                {t("analysis.display.remove_failed", "Rimuovi report con errore")}
               </button>
             </div>
           ) : (
@@ -656,13 +662,13 @@ export const AnalysisPage: React.FC = () => {
               <div className="flex justify-end pt-2">
                 <button
                   onClick={() => {
-                    if (window.confirm("Sei sicuro di voler eliminare questo report?")) {
+                    if (window.confirm(t("analysis.display.confirm_delete", "Sei sicuro di voler eliminare questo report?"))) {
                       deleteMutation.mutate(activeReport.id);
                     }
                   }}
                   className="text-xs text-rose-400 hover:text-rose-300 hover:underline"
                 >
-                  Elimina questo report
+                  {t("analysis.display.delete_report", "Elimina questo report")}
                 </button>
               </div>
             </div>

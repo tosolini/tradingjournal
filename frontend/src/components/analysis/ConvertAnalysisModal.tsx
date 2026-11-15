@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AnalysisReportDetail, api, tradeIdeasApi } from "../../lib/api";
 import { useToast } from "../../contexts/ToastContext";
 import { RichTextEditor } from "../RichTextEditor";
@@ -18,6 +19,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
   onClose,
   report,
 }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
@@ -86,42 +88,51 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
     }
 
     // Curated thesis text
-    let thesis = `Analisi Multi-Agente AI (Coach Score: ${score ?? "—"}/10)\n`;
+    let thesis = `${t("analysis.convert_modal.defaults.thesis_header", { score: score ?? "—" })}\n`;
     if (report.lead_synthesis) {
-      thesis += `\n• Sintesi Commissione: ${report.lead_synthesis.slice(0, 300)}...`;
+      thesis += `\n${t("analysis.convert_modal.defaults.lead_synthesis_prefix", "• Sintesi Commissione: ")}${report.lead_synthesis.slice(0, 300)}...`;
     }
     if (report.bull_thesis) {
-      thesis += `\n• Catalizzatori Bull: ${report.bull_thesis.slice(0, 200)}...`;
+      thesis += `\n${t("analysis.convert_modal.defaults.bull_thesis_prefix", "• Catalizzatori Bull: ")}${report.bull_thesis.slice(0, 200)}...`;
     }
     if (report.action_suggestions && report.action_suggestions.length > 0) {
-      thesis += `\n• Azioni Suggerite: ${report.action_suggestions.slice(0, 2).join("; ")}`;
+      thesis += `\n${t("analysis.convert_modal.defaults.action_sugg_prefix", "• Azioni Suggerite: ")}${report.action_suggestions.slice(0, 2).join("; ")}`;
     }
     setThesisNotes(thesis.trim());
 
     // Daily Note Defaults
     setNoteDate(new Date().toISOString().slice(0, 10));
     setMood(score && score >= 7 ? "up" : score && score <= 4 ? "down" : "stale");
-    setShortSummary(`Analisi AI: ${report.symbol} (${report.market}) · Score ${score ?? "—"}/10`);
+    setShortSummary(t("analysis.convert_modal.defaults.short_summary", {
+      symbol: report.symbol,
+      market: report.market,
+      score: score ?? "—",
+      defaultValue: `Analisi AI: ${report.symbol} (${report.market}) · Score ${score ?? "—"}/10`,
+    }));
 
-    let rich = `<p><strong>Analisi Multi-Agente: ${report.symbol} (${report.market})</strong></p>`;
-    rich += `<p><strong>Score del Coach:</strong> ${score ?? "—"}/10</p>`;
+    let rich = `<p><strong>${t("analysis.convert_modal.defaults.rich_header", {
+      symbol: report.symbol,
+      market: report.market,
+      defaultValue: `Analisi Multi-Agente: ${report.symbol} (${report.market})`,
+    })}</strong></p>`;
+    rich += `<p><strong>${t("analysis.convert_modal.defaults.coach_score", "Score del Coach:")}</strong> ${score ?? "—"}/10</p>`;
     if (report.lead_synthesis) {
-      rich += `<p><strong>Sintesi:</strong> ${report.lead_synthesis}</p>`;
+      rich += `<p><strong>${t("analysis.convert_modal.defaults.synthesis", "Sintesi:")}</strong> ${report.lead_synthesis}</p>`;
     }
     if (report.action_suggestions && report.action_suggestions.length > 0) {
-      rich += `<p><strong>Punti Chiave:</strong></p><ul>${report.action_suggestions
+      rich += `<p><strong>${t("analysis.convert_modal.defaults.key_points", "Punti Chiave:")}</strong></p><ul>${report.action_suggestions
         .map((s) => `<li>${s}</li>`)
         .join("")}</ul>`;
     }
     setNoteContent(rich);
-  }, [isOpen, report]);
+  }, [isOpen, report, t]);
 
   // Mutation: Save Scouting Idea
   const scoutingMutation = useMutation({
     mutationFn: () => {
       const parsedTrigger = parseFloat(triggerPrice);
       if (!parsedTrigger || isNaN(parsedTrigger)) {
-        throw new Error("Il prezzo trigger è obbligatorio per l'idea di scouting.");
+        throw new Error(t("analysis.convert_modal.toasts.trigger_required", "Il prezzo trigger è obbligatorio per l'idea di scouting."));
       }
 
       return tradeIdeasApi.create({
@@ -139,12 +150,12 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trade-ideas"] });
       queryClient.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
-      toast.success(`Idea di scouting per ${report.symbol} creata con successo!`);
+      toast.success(t("analysis.convert_modal.toasts.scouting_success", { symbol: report.symbol, defaultValue: `Idea di scouting per ${report.symbol} creata con successo!` }));
       onClose();
       navigate("/notes?tab=scouting");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Impossibile salvare l'idea di scouting.");
+      toast.error(err.message || t("analysis.convert_modal.toasts.scouting_error", "Impossibile salvare l'idea di scouting."));
     },
   });
 
@@ -159,19 +170,19 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
           mood,
           market_condition: `${report.symbol} (${report.market})`,
           market_volatility: "medium",
-          short_summary: shortSummary.trim() || `Analisi ${report.symbol}`,
+          short_summary: shortSummary.trim() || t("analysis.convert_modal.defaults.short_summary_fallback", { symbol: report.symbol, defaultValue: `Analisi ${report.symbol}` }),
           rich_text: noteContent.trim(),
         }),
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
-      toast.success(`Nota di trading per ${report.symbol} aggiunta al diario!`);
+      toast.success(t("analysis.convert_modal.toasts.note_success", { symbol: report.symbol, defaultValue: `Nota di trading per ${report.symbol} aggiunta al diario!` }));
       onClose();
       navigate("/notes?tab=notes");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Impossibile salvare la nota giornaliera.");
+      toast.error(err.message || t("analysis.convert_modal.toasts.note_error", "Impossibile salvare la nota giornaliera."));
     },
   });
 
@@ -195,11 +206,15 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-xl">⚡</span>
               <h2 className="text-lg font-bold text-white tracking-tight">
-                {step === 1 ? "Trasforma Analisi in Azione" : destination === "scouting" ? "Crea Idea di Scouting" : "Aggiungi a Nota del Giorno"}
+                {step === 1
+                  ? t("analysis.convert_modal.title_step1", "Trasforma Analisi in Azione")
+                  : destination === "scouting"
+                  ? t("analysis.convert_modal.title_scouting", "Crea Idea di Scouting")
+                  : t("analysis.convert_modal.title_note", "Aggiungi a Nota del Giorno")}
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              {report.symbol} ({report.market}) · Coach Score:{" "}
+              {report.symbol} ({report.market}) · {t("analysis.viewer.coach_score", "Coach Score")}:{" "}
               <span className="text-sky-400 font-semibold">{report.overall_score ?? "—"}/10</span>
             </p>
           </div>
@@ -207,7 +222,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
-            aria-label="Chiudi"
+            aria-label={t("analysis.convert_modal.close", "Chiudi")}
           >
             ✕
           </button>
@@ -219,7 +234,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-xs text-slate-300">
-                Seleziona dove desideri trasferire i dati e le tesi elaborate dall'intelligenza artificiale:
+                {t("analysis.convert_modal.step1_prompt", "Seleziona dove desideri trasferire i dati e le tesi elaborate dall'intelligenza artificiale:")}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -236,13 +251,13 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
                     🎯
                   </div>
                   <h3 className="font-bold text-sm text-white group-hover:text-teal-300 transition-colors">
-                    Idea di Scouting
+                    {t("analysis.convert_modal.scouting_card_title", "Idea di Scouting")}
                   </h3>
                   <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    Aggiungi alla Watchlist con trigger di prezzo, Stop Loss e Target precompilati dall'analisi tecnica e dai consensus.
+                    {t("analysis.convert_modal.scouting_card_desc", "Aggiungi alla Watchlist con trigger di prezzo, Stop Loss e Target precompilati dall'analisi tecnica e dai consensus.")}
                   </p>
                   <span className="mt-3 text-[11px] font-semibold text-teal-400 flex items-center gap-1">
-                    Configura Setup <span>→</span>
+                    {t("analysis.convert_modal.scouting_card_action", "Configura Setup")} <span>→</span>
                   </span>
                 </button>
 
@@ -259,13 +274,13 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
                     📝
                   </div>
                   <h3 className="font-bold text-sm text-white group-hover:text-violet-300 transition-colors">
-                    Nota di Trading
+                    {t("analysis.convert_modal.note_card_title", "Nota di Trading")}
                   </h3>
                   <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    Registra la riflessione e i catalizzatori nel diario di oggi, con score, sentiment e consigli operativi del coach.
+                    {t("analysis.convert_modal.note_card_desc", "Registra la riflessione e i catalizzatori nel diario di oggi, con score, sentiment e consigli operativi del coach.")}
                   </p>
                   <span className="mt-3 text-[11px] font-semibold text-violet-400 flex items-center gap-1">
-                    Scrivi nel Diario <span>→</span>
+                    {t("analysis.convert_modal.note_card_action", "Scrivi nel Diario")} <span>→</span>
                   </span>
                 </button>
               </div>
@@ -278,7 +293,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
               {/* Direction selector */}
               <div>
                 <label className="block font-semibold uppercase text-slate-400 mb-1.5">
-                  Direzione Setup
+                  {t("analysis.convert_modal.direction_label", "Direzione Setup")}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -293,7 +308,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
                         : "bg-slate-800 text-slate-400 hover:text-white"
                     }`}
                   >
-                    <span>↗</span> LONG (Rialzista)
+                    <span>↗</span> {t("analysis.convert_modal.direction_long", "LONG (Rialzista)")}
                   </button>
                   <button
                     type="button"
@@ -307,7 +322,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
                         : "bg-slate-800 text-slate-400 hover:text-white"
                     }`}
                   >
-                    <span>↘</span> SHORT (Ribassista)
+                    <span>↘</span> {t("analysis.convert_modal.direction_short", "SHORT (Ribassista)")}
                   </button>
                 </div>
               </div>
@@ -316,27 +331,27 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block font-semibold uppercase text-slate-400 mb-1">
-                    Condizione
+                    {t("analysis.convert_modal.condition_label", "Condizione")}
                   </label>
                   <select
                     value={triggerCondition}
                     onChange={(e) => setTriggerCondition(e.target.value as "<=" | ">=")}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-white text-xs font-mono"
                   >
-                    <option value="<=">&le; Prezzo tocca o scende a</option>
-                    <option value=">=">&ge; Prezzo tocca o sale a</option>
+                    <option value="<=">{t("analysis.convert_modal.condition_le", "≤ Prezzo tocca o scende a")}</option>
+                    <option value=">=">{t("analysis.convert_modal.condition_ge", "≥ Prezzo tocca o sale a")}</option>
                   </select>
                 </div>
                 <div className="col-span-2">
                   <label className="block font-semibold uppercase text-slate-400 mb-1">
-                    Prezzo Trigger *
+                    {t("analysis.convert_modal.trigger_price_label", "Prezzo Trigger *")}
                   </label>
                   <input
                     type="number"
                     step="any"
                     value={triggerPrice}
                     onChange={(e) => setTriggerPrice(e.target.value)}
-                    placeholder="Es. 120.50"
+                    placeholder={t("analysis.convert_modal.trigger_price_placeholder", "Es. 120.50")}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:ring-1 focus:ring-teal-400 focus:outline-none"
                   />
                 </div>
@@ -346,27 +361,27 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold uppercase text-rose-400 mb-1">
-                    Stop Loss
+                    {t("analysis.convert_modal.stop_loss_label", "Stop Loss")}
                   </label>
                   <input
                     type="number"
                     step="any"
                     value={stopLoss}
                     onChange={(e) => setStopLoss(e.target.value)}
-                    placeholder="Supporto tecnico"
+                    placeholder={t("analysis.convert_modal.stop_loss_placeholder", "Supporto tecnico")}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:ring-1 focus:ring-rose-400 focus:outline-none"
                   />
                 </div>
                 <div>
                   <label className="block font-semibold uppercase text-emerald-400 mb-1">
-                    Target Price
+                    {t("analysis.convert_modal.target_price_label", "Target Price")}
                   </label>
                   <input
                     type="number"
                     step="any"
                     value={targetPrice}
                     onChange={(e) => setTargetPrice(e.target.value)}
-                    placeholder="Target Wall St o resistenza"
+                    placeholder={t("analysis.convert_modal.target_price_placeholder", "Target Wall St o resistenza")}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:ring-1 focus:ring-emerald-400 focus:outline-none"
                   />
                 </div>
@@ -375,7 +390,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
               {/* Thesis Notes */}
               <div>
                 <label className="block font-semibold uppercase text-slate-400 mb-1">
-                  Tesi di Scouting & Catalizzatori
+                  {t("analysis.convert_modal.thesis_label", "Tesi di Scouting & Catalizzatori")}
                 </label>
                 <textarea
                   rows={4}
@@ -393,7 +408,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold uppercase text-slate-400 mb-1">
-                    Data Diario
+                    {t("analysis.convert_modal.date_label", "Data Diario")}
                   </label>
                   <input
                     type="date"
@@ -405,23 +420,23 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
 
                 <div>
                   <label className="block font-semibold uppercase text-slate-400 mb-1">
-                    Sentiment / Mood
+                    {t("analysis.convert_modal.sentiment_label", "Sentiment / Mood")}
                   </label>
                   <select
                     value={mood}
                     onChange={(e) => setMood(e.target.value as "up" | "down" | "stale")}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs"
                   >
-                    <option value="up">🟢 Positivo / Rialzista</option>
-                    <option value="stale">🟡 Neutro / Attesa</option>
-                    <option value="down">🔴 Cauto / Ribassista</option>
+                    <option value="up">{t("analysis.convert_modal.mood_up", "🟢 Positivo / Rialzista")}</option>
+                    <option value="stale">{t("analysis.convert_modal.mood_stale", "🟡 Neutro / Attesa")}</option>
+                    <option value="down">{t("analysis.convert_modal.mood_down", "🔴 Cauto / Ribassista")}</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block font-semibold uppercase text-slate-400 mb-1">
-                  Sommario Breve
+                  {t("analysis.convert_modal.summary_label", "Sommario Breve")}
                 </label>
                 <input
                   type="text"
@@ -433,12 +448,12 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
 
               <div>
                 <label className="block font-semibold uppercase text-slate-400 mb-1">
-                  Contenuto della Nota (WYSIWYG)
+                  {t("analysis.convert_modal.note_content_label", "Contenuto della Nota (WYSIWYG)")}
                 </label>
                 <RichTextEditor
                   value={noteContent}
                   onChange={setNoteContent}
-                  placeholder="Scrivi o perfeziona i dettagli della tua nota..."
+                  placeholder={t("analysis.convert_modal.note_content_placeholder", "Scrivi o perfeziona i dettagli della tua nota...")}
                   minHeight="180px"
                 />
               </div>
@@ -455,7 +470,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
               disabled={isPending}
               className="px-3.5 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs text-slate-300 font-medium transition"
             >
-              ← Indietro
+              {t("analysis.convert_modal.btn_back", "← Indietro")}
             </button>
           ) : (
             <div />
@@ -468,7 +483,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
               disabled={isPending}
               className="px-3.5 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 text-xs text-slate-400 hover:text-white transition"
             >
-              Annulla
+              {t("analysis.convert_modal.btn_cancel", "Annulla")}
             </button>
 
             {step === 2 && (
@@ -490,11 +505,11 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    <span>Salvataggio...</span>
+                    <span>{t("analysis.convert_modal.btn_saving", "Salvataggio...")}</span>
                   </>
                 ) : (
                   <>
-                    <span>Salva Subito</span>
+                    <span>{t("analysis.convert_modal.btn_save", "Salva Subito")}</span>
                     <span>🚀</span>
                   </>
                 )}
