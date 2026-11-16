@@ -7,6 +7,7 @@ from typing import Any, Optional
 import requests
 
 from app.config import settings
+from app.i18n import translate_locale
 
 logger = logging.getLogger(__name__)
 
@@ -22,16 +23,19 @@ class BaseChatClient(ABC):
 class MockChatClient(BaseChatClient):
     """Deterministic mock client for tests and dry runs."""
 
-    def __init__(self, responses: Optional[dict[str, str]] = None):
+    def __init__(self, responses: Optional[dict[str, str]] = None, language: str = "en"):
         self.responses = responses or {}
         self.call_history: list[dict[str, str]] = []
+        self.language = "it" if str(language).lower().startswith("it") else "en"
 
     def generate(self, system_prompt: str, user_prompt: str, temperature: float = 0.2) -> str:
         self.call_history.append({"system": system_prompt, "user": user_prompt})
         for key, resp in self.responses.items():
             if key.lower() in system_prompt.lower() or key.lower() in user_prompt.lower():
                 return resp
-        return "Report sintetico generato in modalità test (Mock)."
+        if self.language == "it":
+            return "Report sintetico generato in modalità test (Mock)."
+        return "Synthetic report generated in test (Mock) mode."
 
 
 class OpenAIChatClient(BaseChatClient):
@@ -128,6 +132,7 @@ def get_llm_client(
     model: Optional[str] = None,
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
+    language: str = "en",
 ) -> BaseChatClient:
     """Agnostic factory returning the configured Chat Client."""
     prov = (provider or settings.analysis_llm_provider).lower()
@@ -136,18 +141,18 @@ def get_llm_client(
     b_url = base_url or settings.analysis_base_url
 
     if prov == "mock":
-        return MockChatClient()
+        return MockChatClient(language=language)
 
     if prov == "gemini":
         if not key:
             logger.warning("Gemini API key is not set; falling back to MockChatClient")
-            return MockChatClient()
+            return MockChatClient(language=language)
         return GeminiChatClient(api_key=key, model=mod)
 
     elif prov == "anthropic":
         if not key:
             logger.warning("Anthropic API key is not set; falling back to MockChatClient")
-            return MockChatClient()
+            return MockChatClient(language=language)
         return AnthropicChatClient(api_key=key, model=mod)
 
     elif prov == "ollama":
@@ -157,28 +162,36 @@ def get_llm_client(
     elif prov == "openai":
         if not key:
             logger.warning("OpenAI API key is not set; falling back to MockChatClient")
-            return MockChatClient()
+            return MockChatClient(language=language)
         return OpenAIChatClient(api_key=key, model=mod, base_url=b_url)
 
     elif prov == "openrouter":
         if not key:
             logger.warning("OpenRouter API key is not set; falling back to MockChatClient")
-            return MockChatClient()
+            return MockChatClient(language=language)
         openrouter_url = b_url or "https://openrouter.ai/api/v1"
         return OpenAIChatClient(api_key=key, model=mod, base_url=openrouter_url)
 
     # Default fallback
-    return MockChatClient()
+    return MockChatClient(language=language)
 
 
-def get_user_llm_client(user_llm_config: Optional[dict[str, Any]] = None) -> BaseChatClient:
+def get_user_llm_client(
+    user_llm_config: Optional[dict[str, Any]] = None, language: str = "en"
+) -> BaseChatClient:
     """Return LLM client resolved from user preferences or global settings."""
     if user_llm_config and isinstance(user_llm_config, dict):
         provider = user_llm_config.get("provider")
         model = user_llm_config.get("model")
         api_key = user_llm_config.get("api_key")
         base_url = user_llm_config.get("base_url")
-        return get_llm_client(provider=provider, model=model, api_key=api_key, base_url=base_url)
+        return get_llm_client(
+            provider=provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            language=language,
+        )
 
     return get_llm_client()
 
@@ -188,6 +201,7 @@ def test_llm_connection(
     model: Optional[str] = None,
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
+    locale: str = "en",
 ) -> tuple[bool, Optional[int], str, Optional[str]]:
     """
     Test real-time connectivity and credentials for an LLM provider.
@@ -196,19 +210,22 @@ def test_llm_connection(
     prov = (provider or "mock").strip().lower()
     t_start = time.perf_counter()
 
+    def _tr(key: str, **kwargs: Any) -> str:
+        return translate_locale(locale, key, **kwargs)
+
     if prov == "mock":
         latency_ms = max(1, int((time.perf_counter() - t_start) * 1000))
-        return True, latency_ms, "Provider Mock (Offline) pronto all'uso.", None
+        return True, latency_ms, _tr("test.mock_ready"), None
 
     effective_key = (api_key or "").strip() or settings.analysis_api_key
 
     try:
         if prov == "gemini":
             if not effective_key:
-                return False, None, "Connessione fallita", "API Key mancante per Google Gemini."
+                return False, None, _tr("test.connection_failed"), _tr("test.missing_api_key", provider="Google Gemini")
             eff_model = (model or settings.analysis_llm_model or "").strip().replace("models/", "")
             if not eff_model:
-                return False, None, "Connessione fallita", "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
+                return False, None, _tr("test.connection_failed"), _tr("test.missing_model")
             url = (
                 f"https://generativelanguage.googleapis.com/v1beta/models/{eff_model}:generateContent"
                 f"?key={effective_key}"
@@ -220,7 +237,7 @@ def test_llm_connection(
             resp = requests.post(url, json=payload, timeout=12)
             latency_ms = int((time.perf_counter() - t_start) * 1000)
             if resp.status_code == 200:
-                return True, latency_ms, f"Connessione a Gemini ({eff_model}) riuscita!", None
+                return True, latency_ms, _tr("test.success", provider="Gemini", model=eff_model), None
             else:
                 err_detail = resp.text[:200]
                 try:
@@ -228,14 +245,14 @@ def test_llm_connection(
                     err_detail = err_json.get("error", {}).get("message", err_detail)
                 except Exception:
                     pass
-                return False, latency_ms, "Errore API Gemini", f"HTTP {resp.status_code}: {err_detail}"
+                return False, latency_ms, _tr("test.api_error", provider="Gemini"), f"HTTP {resp.status_code}: {err_detail}"
 
         elif prov == "openai":
             if not effective_key:
-                return False, None, "Connessione fallita", "API Key mancante per OpenAI."
+                return False, None, _tr("test.connection_failed"), _tr("test.missing_api_key", provider="OpenAI")
             eff_model = (model or settings.analysis_llm_model or "").strip()
             if not eff_model:
-                return False, None, "Connessione fallita", "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
+                return False, None, _tr("test.connection_failed"), _tr("test.missing_model")
             eff_base_url = (base_url or settings.analysis_base_url or "https://api.openai.com/v1").rstrip("/")
             url = f"{eff_base_url}/chat/completions"
             headers = {
@@ -250,7 +267,7 @@ def test_llm_connection(
             resp = requests.post(url, headers=headers, json=payload, timeout=12)
             latency_ms = int((time.perf_counter() - t_start) * 1000)
             if resp.status_code == 200:
-                return True, latency_ms, f"Connessione a OpenAI ({eff_model}) riuscita!", None
+                return True, latency_ms, _tr("test.success", provider="OpenAI", model=eff_model), None
             else:
                 err_detail = resp.text[:200]
                 try:
@@ -258,14 +275,14 @@ def test_llm_connection(
                     err_detail = err_json.get("error", {}).get("message", err_detail)
                 except Exception:
                     pass
-                return False, latency_ms, "Errore API OpenAI", f"HTTP {resp.status_code}: {err_detail}"
+                return False, latency_ms, _tr("test.api_error", provider="OpenAI"), f"HTTP {resp.status_code}: {err_detail}"
 
         elif prov == "anthropic":
             if not effective_key:
-                return False, None, "Connessione fallita", "API Key mancante per Anthropic."
+                return False, None, _tr("test.connection_failed"), _tr("test.missing_api_key", provider="Anthropic")
             eff_model = (model or settings.analysis_llm_model or "").strip()
             if not eff_model:
-                return False, None, "Connessione fallita", "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
+                return False, None, _tr("test.connection_failed"), _tr("test.missing_model")
             url = "https://api.anthropic.com/v1/messages"
             headers = {
                 "x-api-key": effective_key,
@@ -280,7 +297,7 @@ def test_llm_connection(
             resp = requests.post(url, headers=headers, json=payload, timeout=12)
             latency_ms = int((time.perf_counter() - t_start) * 1000)
             if resp.status_code == 200:
-                return True, latency_ms, f"Connessione ad Anthropic ({eff_model}) riuscita!", None
+                return True, latency_ms, _tr("test.success", provider="Anthropic", model=eff_model), None
             else:
                 err_detail = resp.text[:200]
                 try:
@@ -288,7 +305,7 @@ def test_llm_connection(
                     err_detail = err_json.get("error", {}).get("message", err_detail)
                 except Exception:
                     pass
-                return False, latency_ms, "Errore API Anthropic", f"HTTP {resp.status_code}: {err_detail}"
+                return False, latency_ms, _tr("test.api_error", provider="Anthropic"), f"HTTP {resp.status_code}: {err_detail}"
 
         elif prov == "ollama":
             eff_base_url = (base_url or settings.analysis_base_url or "http://localhost:11434").rstrip("/")
@@ -298,16 +315,16 @@ def test_llm_connection(
             resp = requests.get(tags_url, timeout=6)
             latency_ms = int((time.perf_counter() - t_start) * 1000)
             if resp.status_code == 200:
-                return True, latency_ms, f"Connessione a Ollama riuscita ({root_url})!", None
+                return True, latency_ms, _tr("test.success_ollama", url=root_url), None
             else:
-                return False, latency_ms, "Errore Ollama", f"HTTP {resp.status_code}: {resp.text[:200]}"
+                return False, latency_ms, _tr("test.ollama_error"), f"HTTP {resp.status_code}: {resp.text[:200]}"
 
         elif prov == "openrouter":
             if not effective_key:
-                return False, None, "Connessione fallita", "API Key mancante per OpenRouter."
+                return False, None, _tr("test.connection_failed"), _tr("test.missing_api_key", provider="OpenRouter")
             eff_model = (model or settings.analysis_llm_model or "").strip()
             if not eff_model:
-                return False, None, "Connessione fallita", "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
+                return False, None, _tr("test.connection_failed"), _tr("test.missing_model")
             eff_base_url = (base_url or settings.analysis_base_url or "https://openrouter.ai/api/v1").rstrip("/")
             url = f"{eff_base_url}/chat/completions"
             headers = {
@@ -324,7 +341,7 @@ def test_llm_connection(
             resp = requests.post(url, headers=headers, json=payload, timeout=12)
             latency_ms = int((time.perf_counter() - t_start) * 1000)
             if resp.status_code == 200:
-                return True, latency_ms, f"Connessione a OpenRouter ({eff_model}) riuscita!", None
+                return True, latency_ms, _tr("test.success", provider="OpenRouter", model=eff_model), None
             else:
                 err_detail = resp.text[:200]
                 try:
@@ -332,14 +349,14 @@ def test_llm_connection(
                     err_detail = err_json.get("error", {}).get("message", err_detail)
                 except Exception:
                     pass
-                return False, latency_ms, "Errore API OpenRouter", f"HTTP {resp.status_code}: {err_detail}"
+                return False, latency_ms, _tr("test.api_error", provider="OpenRouter"), f"HTTP {resp.status_code}: {err_detail}"
 
         else:
-            return False, None, "Provider non supportato", f"Provider sconosciuto: {provider}"
+            return False, None, _tr("test.unsupported_provider"), _tr("test.unknown_provider", provider=provider)
 
     except requests.exceptions.ConnectionError as err:
-        return False, None, "Errore di connessione", f"Impossibile raggiungere il server host: {str(err)[:200]}"
+        return False, None, _tr("test.connection_error"), _tr("test.host_unreachable", detail=str(err)[:200])
     except requests.exceptions.Timeout:
-        return False, None, "Timeout connessione", "La richiesta ha impiegato più di 12 secondi."
+        return False, None, _tr("test.timeout"), _tr("test.timeout_detail")
     except Exception as exc:
-        return False, None, "Errore imprevisto", str(exc)[:250]
+        return False, None, _tr("test.unexpected_error"), str(exc)[:250]

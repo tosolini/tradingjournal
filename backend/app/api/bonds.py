@@ -1,12 +1,13 @@
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import select, or_, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.deps import get_current_user
+from app.i18n import localized_error
 from app.models import Asset, BondDetail, Holding, User
 from app.schemas import BondCalendarItem, BondLookupRequest, BondLookupResponse, BondPortfolioMetrics
 from app.services.bonds import (
@@ -304,14 +305,28 @@ def get_bond_metrics(
 @router.post("/lookup", response_model=BondLookupResponse)
 def lookup_bond(
     payload: BondLookupRequest,
+    request: Request,
     _current_user: User = Depends(get_current_user),
 ):
     from app.services.euronext import fetch_euronext_bond_details
     try:
         data = fetch_euronext_bond_details(payload.query)
         return BondLookupResponse(**data)
+    except ValueError as e:
+        message = str(e)
+        if message.startswith("errors."):
+            raise localized_error(
+                status_code=400,
+                code=message,
+                request=request,
+                query=payload.query,
+            ) from e
+        raise HTTPException(status_code=400, detail=message) from e
     except Exception as e:
-        raise HTTPException(
+        raise localized_error(
             status_code=400,
-            detail=f"Errore nel recupero dati Euronext per '{payload.query}': {str(e)}",
-        )
+            code="errors.euronext_lookup_failed",
+            request=request,
+            query=payload.query,
+            detail=str(e),
+        ) from e

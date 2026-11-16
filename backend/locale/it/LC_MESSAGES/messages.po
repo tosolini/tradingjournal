@@ -104,3 +104,138 @@ msgstr "Non puoi disattivare il tuo stesso account"
 
 msgid "errors.user_has_data"
 msgstr "L'utente possiede ancora dati, disattivalo invece di eliminarlo"
+
+msgid "errors.cannot_delete_self"
+msgstr "Non puoi eliminare il tuo stesso account"
+
+msgid "errors.current_password_required"
+msgstr "Password attuale obbligatoria"
+
+msgid "errors.euronext_sync_failed"
+msgstr "Sincronizzazione Euronext non riuscita: {detail}"
+
+msgid "errors.exchange_name_required"
+msgstr "Nome mercato obbligatorio"
+
+msgid "errors.exchange_not_euronext"
+msgstr "Il mercato non è collegato a Euronext"
+
+msgid "errors.exchange_not_found"
+msgstr "Mercato non trovato"
+
+msgid "errors.not_found"
+msgstr "Non trovato"
+
+msgid "errors.trade_idea_not_found"
+msgstr "Idea di scouting non trovata"
+
+msgid "errors.exit_tranche_closed"
+msgstr "La tranche è già chiusa"
+
+msgid "errors.exit_type_invalid"
+msgstr "Tipo di uscita non valido"
+
+msgid "errors.exit_bonds_only"
+msgstr "Questo tipo di uscita è disponibile solo per le obbligazioni"
+
+msgid "errors.exit_maturity_bonds_only"
+msgstr "La scadenza naturale è disponibile solo per le obbligazioni"
+
+msgid "errors.exit_maturity_not_reached"
+msgstr "Il rimborso a scadenza non è ancora avvenuto"
+
+msgid "errors.exit_date_future"
+msgstr "La data di uscita non può essere nel futuro"
+
+msgid "errors.exit_date_before_entry"
+msgstr "La data di uscita non può precedere la data di ingresso"
+
+msgid "errors.exit_quantity_invalid"
+msgstr "Quantità non valida"
+
+msgid "errors.exit_price_invalid"
+msgstr "Prezzo di uscita non valido"
+
+msgid "errors.exit_accrued_invalid"
+msgstr "Rateo di uscita non valido"
+
+msgid "errors.exit_fees_invalid"
+msgstr "Commissioni non valide"
+
+msgid "errors.exit_coupons_invalid"
+msgstr "Cedole/premio non validi"
+
+msgid "errors.exit_taxes_invalid"
+msgstr "Imposte non valide"
+
+msgid "errors.euronext_query_invalid"
+msgstr "Formato non riconosciuto per query Euronext: '{query}'. Inserisci un ISIN o URL Euronext."
+
+msgid "errors.euronext_lookup_failed"
+msgstr "Errore nel recupero dati Euronext per '{query}': {detail}"
+
+msgid "errors.euronext_asset_not_bond"
+msgstr "L'asset non è un'obbligazione: sincronizzazione Euronext non disponibile"
+
+msgid "errors.euronext_asset_missing_identifier"
+msgstr "L'asset non ha ISIN o simbolo per la ricerca su Euronext"
+
+msgid "errors.euronext_no_bond_data"
+msgstr "Nessun dato obbligazionario trovato su Euronext"
+
+msgid "warnings.exit_bonus_forfeited"
+msgstr "Vendita anticipata: il premio fedeltà CUM non viene riconosciuto sulla quantità venduta."
+
+msgid "warnings.exit_partial_remaining"
+msgstr "Vendita parziale: restano {quantity} di quantità nella tranche."
+
+msgid "warnings.exit_tranche_closed"
+msgstr "La tranche verrà chiusa."
+
+msgid "warnings.exit_capital_gain_deferred"
+msgstr "Tassa sul capital gain differita a fine anno secondo la configurazione del broker."
+
+msgid "test.mock_ready"
+msgstr "Provider Mock (Offline) pronto all'uso."
+
+msgid "test.success"
+msgstr "Connessione a {provider} ({model}) riuscita!"
+
+msgid "test.success_ollama"
+msgstr "Connessione a Ollama riuscita ({url})!"
+
+msgid "test.connection_failed"
+msgstr "Connessione fallita"
+
+msgid "test.missing_api_key"
+msgstr "API Key mancante per {provider}."
+
+msgid "test.missing_model"
+msgstr "Identificativo del modello mancante. Inserisci il nome del modello da utilizzare."
+
+msgid "test.api_error"
+msgstr "Errore API {provider}"
+
+msgid "test.ollama_error"
+msgstr "Errore Ollama"
+
+msgid "test.unsupported_provider"
+msgstr "Provider non supportato"
+
+msgid "test.unknown_provider"
+msgstr "Provider sconosciuto: {provider}"
+
+msgid "test.connection_error"
+msgstr "Errore di connessione"
+
+msgid "test.host_unreachable"
+msgstr "Impossibile raggiungere il server host: {detail}"
+
+msgid "test.timeout"
+msgstr "Timeout connessione"
+
+msgid "test.timeout_detail"
+msgstr "La richiesta ha impiegato più di 12 secondi."
+
+msgid "test.unexpected_error"
+msgstr "Errore imprevisto"

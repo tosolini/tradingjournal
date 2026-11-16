@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { Account, Broker, Trade, TradeDetail, api, fetchTradeImageBlobUrl } from "../lib/api";
 import { estimateExecutionFee, isGovernmentBond } from "../lib/fees";
+import { getActiveLocale } from "../lib/numbers";
 import { TradingViewChart } from "../components/TradingViewChart";
 import { TradingViewTechnicalAnalysis } from "../components/TradingViewTechnicalAnalysis";
 
@@ -19,7 +20,7 @@ const closeTradeSchema = z.object({
 
 type CloseTradePayload = z.infer<typeof closeTradeSchema>;
 
-function formatMetric(value: string | number | undefined): string {
+function formatMetric(value: string | number | undefined, locale = getActiveLocale()): string {
   if (value === undefined || value === null) {
     return "-";
   }
@@ -27,10 +28,14 @@ function formatMetric(value: string | number | undefined): string {
   if (!Number.isFinite(n)) {
     return "-";
   }
-  return n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatMoney(value: string | number | undefined, currency?: string): string {
+function formatMoney(
+  value: string | number | undefined,
+  currency?: string,
+  locale = getActiveLocale(),
+): string {
   if (value === undefined || value === null) {
     return "-";
   }
@@ -40,12 +45,12 @@ function formatMoney(value: string | number | undefined, currency?: string): str
   }
   const normalized = (currency || "").trim().toUpperCase();
   if (!normalized) {
-    return formatMetric(n);
+    return formatMetric(n, locale);
   }
   try {
-    return new Intl.NumberFormat("it-IT", { style: "currency", currency: normalized }).format(n);
+    return new Intl.NumberFormat(locale, { style: "currency", currency: normalized }).format(n);
   } catch {
-    return `${formatMetric(n)} ${normalized}`;
+    return `${formatMetric(n, locale)} ${normalized}`;
   }
 }
 
@@ -352,10 +357,10 @@ export function TradeDetailPage() {
           <Link
             to={`/analysis?symbol=${encodeURIComponent(trade.symbol)}${trade.market ? `&market=${encodeURIComponent(trade.market)}` : ""}&tradeId=${trade.id}`}
             className="rounded bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
-            title={t("trade_detail.ai_coaching_title", "Analisi & Coaching AI con Multi-Agent Debate")}
+            title={t("trade_detail.ai_coaching_title")}
           >
             <span>🤖</span>
-            <span>{t("trade_detail.ai_coaching", "Coaching AI")}</span>
+            <span>{t("trade_detail.ai_coaching")}</span>
           </Link>
         </div>
       </div>
@@ -374,7 +379,7 @@ export function TradeDetailPage() {
           <div>{trade.status}</div>
         </div>
         <div>
-          <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.instrument_type", "Strumento")}</div>
+          <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.instrument_type")}</div>
           <div className="flex items-center gap-1.5">
             <span className="capitalize">{trade.instrument_type ? trade.instrument_type.replace('_', ' ') : "Stock"}</span>
             {isGovBond && (
@@ -468,7 +473,7 @@ export function TradeDetailPage() {
           <div className="grid gap-3 md:grid-cols-4">
             <div>
               <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.closed_at")}</div>
-              <div>{new Date(closeSummary.closed_at).toLocaleString()}</div>
+              <div>{new Date(closeSummary.closed_at).toLocaleString(getActiveLocale())}</div>
             </div>
             <div>
               <div className="text-xs text-slate-400 dark:text-slate-900">{t("trade_detail.fields.reason")}</div>
@@ -505,7 +510,7 @@ export function TradeDetailPage() {
               <div>
                 {closeSummary.capital_gain_mode} {Number(closeSummary.capital_gain_rate || 0).toFixed(2)}%
                 {closeSummary.instrument_type === "government_bond" || closeSummary.instrument_type === "titolo_di_stato" ? (
-                  <span className="ml-1 text-xs text-emerald-400 font-medium">({t("trade_detail.gov_bond_tag", "Titolo di Stato")})</span>
+                  <span className="ml-1 text-xs text-emerald-400 font-medium">({t("trade_detail.gov_bond_tag")})</span>
                 ) : null}
               </div>
             </div>
@@ -606,8 +611,8 @@ export function TradeDetailPage() {
                   type="button"
                   onClick={openDateTimePicker}
                   className="absolute right-1 top-1/2 -translate-y-1/2 rounded bg-slate-800 dark:bg-slate-100 px-2 py-1 text-xs text-slate-200 dark:text-slate-900 hover:bg-slate-700"
-                  title="Apri selettore data"
-                  aria-label="Apri selettore data"
+                  title={t("trade_detail.open_date_picker")}
+                  aria-label={t("trade_detail.open_date_picker")}
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />

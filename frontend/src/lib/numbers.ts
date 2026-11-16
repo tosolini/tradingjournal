@@ -1,3 +1,5 @@
+import i18n from "./i18n";
+
 /**
  * Utility functions for locale-aware number parsing and formatting.
  * Seamlessly supports both comma (,) and dot (.) decimal separators.
@@ -7,8 +9,17 @@
  * Returns BCP 47 language tag ("it-IT" or "en-US") from i18n language string.
  */
 export function getNumberLocale(lang?: string): string {
-  if (!lang) return "it-IT";
+  if (!lang) return getActiveLocale();
   return lang.startsWith("en") ? "en-US" : "it-IT";
+}
+
+/**
+ * Returns the BCP 47 locale for the currently active UI language.
+ * Used as the default for every formatter so callers that omit the locale
+ * still follow the language selected by the user.
+ */
+export function getActiveLocale(): string {
+  return getNumberLocale(i18n.resolvedLanguage ?? i18n.language);
 }
 
 /**
@@ -58,12 +69,12 @@ export function cleanNumberInput(value: string | number | null | undefined): str
 }
 
 /**
- * Formats a monetary amount according to the given locale (or defaults to it-IT / en-US).
+ * Formats a monetary amount according to the given locale (or the active UI locale).
  */
 export function formatMoney(
   value: string | number | null | undefined,
   currency = "EUR",
-  locale = "it-IT"
+  locale = getActiveLocale()
 ): string {
   const n = parseLocaleNumber(value);
   const normalized = (currency || "EUR").trim().toUpperCase();
@@ -84,7 +95,7 @@ export function formatMoney(
 export function formatSignedMoney(
   value: string | number | null | undefined,
   currency = "EUR",
-  locale = "it-IT"
+  locale = getActiveLocale()
 ): string {
   const n = parseLocaleNumber(value);
   const sign = n < 0 ? "-" : n > 0 ? "+" : "";
@@ -99,7 +110,7 @@ export function formatNumber(
   options?: { minDecimals?: number; maxDecimals?: number; locale?: string }
 ): string {
   const n = parseLocaleNumber(value);
-  const loc = options?.locale || "it-IT";
+  const loc = options?.locale || getActiveLocale();
   return n.toLocaleString(loc, {
     minimumFractionDigits: options?.minDecimals ?? 2,
     maximumFractionDigits: options?.maxDecimals ?? 2,
@@ -113,7 +124,7 @@ export function formatNumber(
 export function formatPct(
   value: string | number | null | undefined,
   decimals = 2,
-  locale = "it-IT"
+  locale = getActiveLocale()
 ): string {
   const n = parseLocaleNumber(value);
   const formatted = Math.abs(n).toLocaleString(locale, {
@@ -133,7 +144,7 @@ export function formatPrice(
   value: string | number | null | undefined,
   isBond = false,
   currency = "EUR",
-  locale = "it-IT",
+  locale = getActiveLocale(),
   decimals = 2
 ): string {
   const n = parseLocaleNumber(value);
@@ -156,7 +167,7 @@ export function formatPrice(
 export function formatQuantity(
   value: string | number | null | undefined,
   isBond = false,
-  locale = "it-IT"
+  locale = getActiveLocale()
 ): string {
   const n = parseLocaleNumber(value);
   if (isBond) {

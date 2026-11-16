@@ -38,7 +38,7 @@ export function QuickAccountModal({ open, onClose, onCreated }: Props) {
       }),
     onSuccess: (account) => {
       qc.invalidateQueries({ queryKey: ["accounts"] });
-      toast.success(t("accounts.created_success", "Conto creato con successo"));
+      toast.success(t("accounts.created_success"));
       setName("");
       setBrokerId("");
       setCashBalance("0");
@@ -57,12 +57,12 @@ export function QuickAccountModal({ open, onClose, onCreated }: Props) {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
         <div className="w-full max-w-sm rounded-xl border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white p-5 shadow-2xl">
           <h3 className="mb-3 text-base font-semibold text-teal-200 dark:text-teal-900">
-            {t("accounts.quick_add_title", "Nuovo Conto Rapido")}
+            {t("accounts.quick_add_title")}
           </h3>
           <div className="space-y-3">
             <div>
               <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                {t("accounts.name", "Nome Conto")} *
+                {t("accounts.name")} *
               </label>
               <input
                 type="text"
@@ -76,14 +76,14 @@ export function QuickAccountModal({ open, onClose, onCreated }: Props) {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs text-slate-400 dark:text-slate-900">
-                  {t("accounts.broker", "Broker (opzionale)")}
+                  {t("accounts.broker")}
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowBrokerModal(true)}
                   className="text-[11px] font-medium text-teal-400 hover:text-teal-300"
                 >
-                  + {t("accounts.add_broker", "Nuovo Broker")}
+                  + {t("accounts.add_broker")}
                 </button>
               </div>
               <select
@@ -91,7 +91,7 @@ export function QuickAccountModal({ open, onClose, onCreated }: Props) {
                 onChange={(e) => setBrokerId(e.target.value)}
                 className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
               >
-                <option value="">{t("accounts.no_broker", "Nessun broker")}</option>
+                <option value="">{t("accounts.no_broker")}</option>
                 {brokers?.map((b: Broker) => (
                   <option key={b.id} value={b.id}>
                     {b.name}
@@ -102,7 +102,7 @@ export function QuickAccountModal({ open, onClose, onCreated }: Props) {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                  {t("accounts.currency", "Valuta")}
+                  {t("accounts.currency")}
                 </label>
                 <input
                   type="text"
@@ -114,7 +114,7 @@ export function QuickAccountModal({ open, onClose, onCreated }: Props) {
               </div>
               <div>
                 <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                  {t("accounts.initial_cash", "Liquidità Iniziale")}
+                  {t("accounts.initial_cash")}
                 </label>
                 <input
                   type="number"
@@ -132,7 +132,7 @@ export function QuickAccountModal({ open, onClose, onCreated }: Props) {
               onClick={onClose}
               className="rounded-lg border border-slate-700 dark:border-slate-300 px-3 py-1.5 text-xs text-slate-300 dark:text-slate-700 hover:bg-slate-800 dark:hover:bg-slate-100"
             >
-              {t("common.cancel", "Annulla")}
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -140,7 +140,7 @@ export function QuickAccountModal({ open, onClose, onCreated }: Props) {
               disabled={!name.trim() || mutation.isPending}
               className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-50"
             >
-              {mutation.isPending ? t("common.saving", "Salvataggio...") : t("common.save", "Salva")}
+              {mutation.isPending ? t("common.saving") : t("common.save")}
             </button>
           </div>
         </div>

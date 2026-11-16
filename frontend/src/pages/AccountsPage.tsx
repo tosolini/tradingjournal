@@ -4,24 +4,34 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolverTyped } from "../lib/zod-resolver";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { Account, ApiError, Broker, CashLedgerEntry, api, createLedgerEntry, deleteLedgerEntry, fetchLedgerEntries } from "../lib/api";
 import { formatMoney as formatMoneyUtil, getNumberLocale, parseLocaleNumber as asNumber } from "../lib/numbers";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { QuickBrokerModal } from "../components/QuickBrokerModal";
 
 
-function formatMoney(value: string | number | undefined, currency?: string, locale = "it-IT"): string {
+function formatMoney(
+  value: string | number | undefined,
+  currency?: string,
+  locale = getNumberLocale(),
+): string {
   return formatMoneyUtil(value, currency, locale);
 }
 
-const accountSchema = z.object({
-  name: z.string().min(2, "Inserisci un nome account valido"),
-  base_currency: z.string().min(3).max(8),
-  cash_balance: z.preprocess((v) => (typeof v === "string" ? v.replace(",", ".") : v), z.coerce.number().min(0)),
-  broker_id: z.number().int().positive().nullable().optional(),
-});
+function makeAccountSchema(t: TFunction) {
+  return z.object({
+    name: z.string().min(2, t("accounts.error_invalid_name")),
+    base_currency: z.string().min(3).max(8),
+    cash_balance: z.preprocess(
+      (v) => (typeof v === "string" ? v.replace(",", ".") : v),
+      z.coerce.number().min(0, t("accounts.error_invalid_cash")),
+    ),
+    broker_id: z.number().int().positive().nullable().optional(),
+  });
+}
 
-type AccountPayload = z.infer<typeof accountSchema>;
+type AccountPayload = z.infer<ReturnType<typeof makeAccountSchema>>;
 
 function EditIcon() {
   return (
@@ -127,15 +137,15 @@ function LedgerSection({ accounts }: { accounts: Account[] }) {
       case "withdrawal":
         return t("accounts.ledger_withdrawal");
       case "coupon":
-        return t("accounts.ledger_coupon", "Cedola");
+        return t("accounts.ledger_coupon");
       case "bond_bonus":
-        return t("accounts.ledger_bond_bonus", "Premio fedeltà");
+        return t("accounts.ledger_bond_bonus");
       case "bond_redemption":
-        return t("accounts.ledger_bond_redemption", "Rimborso obbligazione");
+        return t("accounts.ledger_bond_redemption");
       case "dividend":
-        return t("accounts.ledger_dividend", "Dividendo");
+        return t("accounts.ledger_dividend");
       case "asset_sale":
-        return t("accounts.ledger_asset_sale", "Vendita titolo");
+        return t("accounts.ledger_asset_sale");
       default:
         return type;
     }
@@ -310,6 +320,7 @@ export function AccountsPage() {
   const { t, i18n } = useTranslation();
   const locale = getNumberLocale(i18n.resolvedLanguage);
   const qc = useQueryClient();
+  const accountSchema = useMemo(() => makeAccountSchema(t), [t]);
   const [rowError, setRowError] = useState<string | null>(null);
   const [rowSuccess, setRowSuccess] = useState<string | null>(null);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -467,7 +478,7 @@ export function AccountsPage() {
         <form className="grid gap-3 md:grid-cols-5" onSubmit={handleSubmit(onSubmit)}>
           <input
             {...register("name")}
-            placeholder="Portfolio name"
+            placeholder={t("accounts.name_placeholder")}
             className="rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2"
           />
           <div className="flex gap-1.5 items-center">
@@ -483,7 +494,7 @@ export function AccountsPage() {
               })}
               className="flex-1 rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2 text-sm"
             >
-              <option value="">Broker (opzionale)</option>
+              <option value="">{t("accounts.broker")}</option>
               {brokers?.map((broker) => (
                 <option key={broker.id} value={broker.id}>
                   {broker.name}
@@ -493,7 +504,7 @@ export function AccountsPage() {
             <button
               type="button"
               onClick={() => setShowQuickBroker(true)}
-              title={t("accounts.add_broker", "Crea nuovo broker")}
+              title={t("accounts.add_broker")}
               className="rounded border border-slate-700 dark:border-slate-300 px-2.5 py-2 text-xs font-semibold text-teal-400 hover:bg-slate-800 dark:hover:bg-slate-100"
             >
               +
@@ -501,14 +512,14 @@ export function AccountsPage() {
           </div>
           <input
             {...register("base_currency")}
-            placeholder="Currency (EUR)"
+            placeholder={t("accounts.currency_placeholder")}
             className="rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2"
           />
           <input
             type="number"
             step="0.01"
             {...register("cash_balance")}
-            placeholder="Initial cash"
+            placeholder={t("accounts.cash_placeholder")}
             className="rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2"
           />
           <button
@@ -531,11 +542,11 @@ export function AccountsPage() {
           <thead>
             <tr className="border-b border-slate-700 dark:border-slate-300 text-left text-slate-400 dark:text-slate-900">
               <th className="px-4 py-2">ID</th>
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">Broker</th>
-              <th className="px-4 py-2">Base Currency</th>
-              <th className="px-4 py-2">Cash Balance</th>
-              <th className="px-4 py-2">Actions</th>
+              <th className="px-4 py-2">{t("accounts.col_name")}</th>
+              <th className="px-4 py-2">{t("accounts.col_broker")}</th>
+              <th className="px-4 py-2">{t("accounts.col_currency")}</th>
+              <th className="px-4 py-2">{t("accounts.col_cash")}</th>
+              <th className="px-4 py-2">{t("accounts.col_actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -564,7 +575,7 @@ export function AccountsPage() {
                           onChange={(event) => setEditBrokerId(event.target.value)}
                           className="w-full rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-2 py-1"
                         >
-                          <option value="">Nessun broker</option>
+                          <option value="">{t("accounts.no_broker")}</option>
                           {brokers?.map((broker) => (
                             <option key={broker.id} value={broker.id}>
                               {broker.name}
@@ -606,8 +617,8 @@ export function AccountsPage() {
                             className="rounded bg-emerald-500 p-2 text-slate-950"
                             onClick={saveEditing}
                             disabled={updateAccount.isPending}
-                            title="Salva modifiche"
-                            aria-label="Salva modifiche"
+                            title={t("accounts.save_changes_title")}
+                            aria-label={t("accounts.save_changes_title")}
                           >
                             <SaveIcon />
                           </button>
@@ -615,8 +626,8 @@ export function AccountsPage() {
                             type="button"
                             className="rounded bg-slate-600 p-2 text-white"
                             onClick={cancelEditing}
-                            title="Annulla modifica"
-                            aria-label="Annulla modifica"
+                            title={t("accounts.cancel_edit_title")}
+                            aria-label={t("accounts.cancel_edit_title")}
                           >
                             <CancelIcon />
                           </button>
@@ -626,8 +637,8 @@ export function AccountsPage() {
                           type="button"
                           className="rounded bg-sky-500 p-2 text-slate-950"
                           onClick={() => startEditing(account)}
-                          title="Modifica account"
-                          aria-label="Modifica account"
+                          title={t("accounts.edit_title")}
+                          aria-label={t("accounts.edit_title")}
                         >
                           <EditIcon />
                         </button>
@@ -640,8 +651,8 @@ export function AccountsPage() {
                           setRowSuccess(null);
                           setDeletePendingId(account.id);
                         }}
-                        title="Elimina account"
-                        aria-label="Elimina account"
+                        title={t("accounts.delete_title")}
+                        aria-label={t("accounts.delete_title")}
                       >
                         <DeleteIcon />
                       </button>

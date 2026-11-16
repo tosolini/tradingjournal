@@ -76,7 +76,7 @@ def test_connectivity_gemini_missing_key():
     with patch("app.services.analysis.agents.llm_factory.settings.analysis_api_key", ""):
         success, latency, message, err = execute_test_connection(provider="gemini", api_key="")
         assert success is False
-        assert "mancante" in (err or "").lower()
+        assert "missing api key" in (err or "").lower()
 
 
 def test_connectivity_gemini_missing_model():
@@ -87,7 +87,7 @@ def test_connectivity_gemini_missing_model():
             model=""
         )
         assert success is False
-        assert "modello" in (err or "").lower()
+        assert "model identifier missing" in (err or "").lower()
 
 
 def test_connectivity_gemini_success():
@@ -130,14 +130,14 @@ def test_connectivity_openrouter_success():
 
 def test_api_endpoint_mock(test_user):
     req_mock = TestLlmRequest(provider="mock")
-    res_mock = execute_test_endpoint(payload=req_mock, current_user=test_user)
+    res_mock = execute_test_endpoint(payload=req_mock, request=None, current_user=test_user)
     assert res_mock.success is True
     assert res_mock.latency_ms is not None
 
     req_unknown = TestLlmRequest(provider="non-existent-provider")
-    res_unknown = execute_test_endpoint(payload=req_unknown, current_user=test_user)
+    res_unknown = execute_test_endpoint(payload=req_unknown, request=None, current_user=test_user)
     assert res_unknown.success is False
-    assert "non supportato" in res_unknown.message.lower()
+    assert "unsupported provider" in res_unknown.message.lower()
 
 
 def test_api_endpoint_fallback_to_user_preferences(test_user):
@@ -154,7 +154,7 @@ def test_api_endpoint_fallback_to_user_preferences(test_user):
 
     with patch("requests.post", return_value=mock_resp) as mock_post:
         req = TestLlmRequest(provider="openai", model="gpt-4o", api_key="")
-        res = execute_test_endpoint(payload=req, current_user=test_user)
+        res = execute_test_endpoint(payload=req, request=None, current_user=test_user)
         assert res.success is True
         mock_post.assert_called_once()
         call_headers = mock_post.call_args[1]["headers"]

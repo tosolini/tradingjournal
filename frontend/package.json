@@ -6,7 +6,9 @@
     "scripts": {
         "dev": "vite --host 0.0.0.0 --port 5173",
         "build": "tsc -b && vite build",
-        "preview": "vite preview --host 0.0.0.0 --port 5173"
+        "preview": "vite preview --host 0.0.0.0 --port 5173",
+        "i18n:check": "node scripts/check-i18n.mjs",
+        "i18n:check:strict": "node scripts/check-i18n.mjs --strict"
     },
     "dependencies": {
         "@tanstack/react-query": "^5.105.0",

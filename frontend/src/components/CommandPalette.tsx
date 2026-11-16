@@ -89,8 +89,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       // Navigation
       {
         id: "nav-dashboard",
-        title: t("layout.nav.dashboard", "Dashboard"),
-        subtitle: t("layout.command_palette.sub_dashboard", "Panoramica KPI, equity curve e statistiche"),
+        title: t("layout.nav.dashboard"),
+        subtitle: t("layout.command_palette.sub_dashboard"),
         category: "navigation",
         icon: LayoutDashboardIcon,
         onSelect: () => {
@@ -100,8 +100,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-calendar",
-        title: t("layout.nav.calendar", "Calendario"),
-        subtitle: t("layout.command_palette.sub_calendar", "Calendario mensile con PnL giornaliero ed esecuzioni"),
+        title: t("layout.nav.calendar"),
+        subtitle: t("layout.command_palette.sub_calendar"),
         category: "navigation",
         icon: CalendarIcon,
         onSelect: () => {
@@ -111,8 +111,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-trades",
-        title: t("layout.nav.trades", "Trade"),
-        subtitle: t("layout.command_palette.sub_trades", "Elenco e gestione di tutti i trade ed esecuzioni"),
+        title: t("layout.nav.trades"),
+        subtitle: t("layout.command_palette.sub_trades"),
         category: "navigation",
         icon: TrendingUpIcon,
         onSelect: () => {
@@ -122,8 +122,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-notes",
-        title: t("layout.nav.notes", "Note"),
-        subtitle: t("layout.command_palette.sub_notes", "Diario giornaliero di trading e psicologia"),
+        title: t("layout.nav.notes"),
+        subtitle: t("layout.command_palette.sub_notes"),
         category: "navigation",
         icon: BookOpenIcon,
         onSelect: () => {
@@ -133,8 +133,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-portfolio",
-        title: t("layout.nav.portfolio", "Portafoglio"),
-        subtitle: t("layout.command_palette.sub_portfolio", "Holdings di ETF e obbligazioni"),
+        title: t("layout.nav.portfolio"),
+        subtitle: t("layout.command_palette.sub_portfolio"),
         category: "navigation",
         icon: PieChartIcon,
         onSelect: () => {
@@ -144,8 +144,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-performance",
-        title: t("layout.nav.performance", "Performance"),
-        subtitle: t("layout.command_palette.sub_performance", "Analisi storica del valore e del rendimento"),
+        title: t("layout.nav.performance"),
+        subtitle: t("layout.command_palette.sub_performance"),
         category: "navigation",
         icon: ActivityIcon,
         onSelect: () => {
@@ -155,8 +155,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-assets",
-        title: t("layout.nav.assets", "Asset"),
-        subtitle: t("layout.command_palette.sub_assets", "Anagrafica ETF, obbligazioni e fondi"),
+        title: t("layout.nav.assets"),
+        subtitle: t("layout.command_palette.sub_assets"),
         category: "navigation",
         icon: CoinsIcon,
         onSelect: () => {
@@ -166,8 +166,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-accounts",
-        title: t("layout.nav.accounts", "Conti"),
-        subtitle: t("layout.command_palette.sub_accounts", "Gestione conti trading e liquidità"),
+        title: t("layout.nav.accounts"),
+        subtitle: t("layout.command_palette.sub_accounts"),
         category: "navigation",
         icon: WalletIcon,
         onSelect: () => {
@@ -177,8 +177,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-brokers",
-        title: t("layout.nav.brokers", "Broker"),
-        subtitle: t("layout.command_palette.sub_brokers", "Configurazione broker, commissioni e mercati"),
+        title: t("layout.nav.brokers"),
+        subtitle: t("layout.command_palette.sub_brokers"),
         category: "navigation",
         icon: Building2Icon,
         onSelect: () => {
@@ -188,8 +188,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-settings",
-        title: t("layout.nav.settings", "Impostazioni"),
-        subtitle: t("layout.command_palette.sub_settings", "Profilo utente, amministrazione e backup"),
+        title: t("layout.nav.settings"),
+        subtitle: t("layout.command_palette.sub_settings"),
         category: "navigation",
         icon: SettingsIcon,
         onSelect: () => {
@@ -199,8 +199,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "nav-help",
-        title: t("layout.nav.help", "Guida"),
-        subtitle: t("layout.command_palette.sub_help", "Manuale d'uso e documentazione"),
+        title: t("layout.nav.help"),
+        subtitle: t("layout.command_palette.sub_help"),
         category: "navigation",
         icon: HelpCircleIcon,
         onSelect: () => {
@@ -212,8 +212,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       // Quick Actions
       {
         id: "act-new-trade",
-        title: t("layout.actions.new_trade", "Nuovo Trade"),
-        subtitle: t("layout.command_palette.act_new_trade_sub", "Apri il form rapido o il wizard per registrare un trade"),
+        title: t("layout.actions.new_trade"),
+        subtitle: t("layout.command_palette.act_new_trade_sub"),
         category: "action",
         icon: PlusIcon,
         onSelect: () => {
@@ -223,8 +223,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "act-new-note",
-        title: t("layout.actions.new_note", "Nuova Nota"),
-        subtitle: t("layout.command_palette.act_new_note_sub", "Scrivi una nuova riflessione nel diario di trading"),
+        title: t("layout.actions.new_note"),
+        subtitle: t("layout.command_palette.act_new_note_sub"),
         category: "action",
         icon: BookOpenIcon,
         onSelect: () => {
@@ -235,9 +235,9 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       {
         id: "act-toggle-theme",
         title: theme === "dark" 
-          ? t("layout.command_palette.act_light_theme", "Passa a Tema Chiaro (Light Mode)") 
-          : t("layout.command_palette.act_dark_theme", "Passa a Tema Scuro (Dark Mode)"),
-        subtitle: t("layout.command_palette.act_toggle_theme_sub", "Inverti lo schema colore dell'interfaccia"),
+          ? t("layout.command_palette.act_light_theme") 
+          : t("layout.command_palette.act_dark_theme"),
+        subtitle: t("layout.command_palette.act_toggle_theme_sub"),
         category: "action",
         icon: theme === "dark" ? SunIcon : MoonIcon,
         onSelect: () => {
@@ -247,16 +247,19 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
       {
         id: "act-toggle-lang",
-        title: t("layout.command_palette.act_switch_lang", i18n.resolvedLanguage === "it" ? "Switch to English" : "Passa all'Italiano"),
-        subtitle: t("layout.command_palette.act_toggle_lang_sub", "Cambia lingua dell'applicazione"),
+        title:
+          i18n.resolvedLanguage === "it"
+            ? t("layout.command_palette.act_switch_to_en")
+            : t("layout.command_palette.act_switch_to_it"),
+        subtitle: t("layout.command_palette.act_toggle_lang_sub"),
         category: "action",
         icon: GlobeIcon,
         onSelect: toggleLanguage,
       },
       {
         id: "act-credits",
-        title: t("layout.command_palette.act_credits", "Credits & Sviluppatore (Walter Tosolini)"),
-        subtitle: t("layout.command_palette.act_credits_sub", "Info sull'autore, link www.tosolini.info, GitHub e LinkedIn"),
+        title: t("layout.command_palette.act_credits"),
+        subtitle: t("layout.command_palette.act_credits_sub"),
         category: "action",
         icon: HelpCircleIcon,
         onSelect: () => {
@@ -338,7 +341,7 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder={t("layout.command_palette.placeholder", "Cerca comandi, pagine, ticker o azioni... (es. Trade, Note, AAPL)")}
+            placeholder={t("layout.command_palette.placeholder")}
             className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none dark:text-slate-900 dark:placeholder-slate-400"
           />
           {query ? (
@@ -363,7 +366,7 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
         <div className="max-h-96 overflow-y-auto p-2">
           {filteredCommands.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
-              {t("layout.command_palette.no_results", { query, defaultValue: `Nessun comando o ticker trovato per "${query}"` })}
+              {t("layout.command_palette.no_results", { query })}
             </div>
           ) : (
             <div className="space-y-1">
@@ -415,9 +418,9 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
         {/* Footer shortcuts helper */}
         <div className="flex items-center justify-between border-t border-slate-800 bg-slate-950/60 px-4 py-2.5 text-[11px] text-slate-500 dark:border-slate-200 dark:bg-slate-50 dark:text-slate-600">
           <div className="flex items-center gap-3">
-            <span>{t("layout.command_palette.nav_hint", "↑↓ Naviga")}</span>
-            <span>{t("layout.command_palette.select_hint", "↵ Seleziona")}</span>
-            <span>{t("layout.command_palette.close_hint", "ESC Chiudi")}</span>
+            <span>{t("layout.command_palette.nav_hint")}</span>
+            <span>{t("layout.command_palette.select_hint")}</span>
+            <span>{t("layout.command_palette.close_hint")}</span>
           </div>
           <span className="text-[10px] font-medium text-teal-400/80 dark:text-teal-700">
             TradingJournal Quick Command

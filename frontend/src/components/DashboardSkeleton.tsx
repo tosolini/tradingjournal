@@ -26,20 +26,17 @@ export function DashboardSkeleton() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold text-slate-100 dark:text-slate-800">
-                {t("dashboard.loading_title", "Caricamento dashboard in corso...")}
+                {t("dashboard.loading_title")}
               </h2>
               <span className="inline-flex items-center rounded-full bg-teal-500/15 px-2 py-0.5 text-[11px] font-medium text-teal-300 dark:text-teal-700">
-                {t("dashboard.syncing", "Live Sync")}
+                {t("dashboard.syncing")}
               </span>
             </div>
             <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              {t("dashboard.loading_subtitle", "Sincronizzazione quotazioni e ricalcolo metriche di portafoglio...")}
+              {t("dashboard.loading_subtitle")}
             </p>
             <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-              {t(
-                "dashboard.loading_notice",
-                "Al primo avvio o dopo un periodo di inattività il recupero delle quotazioni e il calcolo del portafoglio richiedono alcuni istanti."
-              )}
+              {t("dashboard.loading_notice")}
             </p>
           </div>
         </div>

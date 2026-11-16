@@ -23,7 +23,14 @@ import {
 } from "../lib/api";
 import { HoldingEditFormModal } from "./PortfolioPage";
 import { HoldingExitModal } from "../components/HoldingExitModal";
-import { formatMoney, formatNumber, formatPct, getNumberLocale, parseLocaleNumber as asNumber } from "../lib/numbers";
+import {
+  formatMoney,
+  formatNumber,
+  formatPct,
+  getActiveLocale,
+  getNumberLocale,
+  parseLocaleNumber as asNumber,
+} from "../lib/numbers";
 function colorForPct(value: string | number | null | undefined): string {
   const n = asNumber(value);
   if (n > 0) return "text-green-400 dark:text-green-700";
@@ -31,7 +38,7 @@ function colorForPct(value: string | number | null | undefined): string {
   return "text-slate-300 dark:text-slate-900";
 }
 
-function formatDate(dateStr: string | null | undefined, locale = "it-IT"): string {
+function formatDate(dateStr: string | null | undefined, locale = getActiveLocale()): string {
   if (!dateStr) return "—";
   try {
     const d = new Date(dateStr);
@@ -42,12 +49,23 @@ function formatDate(dateStr: string | null | undefined, locale = "it-IT"): strin
   }
 }
 
-function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPriceHistory; locale?: string }) {
+function PriceSpreadChart({
+  history,
+  locale = getActiveLocale(),
+}: {
+  history: HoldingPriceHistory;
+  locale?: string;
+}) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const [showProjection, setShowProjection] = useState(false);
 
   const points = history.points || [];
+  const historicalPoints = useMemo(() => points.filter((p) => !p.is_projection), [points]);
+  const projectionPoints = useMemo(() => points.filter((p) => p.is_projection), [points]);
+  const hasProjection = projectionPoints.length > 0;
 
   useEffect(() => {
     if (!ref.current || points.length === 0) return;
@@ -71,16 +89,18 @@ function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPrice
       },
     });
 
+    const activeRangePoints = showProjection ? points : (historicalPoints.length > 0 ? historicalPoints : points);
+
     // 1. Linea Prezzo Nominale (100.00)
     const nominalSeries = chart.addSeries(LineSeries, {
       color: isDark ? "#94a3b8" : "#64748b",
       lineWidth: 2,
       lineStyle: 2, // Dashed
-      title: "Nominale (100)",
+      title: t("holding_detail.chart.series_nominal"),
       priceLineVisible: false,
     });
     nominalSeries.setData(
-      points.map((p) => ({
+      activeRangePoints.map((p) => ({
         time: p.date,
         value: asNumber(p.nominal_price),
       }))
@@ -91,31 +111,49 @@ function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPrice
       color: "#f59e0b", // Amber
       lineWidth: 2,
       lineStyle: 3, // Dotted
-      title: "Prezzo Carico",
+      title: t("holding_detail.chart.series_cost"),
       priceLineVisible: false,
     });
     costSeries.setData(
-      points.map((p) => ({
+      activeRangePoints.map((p) => ({
         time: p.date,
         value: asNumber(p.avg_cost),
       }))
     );
 
-    // 3. Serie Prezzo di Mercato / Traiettoria
+    // 3. Serie Prezzo di Mercato Reale (AreaSeries basata solo sui dati storici effettivi)
+    const marketSeriesData = (historicalPoints.length > 0 ? historicalPoints : points).map((p) => ({
+      time: p.date,
+      value: asNumber(p.market_price),
+    }));
+
     const marketSeries = chart.addSeries(AreaSeries, {
       lineColor: isDark ? "#2dd4bf" : "#0d9488",
       topColor: isDark ? "rgba(45, 212, 191, 0.28)" : "rgba(13, 148, 136, 0.22)",
       bottomColor: isDark ? "rgba(45, 212, 191, 0.02)" : "rgba(13, 148, 136, 0.02)",
       lineWidth: 2,
-      title: "Prezzo Mercato",
+      title: t("holding_detail.chart.series_market"),
       priceLineVisible: true,
     });
-    marketSeries.setData(
-      points.map((p) => ({
-        time: p.date,
-        value: asNumber(p.market_price),
-      }))
-    );
+    marketSeries.setData(marketSeriesData);
+
+    // 4. Se abilitata, linea di proiezione Pull-to-Par a scadenza (tratteggiata)
+    if (showProjection && hasProjection) {
+      const projectionSeries = chart.addSeries(LineSeries, {
+        color: isDark ? "#2dd4bf" : "#0d9488",
+        lineWidth: 2,
+        lineStyle: 2, // Dashed
+        title: t("holding_detail.chart.series_projection"),
+        priceLineVisible: false,
+      });
+
+      const lastHist = historicalPoints[historicalPoints.length - 1];
+      const projData = [
+        ...(lastHist ? [{ time: lastHist.date, value: asNumber(lastHist.market_price) }] : []),
+        ...projectionPoints.map((p) => ({ time: p.date, value: asNumber(p.market_price) })),
+      ];
+      projectionSeries.setData(projData);
+    }
 
     chart.timeScale().fitContent();
 
@@ -130,7 +168,7 @@ function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPrice
       window.removeEventListener("resize", resize);
       chart.remove();
     };
-  }, [points, isDark]);
+  }, [points, historicalPoints, projectionPoints, showProjection, hasProjection, isDark, t]);
 
   const currentP = asNumber(history.current_price);
   const nominalP = asNumber(history.nominal_price) || 100;
@@ -143,16 +181,16 @@ function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPrice
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 pb-3 dark:border-slate-200">
         <div>
           <h3 className="text-base font-semibold text-teal-200 dark:text-teal-900">
-            Scostamento Prezzo di Mercato vs Prezzo Nominale
+            {t("holding_detail.chart.title")}
           </h3>
           <p className="text-xs text-slate-400 dark:text-slate-600">
-            Confronto visivo tra la quotazione corrente, il prezzo di carico e il valore nominale di rimborso a 100.
+            {t("holding_detail.chart.subtitle")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <div className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2.5 py-1">
             <span className="h-2 w-2 rounded-full bg-teal-400 dark:bg-teal-600" />
-            <span className="text-slate-300 dark:text-slate-800">Mercato:</span>
+            <span className="text-slate-300 dark:text-slate-800">{t("holding_detail.chart.market")}</span>
             <span className="font-mono font-semibold text-teal-300 dark:text-teal-900">
               {formatNumber(currentP, { minDecimals: 2, maxDecimals: 2, locale })}%
             </span>
@@ -160,7 +198,7 @@ function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPrice
 
           <div className="flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800/60 px-2.5 py-1 dark:border-slate-300 dark:bg-slate-100">
             <span className="h-2 w-2 rounded-full bg-slate-400" />
-            <span className="text-slate-300 dark:text-slate-800">Nominale:</span>
+            <span className="text-slate-300 dark:text-slate-800">{t("holding_detail.chart.nominal")}</span>
             <span className="font-mono font-semibold text-slate-200 dark:text-slate-900">
               {formatNumber(nominalP, { minDecimals: 2, maxDecimals: 2, locale })}%
             </span>
@@ -168,32 +206,49 @@ function PriceSpreadChart({ history, locale = "it-IT" }: { history: HoldingPrice
 
           <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1">
             <span className="h-2 w-2 rounded-full bg-amber-400" />
-            <span className="text-slate-300 dark:text-slate-800">Carico:</span>
+            <span className="text-slate-300 dark:text-slate-800">{t("holding_detail.chart.cost")}</span>
             <span className="font-mono font-semibold text-amber-300 dark:text-amber-900">
               {formatNumber(costP, { minDecimals: 2, maxDecimals: 2, locale })}%
             </span>
           </div>
 
           <div className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-850 px-2.5 py-1 dark:border-slate-300 dark:bg-slate-50">
-            <span className="text-slate-400 dark:text-slate-700">Scostamento Nominale:</span>
+            <span className="text-slate-400 dark:text-slate-700">{t("holding_detail.chart.spread_nominal")}</span>
             <span className={`font-mono font-semibold ${colorForPct(spreadToNominal)}`}>
               {formatPct(spreadToNominal, 2, locale)}
             </span>
           </div>
+
+          {hasProjection && (
+            <button
+              type="button"
+              onClick={() => setShowProjection((prev) => !prev)}
+              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-medium transition-colors ${
+                showProjection
+                  ? "border-teal-500 bg-teal-500/20 text-teal-300 dark:border-teal-600 dark:text-teal-900"
+                  : "border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-700"
+              }`}
+            >
+              <span className={`h-2 w-2 rounded-full ${showProjection ? "bg-teal-400" : "bg-slate-400"}`} />
+              <span>{showProjection ? t("holding_detail.chart.hide_projection") : t("holding_detail.chart.show_projection")}</span>
+            </button>
+          )}
         </div>
       </div>
 
       <div ref={ref} className="w-full" />
 
-      {points.some((p) => p.is_projection) && (
+      {hasProjection && (
         <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-800/40 p-2 text-xs text-slate-400 dark:bg-slate-100 dark:text-slate-600">
           <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-teal-400 animate-pulse" />
+            <span className={`inline-block h-2 w-2 rounded-full ${showProjection ? "bg-teal-400 animate-pulse" : "bg-slate-400"}`} />
             <span>
-              La curva include la traiettoria di convergenza teorica a scadenza verso 100 (Pull-to-Par).
+              {showProjection
+                ? t("holding_detail.chart.projection_hint")
+                : t("holding_detail.chart.history_hint")}
             </span>
           </div>
-          <span className="font-mono text-teal-400 dark:text-teal-700">Rimborso: 100,00%</span>
+          <span className="font-mono text-teal-400 dark:text-teal-700">{t("holding_detail.chart.redemption")}</span>
         </div>
       )}
     </div>
@@ -209,12 +264,12 @@ export function HoldingDetailPage() {
   const toast = useToast();
   const exitTypeLabel = (type: string) => {
     if (type === "maturity") {
-      return t("portfolio.exit_maturity", "Rimborso a scadenza");
+      return t("portfolio.exit_maturity");
     }
     if (type === "early_redemption") {
-      return t("portfolio.exit_early_redemption", "Rimborso anticipato emittente");
+      return t("portfolio.exit_early_redemption");
     }
-    return t("portfolio.exit_market_sale", "Vendita a mercato");
+    return t("portfolio.exit_market_sale");
   };
 
   const [editTarget, setEditTarget] = useState<HoldingDetail | HoldingSingleDetail | null>(null);
@@ -258,7 +313,7 @@ export function HoldingDetailPage() {
     onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["bonds"] });
-      toast.success(t("portfolio.holding_deleted", "Posizione eliminata con successo"));
+      toast.success(t("portfolio.holding_deleted"));
 
       const remaining = (holding?.tranches ?? []).filter((tr) => tr.id !== deletedId);
       if (remaining.length > 0) {
@@ -273,7 +328,7 @@ export function HoldingDetailPage() {
       setDeleteTarget(null);
     },
     onError: (err: Error) => {
-      toast.error(`Errore eliminazione: ${err.message}`);
+      toast.error(t("holding_detail.delete_error", { message: err.message }));
     },
   });
 
@@ -285,11 +340,11 @@ export function HoldingDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["ledger"] });
       refetchDetail();
       refetchExits();
-      toast.success(t("portfolio.exit_deleted", "Uscita annullata con successo"));
+      toast.success(t("portfolio.exit_deleted"));
       setExitToDelete(null);
     },
     onError: (err: Error) => {
-      toast.error(`Errore annullamento uscita: ${err.message}`);
+      toast.error(t("holding_detail.undo_exit_error", { message: err.message }));
     },
   });
 
@@ -301,7 +356,7 @@ export function HoldingDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
       refetchDetail();
       toast.success(
-        t("portfolio.sync_euronext_success", "Dati obbligazione sincronizzati con successo da Euronext")
+        t("portfolio.sync_euronext_success")
       );
     },
     onError: (err: Error) => {
@@ -399,7 +454,7 @@ export function HoldingDetailPage() {
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
-          <p className="mt-3 text-sm text-slate-400 dark:text-slate-600">Caricamento posizione in corso...</p>
+          <p className="mt-3 text-sm text-slate-400 dark:text-slate-600">{t("holding_detail.loading")}</p>
         </div>
       </div>
     );
@@ -409,15 +464,15 @@ export function HoldingDetailPage() {
     return (
       <div className="p-6">
         <div className="card border-red-500/30 p-8 text-center">
-          <h2 className="text-xl font-bold text-red-400">Posizione non trovata</h2>
+          <h2 className="text-xl font-bold text-red-400">{t("holding_detail.not_found_title")}</h2>
           <p className="mt-2 text-sm text-slate-400">
-            La partecipazione richiesta non esiste o non hai i permessi per visualizzarla.
+            {t("holding_detail.not_found_hint")}
           </p>
           <Link
             to="/portfolio"
             className="mt-4 inline-block rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400"
           >
-            ← Torna al Portafoglio
+            {t("holding_detail.back_to_portfolio")}
           </Link>
         </div>
       </div>
@@ -433,7 +488,7 @@ export function HoldingDetailPage() {
             to="/portfolio"
             className="flex items-center gap-1 font-medium text-teal-400 hover:text-teal-300 dark:text-teal-700 dark:hover:text-teal-800"
           >
-            ← {t("portfolio.title", "Portafoglio")}
+            ← {t("portfolio.title")}
           </Link>
           <span>/</span>
           <span className="font-semibold text-slate-200 dark:text-slate-900">{holding.asset_symbol}</span>
@@ -453,14 +508,14 @@ export function HoldingDetailPage() {
               onClick={() => syncMutation.mutate()}
               disabled={syncMutation.isPending}
               className="flex items-center gap-1.5 rounded-lg border border-teal-500/40 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/20 disabled:opacity-50 dark:text-teal-800"
-              title={t("portfolio.sync_euronext_title", "Aggiorna dati cedole e quotazione live da Euronext MOT")}
+              title={t("portfolio.sync_euronext_title")}
             >
               <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
               </svg>
               {syncMutation.isPending
-                ? t("portfolio.sync_euronext_loading", "Sincronizzazione...")
-                : t("portfolio.sync_euronext", "Sincronizza Euronext")}
+                ? t("portfolio.sync_euronext_loading")
+                : t("portfolio.sync_euronext")}
             </button>
           )}
           {!isAggregated && !isClosed && (
@@ -474,7 +529,7 @@ export function HoldingDetailPage() {
                   <path d="M16 17l5-5-5-5" />
                   <path d="M21 12H9" />
                 </svg>
-                {t("portfolio.register_exit", "Registra uscita")}
+                {t("portfolio.register_exit")}
               </button>
               <button
                 onClick={() => setEditTarget(holding)}
@@ -484,7 +539,7 @@ export function HoldingDetailPage() {
                   <path d="M12 20h9" />
                   <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
                 </svg>
-                {t("portfolio.edit_holding", "Modifica")}
+                {t("portfolio.edit_holding")}
               </button>
 
               <button
@@ -496,20 +551,20 @@ export function HoldingDetailPage() {
                   <path d="M8 6V4h8v2" />
                   <path d="M19 6l-1 14H6L5 6" />
                 </svg>
-                {t("portfolio.delete", "Elimina")}
+                {t("portfolio.delete")}
               </button>
             </>
           )}
           {!isAggregated && isClosed && (
             <span className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-300 dark:text-purple-800">
-              {t("portfolio.position_closed", "Posizione chiusa")}
+              {t("portfolio.position_closed")}
               {holding.closed_at ? ` · ${formatDate(holding.closed_at, locale)}` : ""}
             </span>
           )}
           {isAggregated && (
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-600">
-                Modifica, uscite ed eliminazioni si gestiscono dalla tabella delle tranche
+                {t("holding_detail.aggregated_hint")}
               </span>
               <button
                 onClick={startBulkExit}
@@ -520,7 +575,7 @@ export function HoldingDetailPage() {
                   <path d="M16 17l5-5-5-5" />
                   <path d="M21 12H9" />
                 </svg>
-                {t("portfolio.sell_all_position", "Vendi tutta la posizione")}
+                {t("portfolio.sell_all_position")}
               </button>
             </div>
           )}
@@ -532,13 +587,10 @@ export function HoldingDetailPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-amber-300 dark:text-amber-800">
-                {t("portfolio.maturity_due", "Obbligazione scaduta")}
+                {t("portfolio.maturity_due")}
               </h2>
               <p className="mt-1 text-xs text-slate-300 dark:text-slate-700">
-                {t(
-                  "portfolio.maturity_due_hint",
-                  "La scadenza è stata raggiunta. Registra il rimborso a scadenza per chiudere la posizione.",
-                )}{" "}
+                {t("portfolio.maturity_due_hint")}{" "}
                 {holding.bond_detail?.maturity_date
                   ? formatDate(holding.bond_detail.maturity_date, locale)
                   : ""}
@@ -546,17 +598,14 @@ export function HoldingDetailPage() {
             </div>
             {isAggregated ? (
               <span className="text-xs text-amber-300 dark:text-amber-800">
-                {t(
-                  "portfolio.maturity_due_tranches",
-                  "Registra il rimborso per ogni tranche dalla tabella sottostante.",
-                )}
+                {t("portfolio.maturity_due_tranches")}
               </span>
             ) : (
               <button
                 onClick={() => openSingleExit(holding)}
                 className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400"
               >
-                {t("portfolio.register_maturity", "Registra rimborso a scadenza")}
+                {t("portfolio.register_maturity")}
               </button>
             )}
           </div>
@@ -587,17 +636,17 @@ export function HoldingDetailPage() {
               {isAggregated ? (
                 holding.all_eligible_for_bonus ? (
                   <span className="rounded-md border border-teal-500/40 bg-teal-500/20 px-2 py-0.5 text-xs font-bold text-teal-300 dark:text-teal-800">
-                    CUM / Premio Fedeltà su tutte le tranche
+                    {t("holding_detail.badge_cum_all")}
                   </span>
                 ) : holding.has_eligible_for_bonus ? (
                   <span className="rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300 dark:text-amber-800">
-                    CUM solo su alcune tranche
+                    {t("holding_detail.badge_cum_some")}
                   </span>
                 ) : null
               ) : (
                 holding.eligible_for_bonus && (
                   <span className="rounded-md border border-teal-500/40 bg-teal-500/20 px-2 py-0.5 text-xs font-bold text-teal-300 dark:text-teal-800">
-                    CUM / Premio Fedeltà
+                    {t("holding_detail.badge_cum")}
                   </span>
                 )
               )}
@@ -605,26 +654,29 @@ export function HoldingDetailPage() {
             <p className="mt-1.5 text-base text-slate-300 dark:text-slate-700">{holding.asset_name}</p>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-400 dark:text-slate-600">
               <span>
-                Conto: <strong className="text-slate-200 dark:text-slate-900">{holding.account_name}</strong>
+                {t("holding_detail.label_account")}{" "}
+                <strong className="text-slate-200 dark:text-slate-900">{holding.account_name}</strong>
               </span>
               {holding.exchange && (
                 <span>
-                  Borsa: <strong className="text-slate-200 dark:text-slate-900">{holding.exchange}</strong>
+                  {t("holding_detail.label_exchange")}{" "}
+                  <strong className="text-slate-200 dark:text-slate-900">{holding.exchange}</strong>
                 </span>
               )}
               <span>
-                Valuta: <strong className="text-slate-200 dark:text-slate-900">{holding.asset_currency}</strong>
+                {t("holding_detail.label_currency")}{" "}
+                <strong className="text-slate-200 dark:text-slate-900">{holding.asset_currency}</strong>
               </span>
             </div>
           </div>
 
           <div className="text-right">
-            <div className="text-xs uppercase text-slate-400 dark:text-slate-600">Controvalore di Mercato</div>
+            <div className="text-xs uppercase text-slate-400 dark:text-slate-600">{t("holding_detail.market_value")}</div>
             <div className="mt-1 text-2xl font-bold text-teal-300 dark:text-teal-900">
-              {formatMoney(holding.market_value, holding.asset_currency)}
+              {formatMoney(holding.market_value, holding.asset_currency, locale)}
             </div>
             <div className={`mt-0.5 text-sm font-semibold ${colorForPct(holding.return_pct)}`}>
-              {formatMoney(holding.return_value, holding.asset_currency)} ({formatPct(holding.return_pct)})
+              {formatMoney(holding.return_value, holding.asset_currency, locale)} ({formatPct(holding.return_pct)})
             </div>
           </div>
         </div>
@@ -634,7 +686,7 @@ export function HoldingDetailPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card p-4">
           <div className="text-xs uppercase text-slate-400 dark:text-slate-600">
-            {isBond ? "Valore Nominale Detenuto" : "Quantità Detenuta"}
+            {isBond ? t("holding_detail.kpi_nominal_qty") : t("holding_detail.kpi_quantity")}
           </div>
           <div className="mt-1.5 text-xl font-bold font-mono text-slate-100 dark:text-slate-900">
             {isBond
@@ -642,42 +694,46 @@ export function HoldingDetailPage() {
               : Number(holding.quantity).toLocaleString(locale, { maximumFractionDigits: 4 })}
           </div>
           <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-            {isAggregated ? `${trancheCount} tranche · ` : ""}
-            Controvalore di Carico: {formatMoney(holding.cost_basis, holding.asset_currency)}
+            {isAggregated ? `${t("portfolio.tranches_count", { count: trancheCount })} · ` : ""}
+            {t("holding_detail.cost_value")} {formatMoney(holding.cost_basis, holding.asset_currency, locale)}
           </div>
         </div>
 
         <div className="card p-4">
           <div className="text-xs uppercase text-slate-400 dark:text-slate-600">
-            {isBond ? "Prezzo di Carico (% base 100)" : "Prezzo Medio d'Acquisto"}
+            {isBond ? t("holding_detail.kpi_cost_price") : t("holding_detail.kpi_avg_cost")}
           </div>
           <div className="mt-1.5 text-xl font-bold font-mono text-amber-300 dark:text-amber-800">
             {isBond ? `${formatNumber(holding.avg_cost, { minDecimals: 2, maxDecimals: 2, locale })}%` : formatMoney(holding.avg_cost, holding.asset_currency, locale)}
           </div>
           {isBond && asNumber(holding.accrued_interest_in) > 0 && (
             <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-              Rateo all'acquisto: +{formatNumber(holding.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%
+              {t("holding_detail.accrued_at_purchase")}{" "}
+              +{formatNumber(holding.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%
             </div>
           )}
         </div>
 
         <div className="card p-4">
           <div className="text-xs uppercase text-slate-400 dark:text-slate-600">
-            {isBond ? "Prezzo Secco Attuale" : "Prezzo di Mercato Live"}
+            {isBond ? t("holding_detail.kpi_dirty_price_now") : t("holding_detail.kpi_market_live")}
           </div>
           <div className="mt-1.5 text-xl font-bold font-mono text-teal-300 dark:text-teal-800">
             {isBond ? `${formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}%` : formatMoney(holding.current_price, holding.asset_currency, locale)}
           </div>
           {isBond && holding.dirty_price && (
             <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-              Prezzo Tel Quel: <span className="font-mono font-medium text-slate-200 dark:text-slate-800">{formatNumber(holding.dirty_price, { minDecimals: 2, maxDecimals: 2, locale })}%</span>
+              {t("holding_detail.kpi_dirty_price")}{" "}
+              <span className="font-mono font-medium text-slate-200 dark:text-slate-800">
+                {formatNumber(holding.dirty_price, { minDecimals: 2, maxDecimals: 2, locale })}%
+              </span>
             </div>
           )}
         </div>
 
         <div className="card p-4">
           <div className="text-xs uppercase text-slate-400 dark:text-slate-600">
-            {isBond ? "Rendimento Effettivo (YTM Netto)" : "P&L Non Realizzato"}
+            {isBond ? t("holding_detail.kpi_ytm_net") : t("holding_detail.kpi_unrealized")}
           </div>
           <div className={`mt-1.5 text-xl font-bold font-mono ${isBond ? "text-green-400 dark:text-green-700" : colorForPct(holding.return_pct)}`}>
             {isBond
@@ -688,8 +744,8 @@ export function HoldingDetailPage() {
           </div>
           <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
             {isBond && holding.ytm_gross != null
-              ? `YTM Lordo: ${formatPct(holding.ytm_gross)}`
-              : `Ritorno: ${formatMoney(holding.return_value, holding.asset_currency)}`}
+              ? `${t("holding_detail.ytm_gross_short")} ${formatPct(holding.ytm_gross, 2, locale)}`
+              : `${t("holding_detail.return_short")} ${formatMoney(holding.return_value, holding.asset_currency, locale)}`}
           </div>
         </div>
       </div>
@@ -697,56 +753,73 @@ export function HoldingDetailPage() {
       {/* ── Ciclo di Vita & Timeline Temporale ─────────────────────────────────── */}
       <div className="card p-6">
         <h2 className="text-base font-semibold text-teal-200 dark:text-teal-900">
-          Ciclo di Vita & Timeline di Detenzione
+          {t("holding_detail.timeline.title")}
         </h2>
         <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
-          Monitoraggio temporale: dalla data di acquisto fino alla scadenza o data programmata di uscita.
+          {t("holding_detail.timeline.subtitle")}
         </p>
 
         <div className="mt-6 grid gap-6 md:grid-cols-3">
           <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4 dark:border-slate-200 dark:bg-slate-50">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase">
               <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
-              Quando l'ho comprato
+              {t("holding_detail.timeline.bought_on")}
             </div>
             <div className="mt-2 text-lg font-bold text-slate-100 dark:text-slate-900">
-              {formatDate(holding.entry_date)}
+              {formatDate(holding.entry_date, locale)}
             </div>
             <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-              Trascorsi: <strong className="font-mono text-slate-200 dark:text-slate-800">{holding.hold_duration_days ?? 0} giorni</strong> di detenzione
+              {t("holding_detail.timeline.elapsed")}{" "}
+              <strong className="font-mono text-slate-200 dark:text-slate-800">
+                {t("holding_detail.timeline.elapsed_days", { count: holding.hold_duration_days ?? 0 })}
+              </strong>{" "}
+              {t("holding_detail.timeline.elapsed_suffix")}
             </div>
           </div>
 
           <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4 dark:border-slate-200 dark:bg-slate-50">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase">
               <span className="h-2.5 w-2.5 rounded-full bg-teal-400" />
-              Oggi / Stato Attuale
+              {t("holding_detail.timeline.today")}
             </div>
             <div className="mt-2 text-lg font-bold text-teal-300 dark:text-teal-900">
-              {formatDate(new Date().toISOString().split("T")[0])}
+              {formatDate(new Date().toISOString().split("T")[0], locale)}
             </div>
             <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-              Posizione <strong className="text-green-400 dark:text-green-700 font-semibold">Attiva</strong> in portafoglio
+              {t("holding_detail.timeline.active_position")}{" "}
+              <strong className="text-green-400 dark:text-green-700 font-semibold">
+                {t("holding_detail.timeline.active")}
+              </strong>{" "}
+              {t("holding_detail.timeline.in_portfolio")}
             </div>
           </div>
 
           <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4 dark:border-slate-200 dark:bg-slate-50">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase">
               <span className="h-2.5 w-2.5 rounded-full bg-purple-400" />
-              Quando è prevista la fine
+              {t("holding_detail.timeline.end")}
             </div>
             <div className="mt-2 text-lg font-bold text-slate-100 dark:text-slate-900">
-              {formatDate(holding.bond_detail?.maturity_date || holding.exit_date)}
+              {formatDate(holding.bond_detail?.maturity_date || holding.exit_date, locale)}
             </div>
             <div className="mt-1 text-xs text-slate-400 dark:text-slate-600">
               {holding.remaining_days != null ? (
                 holding.remaining_days > 0 ? (
-                  <>Mancano <strong className="font-mono text-purple-300 dark:text-purple-800">{holding.remaining_days} giorni</strong> ({Math.round(holding.remaining_days / 365.25 * 10) / 10} anni) al rimborso</>
+                  <>
+                    <strong className="font-mono text-purple-300 dark:text-purple-800">
+                      {t("holding_detail.timeline.remaining", { count: holding.remaining_days })}
+                    </strong>{" "}
+                    {t("holding_detail.timeline.remaining_years", {
+                      years: Math.round((holding.remaining_days / 365.25) * 10) / 10,
+                    })}
+                  </>
                 ) : (
-                  <span className="text-amber-400 font-semibold">Posizione giunta a scadenza</span>
+                  <span className="text-amber-400 font-semibold">
+                    {t("holding_detail.timeline.matured")}
+                  </span>
                 )
               ) : (
-                "Nessuna data di scadenza definita"
+                t("holding_detail.timeline.no_maturity")
               )}
             </div>
           </div>
@@ -756,11 +829,18 @@ export function HoldingDetailPage() {
         {timelineProgress && (
           <div className="mt-6 pt-4 border-t border-slate-800 dark:border-slate-200">
             <div className="flex justify-between text-xs text-slate-400 dark:text-slate-600 mb-2">
-              <span>Acquisto ({formatDate(holding.entry_date)})</span>
-              <span className="font-mono font-semibold text-teal-300 dark:text-teal-800">
-                {formatNumber(timelineProgress.pct, { minDecimals: 1, maxDecimals: 1, locale })}% del ciclo completato
+              <span>
+                {t("holding_detail.timeline.purchase")} ({formatDate(holding.entry_date, locale)})
               </span>
-              <span>Scadenza ({formatDate(holding.bond_detail?.maturity_date || holding.exit_date, locale)})</span>
+              <span className="font-mono font-semibold text-teal-300 dark:text-teal-800">
+                {t("holding_detail.timeline.completed_pct", {
+                  pct: formatNumber(timelineProgress.pct, { minDecimals: 1, maxDecimals: 1, locale }),
+                })}
+              </span>
+              <span>
+                {t("holding_detail.timeline.maturity")} (
+                {formatDate(holding.bond_detail?.maturity_date || holding.exit_date, locale)})
+              </span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800 dark:bg-slate-200">
               <div
@@ -781,40 +861,42 @@ export function HoldingDetailPage() {
               <div className="flex items-center justify-between border-b border-slate-700/60 pb-3 dark:border-slate-200">
                 <div>
                   <h3 className="text-base font-semibold text-slate-100 dark:text-slate-900">
-                    Rendimento Nominale Garantito
+                    {t("holding_detail.nominal_yield.title")}
                   </h3>
                   <p className="text-xs text-slate-400 dark:text-slate-600">
-                    Condizioni contrattuali stabilite all'emissione dall'emittente
+                    {t("holding_detail.nominal_yield.subtitle")}
                   </p>
                 </div>
                 <span className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs font-mono font-semibold text-slate-300 dark:bg-slate-100 dark:text-slate-800">
-                  {holding.bond_detail?.bond_type === "step_up" ? "Step-Up" : "Fisso"}
+                  {holding.bond_detail?.bond_type === "step_up"
+                    ? t("holding_detail.nominal_yield.type_step_up")
+                    : t("holding_detail.nominal_yield.type_fixed")}
                 </span>
               </div>
 
               <div className="mt-4 space-y-3.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400 dark:text-slate-600">Tasso Cedolare Nominale Annuo:</span>
+                  <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.nominal_yield.coupon_rate")}</span>
                   <span className="font-mono font-bold text-lg text-slate-100 dark:text-slate-900">
                     {formatNumber(holding.nominal_yield, { minDecimals: 2, maxDecimals: 2, locale })}%
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400 dark:text-slate-600">Frequenza Stacco Cedole:</span>
+                  <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.nominal_yield.frequency")}</span>
                   <span className="font-mono font-medium text-slate-200 dark:text-slate-800">
                     {holding.bond_detail?.coupon_frequency === 4
-                      ? "Trimestrale (4/anno)"
+                      ? t("holding_detail.nominal_yield.freq_quarterly")
                       : holding.bond_detail?.coupon_frequency === 2
-                      ? "Semestrale (2/anno)"
-                      : holding.bond_detail?.coupon_frequency === 1
-                      ? "Annuale (1/anno)"
-                      : "Zero-Coupon"}
+                        ? t("holding_detail.nominal_yield.freq_semiannual")
+                        : holding.bond_detail?.coupon_frequency === 1
+                          ? t("holding_detail.nominal_yield.freq_annual")
+                          : t("holding_detail.nominal_yield.freq_zero")}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400 dark:text-slate-600">Aliquota Fiscale Applicata:</span>
+                  <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.nominal_yield.tax_rate")}</span>
                   <span className="font-mono text-slate-200 dark:text-slate-800">
                     {formatNumber(holding.bond_detail?.tax_rate, { minDecimals: 2, maxDecimals: 2, locale })}%
                   </span>
@@ -822,7 +904,7 @@ export function HoldingDetailPage() {
 
                 {asNumber(holding.bond_detail?.final_bonus_rate) > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-400 dark:text-slate-600">Premio Fedeltà Finale (CUM):</span>
+                    <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.nominal_yield.final_bonus")}</span>
                     <span className="font-mono font-semibold text-teal-400 dark:text-teal-700">
                       +{formatNumber(holding.bond_detail?.final_bonus_rate, { minDecimals: 2, maxDecimals: 2, locale })}%
                     </span>
@@ -833,12 +915,17 @@ export function HoldingDetailPage() {
                 {holding.bond_detail?.step_up_schedule && holding.bond_detail.step_up_schedule.length > 0 && (
                   <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-850 p-3 dark:border-slate-200 dark:bg-slate-50">
                     <div className="text-xs font-semibold text-slate-300 dark:text-slate-800 mb-2">
-                      Piano Cedolare Step-Up:
+                      {t("holding_detail.nominal_yield.step_up_plan")}
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {holding.bond_detail.step_up_schedule.map((step, idx) => (
                         <div key={idx} className="flex justify-between bg-slate-800/60 dark:bg-slate-100 p-1.5 rounded">
-                          <span className="text-slate-400">Anni {step.from_year}–{step.to_year}:</span>
+                          <span className="text-slate-400">
+                            {t("holding_detail.nominal_yield.step_up_years", {
+                              from: step.from_year,
+                              to: step.to_year,
+                            })}
+                          </span>
                           <span className="font-mono font-bold text-teal-300 dark:text-teal-800">{formatNumber(step.rate, { minDecimals: 2, maxDecimals: 2, locale })}%</span>
                         </div>
                       ))}
@@ -853,48 +940,49 @@ export function HoldingDetailPage() {
               <div className="flex items-center justify-between border-b border-slate-700/60 pb-3 dark:border-slate-200">
                 <div>
                   <h3 className="text-base font-semibold text-teal-200 dark:text-teal-900">
-                    Rendimento Attuale di Mercato
+                    {t("holding_detail.market_yield.title")}
                   </h3>
                   <p className="text-xs text-slate-400 dark:text-slate-600">
-                    Calcolato a oggi in base al prezzo di mercato e ai giorni residui
+                    {t("holding_detail.market_yield.subtitle")}
                   </p>
                 </div>
                 <span className="rounded-lg bg-teal-500/20 px-2.5 py-1 text-xs font-mono font-semibold text-teal-300 dark:text-teal-900">
-                  Prezzo: {formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}%
+                  {t("holding_detail.market_yield.price")}{" "}
+                  {formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}%
                 </span>
               </div>
 
               <div className="mt-4 space-y-3.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400 dark:text-slate-600">Rendimento a Scadenza (YTM Netto):</span>
+                  <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.market_yield.ytm_net")}</span>
                   <span className="font-mono font-bold text-lg text-green-400 dark:text-green-700">
                     {formatPct(holding.ytm_net, 2, locale)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400 dark:text-slate-600">Rendimento Lordo (YTM Lordo):</span>
+                  <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.market_yield.ytm_gross")}</span>
                   <span className="font-mono font-semibold text-slate-100 dark:text-slate-900">
                     {formatPct(holding.ytm_gross, 2, locale)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400 dark:text-slate-600">Tasso Immediato (Current Yield):</span>
+                  <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.market_yield.current_yield")}</span>
                   <span className="font-mono text-slate-200 dark:text-slate-800">
                     {formatPct(holding.current_yield, 2, locale)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400 dark:text-slate-600">Rateo Maturato a oggi (% base 100):</span>
+                  <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.market_yield.accrued")}</span>
                   <span className="font-mono text-slate-200 dark:text-slate-800">
                     +{formatNumber(holding.accrued_interest, { minDecimals: 4, maxDecimals: 4, locale })}%
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400 dark:text-slate-600">Prezzo Tel Quel (Corso Secco + Rateo):</span>
+                  <span className="text-slate-400 dark:text-slate-600">{t("holding_detail.market_yield.dirty_price")}</span>
                   <span className="font-mono font-semibold text-teal-300 dark:text-teal-800">
                     {formatNumber(holding.dirty_price, { minDecimals: 2, maxDecimals: 2, locale })}%
                   </span>
@@ -916,33 +1004,49 @@ export function HoldingDetailPage() {
                 </div>
                 <div>
                   <h4 className="text-sm font-semibold text-slate-100 dark:text-slate-900">
-                    Analisi Differenziale Rendimento (Spread di Mercato)
+                    {t("holding_detail.spread.title")}
                   </h4>
                   <p className="mt-1 text-xs text-slate-300 dark:text-slate-700 leading-relaxed">
-                    {asNumber(holding.current_price) < 100 ? (
-                      <>
-                        Il titolo quota attualmente <strong>sotto la pari</strong> ({formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}% &lt; 100,00%).
-                        Il rimborso a 100 alla scadenza garantisce un <strong>capital gain aggiuntivo</strong> di +{formatNumber(100 - asNumber(holding.current_price), { minDecimals: 2, maxDecimals: 2, locale })}%
-                        che eleva il rendimento netto a scadenza (<strong>{formatPct(holding.ytm_net)}</strong>) rispetto alla cedola nominale.
-                      </>
-                    ) : asNumber(holding.current_price) > 100 ? (
-                      <>
-                        Il titolo quota attualmente <strong>sopra la pari</strong> ({formatNumber(holding.current_price, { minDecimals: 2, maxDecimals: 2, locale })}% &gt; 100,00%).
-                        Il rimborso a 100 alla scadenza comporta una riduzione in conto capitale di -{formatNumber(asNumber(holding.current_price) - 100, { minDecimals: 2, maxDecimals: 2, locale })}%,
-                        portando il rendimento effettivo a scadenza (<strong>{formatPct(holding.ytm_net)}</strong>) al di sotto della cedola nominale.
-                      </>
-                    ) : (
-                      <>Il titolo quota esattamente alla pari (100,00%). Il rendimento effettivo coincide con la cedola nominale.</>
-                    )}
+                    {asNumber(holding.current_price) < 100
+                      ? t("holding_detail.spread.below_par", {
+                          price: formatNumber(holding.current_price, {
+                            minDecimals: 2,
+                            maxDecimals: 2,
+                            locale,
+                          }),
+                          gain: formatNumber(100 - asNumber(holding.current_price), {
+                            minDecimals: 2,
+                            maxDecimals: 2,
+                            locale,
+                          }),
+                          ytm: formatPct(holding.ytm_net, 2, locale),
+                        })
+                      : asNumber(holding.current_price) > 100
+                        ? t("holding_detail.spread.above_par", {
+                            price: formatNumber(holding.current_price, {
+                              minDecimals: 2,
+                              maxDecimals: 2,
+                              locale,
+                            }),
+                            loss: formatNumber(asNumber(holding.current_price) - 100, {
+                              minDecimals: 2,
+                              maxDecimals: 2,
+                              locale,
+                            }),
+                            ytm: formatPct(holding.ytm_net, 2, locale),
+                          })
+                        : t("holding_detail.spread.at_par")}
                   </p>
                 </div>
               </div>
 
               {holding.yield_spread != null && (
                 <div className="rounded-xl border border-teal-500/40 bg-teal-500/10 px-4 py-2 text-right">
-                  <div className="text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-600">Spread Rendimento Netto</div>
+                  <div className="text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-600">
+                    {t("holding_detail.spread.spread_label")}
+                  </div>
                   <div className={`text-xl font-bold font-mono ${colorForPct(holding.yield_spread)}`}>
-                    {formatPct(holding.yield_spread)}
+                    {formatPct(holding.yield_spread, 2, locale)}
                   </div>
                 </div>
               )}
@@ -953,7 +1057,7 @@ export function HoldingDetailPage() {
 
       {/* ── Grafico Scostamento Prezzo ────────────────────────────────────────── */}
       {priceHistory && priceHistory.points.length > 0 && (
-        <PriceSpreadChart history={priceHistory} />
+        <PriceSpreadChart history={priceHistory} locale={locale} />
       )}
 
       {/* ── Future Cedole del Titolo ──────────────────────────────────────────── */}
@@ -962,20 +1066,23 @@ export function HoldingDetailPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 p-5 dark:border-slate-200">
             <div>
               <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
-                Future Cedole & Flussi di Cassa del Titolo
+                {t("holding_detail.coupons.title")}
               </h2>
               <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
-                Scadenzario dei flussi finanziari futuri{" "}
                 {isAggregated
-                  ? `consolidati per tutte le ${trancheCount} tranche`
-                  : "calcolati per questa posizione"}{" "}
-                ({Number(holding.quantity).toLocaleString(locale)} € nominali totali).
+                  ? t("holding_detail.coupons.subtitle_aggregated", {
+                      count: trancheCount,
+                      nominal: Number(holding.quantity).toLocaleString(locale),
+                    })
+                  : t("holding_detail.coupons.subtitle_single", {
+                      nominal: Number(holding.quantity).toLocaleString(locale),
+                    })}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <span className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 dark:bg-slate-100 dark:text-slate-800">
-                {calendarItems?.length ?? 0} flussi futuri
+                {t("holding_detail.coupons.count", { count: calendarItems?.length ?? 0 })}
               </span>
               <button
                 type="button"
@@ -986,12 +1093,12 @@ export function HoldingDetailPage() {
                   })
                 }
                 className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-300 hover:bg-teal-500/20 dark:border-teal-700/30 dark:bg-teal-50 dark:text-teal-800 dark:hover:bg-teal-100 transition-colors"
-                title={t("portfolio.export_calendar_ics", "Esporta calendario (.ics)")}
+                title={t("portfolio.export_calendar_ics")}
               >
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 12l4.5 4.5m0 0l4.5-4.5M12 3v13.5" />
                 </svg>
-                <span>{t("portfolio.export_calendar_ics", "Esporta calendario (.ics)")}</span>
+                <span>{t("portfolio.export_calendar_ics")}</span>
               </button>
             </div>
           </div>
@@ -1000,19 +1107,19 @@ export function HoldingDetailPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-700 dark:border-slate-300 text-xs uppercase text-slate-400 dark:text-slate-600 bg-slate-850 dark:bg-slate-50">
-                  <th className="p-3">Data Stacco</th>
-                  <th className="p-3">Tipo Flusso</th>
-                  <th className="p-3 text-right">Tasso %</th>
-                  <th className="p-3 text-right">Importo Lordo</th>
-                  <th className="p-3 text-right">Ritenuta Fiscale</th>
-                  <th className="p-3 text-right">Netto Accreditato</th>
+                  <th className="p-3">{t("holding_detail.coupons.col_date")}</th>
+                  <th className="p-3">{t("holding_detail.coupons.col_flow_type")}</th>
+                  <th className="p-3 text-right">{t("holding_detail.coupons.col_rate")}</th>
+                  <th className="p-3 text-right">{t("holding_detail.coupons.col_gross")}</th>
+                  <th className="p-3 text-right">{t("holding_detail.coupons.col_tax")}</th>
+                  <th className="p-3 text-right">{t("holding_detail.coupons.col_net")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(!calendarItems || calendarItems.length === 0) && (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-400">
-                      Nessun flusso cedolare futuro previsto per questa posizione.
+                      {t("holding_detail.coupons.empty")}
                     </td>
                   </tr>
                 )}
@@ -1029,28 +1136,30 @@ export function HoldingDetailPage() {
                       }`}
                     >
                       <td className="p-3 font-mono text-slate-200 dark:text-slate-900 flex items-center gap-2">
-                        <span>{formatDate(item.date)}</span>
+                        <span>{formatDate(item.date, locale)}</span>
                         {isFirst && (
                           <span className="rounded bg-teal-500/20 px-1.5 py-0.5 text-[10px] font-bold text-teal-300 dark:text-teal-800">
-                            PROSSIMA
+                            {t("holding_detail.coupons.tag_next")}
                           </span>
                         )}
                       </td>
                       <td className="p-3">
                         {isRedemption ? (
                           <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs font-semibold text-purple-300 dark:text-purple-800">
-                            Rimborso Capitale (100%)
+                            {t("holding_detail.coupons.flow_redemption")}
                           </span>
                         ) : isBonus ? (
                           <span className="rounded bg-teal-500/20 px-2 py-0.5 text-xs font-semibold text-teal-300 dark:text-teal-800">
-                            Premio Fedeltà (CUM)
+                            {t("holding_detail.coupons.flow_bonus")}
                           </span>
                         ) : (
-                          <span className="text-slate-300 dark:text-slate-800">Cedola Periodica</span>
+                          <span className="text-slate-300 dark:text-slate-800">{t("holding_detail.coupons.flow_coupon")}</span>
                         )}
                       </td>
                       <td className="p-3 text-right font-mono text-slate-300 dark:text-slate-800">
-                        {isRedemption ? (locale.startsWith("it") ? "100,00%" : "100.00%") : `${formatNumber(item.rate, { minDecimals: 2, maxDecimals: 2, locale })}%`}
+                        {isRedemption
+                          ? `${formatNumber(100, { minDecimals: 2, maxDecimals: 2, locale })}%`
+                          : `${formatNumber(item.rate, { minDecimals: 2, maxDecimals: 2, locale })}%`}
                       </td>
                       <td className="p-3 text-right font-mono text-slate-300 dark:text-slate-800">
                         {formatMoney(item.gross_amount, holding.asset_currency, locale)}
@@ -1072,29 +1181,43 @@ export function HoldingDetailPage() {
           {calendarItems && calendarItems.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-3 border-t border-slate-700/60 p-4 bg-slate-850 dark:border-slate-200 dark:bg-slate-50">
               <div>
-                <div className="text-xs text-slate-400 dark:text-slate-600">Totale Cedole Future Nette</div>
+                <div className="text-xs text-slate-400 dark:text-slate-600">
+                  {t("holding_detail.coupons.foot_total_net")}
+                </div>
                 <div className="mt-1 text-base font-bold font-mono text-teal-300 dark:text-teal-900">
-                  {formatMoney(cashFlowSummary.totalNet - cashFlowSummary.redemptionNet, holding.asset_currency)}
+                  {formatMoney(
+                    cashFlowSummary.totalNet - cashFlowSummary.redemptionNet,
+                    holding.asset_currency,
+                    locale,
+                  )}
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  {cashFlowSummary.couponCount} stacchi cedolari futuri
+                  {t("holding_detail.coupons.foot_coupon_count", { count: cashFlowSummary.couponCount })}
                 </div>
               </div>
 
               <div>
-                <div className="text-xs text-slate-400 dark:text-slate-600">Capitale Rimborsato a Scadenza</div>
+                <div className="text-xs text-slate-400 dark:text-slate-600">
+                  {t("holding_detail.coupons.foot_redemption")}
+                </div>
                 <div className="mt-1 text-base font-bold font-mono text-purple-300 dark:text-purple-900">
-                  {formatMoney(cashFlowSummary.redemptionNet, holding.asset_currency)}
+                  {formatMoney(cashFlowSummary.redemptionNet, holding.asset_currency, locale)}
                 </div>
-                <div className="text-[11px] text-slate-500">100% del valore nominale</div>
+                <div className="text-[11px] text-slate-500">
+                  {t("holding_detail.coupons.foot_nominal_note")}
+                </div>
               </div>
 
               <div>
-                <div className="text-xs text-slate-400 dark:text-slate-600">Flusso Finanziario Totale Atteso</div>
-                <div className="mt-1 text-base font-bold font-mono text-green-400 dark:text-green-700">
-                  {formatMoney(cashFlowSummary.totalNet, holding.asset_currency)}
+                <div className="text-xs text-slate-400 dark:text-slate-600">
+                  {t("holding_detail.coupons.foot_total")}
                 </div>
-                <div className="text-[11px] text-slate-500">Importo netto complessivo fino a maturity</div>
+                <div className="mt-1 text-base font-bold font-mono text-green-400 dark:text-green-700">
+                  {formatMoney(cashFlowSummary.totalNet, holding.asset_currency, locale)}
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {t("holding_detail.coupons.foot_total_note")}
+                </div>
               </div>
             </div>
           )}
@@ -1107,10 +1230,10 @@ export function HoldingDetailPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 p-5 dark:border-slate-200">
             <div>
               <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
-                Tranche della Posizione
+                {t("holding_detail.tranches.title")}
               </h2>
               <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
-                Dettaglio delle {trancheCount} tranche che compongono questa posizione. I totali sopra sono la loro somma.
+                {t("holding_detail.tranches.subtitle", { count: trancheCount })}
               </p>
             </div>
             <span className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 dark:bg-slate-100 dark:text-slate-800">
@@ -1123,14 +1246,18 @@ export function HoldingDetailPage() {
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-850 text-xs uppercase text-slate-400 dark:border-slate-300 dark:bg-slate-50 dark:text-slate-600">
                   <th className="p-3">#</th>
-                  <th className="p-3">Data Ingresso</th>
-                  <th className="p-3 text-right">{isBond ? "Nominale" : "Quantità"}</th>
-                  <th className="p-3 text-right">Prezzo di Carico</th>
-                  <th className="p-3 text-right">Rateo Acquisto</th>
-                  <th className="p-3 text-right">Valore Mercato</th>
-                  <th className="p-3 text-right">Rendimento</th>
-                  <th className="p-3 text-center">CUM</th>
-                  <th className="p-3 text-right">Azioni</th>
+                  <th className="p-3">{t("holding_detail.tranches.col_entry_date")}</th>
+                  <th className="p-3 text-right">
+                    {isBond
+                      ? t("holding_detail.tranches.col_nominal")
+                      : t("holding_detail.tranches.col_quantity")}
+                  </th>
+                  <th className="p-3 text-right">{t("holding_detail.tranches.col_cost_price")}</th>
+                  <th className="p-3 text-right">{t("holding_detail.tranches.col_accrued_in")}</th>
+                  <th className="p-3 text-right">{t("holding_detail.tranches.col_market_value")}</th>
+                  <th className="p-3 text-right">{t("holding_detail.tranches.col_return")}</th>
+                  <th className="p-3 text-center">{t("holding_detail.tranches.col_cum")}</th>
+                  <th className="p-3 text-right">{t("holding_detail.tranches.col_actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1167,7 +1294,7 @@ export function HoldingDetailPage() {
                     <td className="p-3 text-center">
                       {tr.eligible_for_bonus ? (
                         <span className="rounded bg-teal-500/20 px-1.5 py-0.5 text-[10px] font-bold text-teal-300 dark:text-teal-800">
-                          SÌ
+                          {t("holding_detail.tranches.cum_yes")}
                         </span>
                       ) : (
                         <span className="text-slate-500">—</span>
@@ -1179,7 +1306,7 @@ export function HoldingDetailPage() {
                           <button
                             onClick={() => openSingleExit(tr)}
                             className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-1.5 text-amber-400 hover:bg-amber-500/20 dark:text-amber-800"
-                            title={t("portfolio.register_exit", "Registra uscita")}
+                            title={t("portfolio.register_exit")}
                           >
                             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -1192,7 +1319,7 @@ export function HoldingDetailPage() {
                           <button
                             onClick={() => setEditTarget(tr)}
                             className="rounded-lg border border-sky-500/40 bg-sky-500/10 p-1.5 text-sky-400 hover:bg-sky-500/20 dark:text-sky-700"
-                            title={t("portfolio.edit_holding", "Modifica")}
+                            title={t("portfolio.edit_holding")}
                           >
                             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M12 20h9" />
@@ -1204,7 +1331,7 @@ export function HoldingDetailPage() {
                           <button
                             onClick={() => setDeleteTarget({ id: tr.id, symbol: tr.asset_symbol })}
                             className="rounded-lg border border-red-500/40 bg-red-500/10 p-1.5 text-red-400 hover:bg-red-500/20 dark:text-red-700"
-                            title={t("portfolio.delete", "Elimina")}
+                            title={t("portfolio.delete")}
                           >
                             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M3 6h18" />
@@ -1215,7 +1342,7 @@ export function HoldingDetailPage() {
                         )}
                         {asNumber(tr.quantity) <= 0 && (
                           <span className="text-[11px] text-purple-300 dark:text-purple-800">
-                            {t("portfolio.position_closed", "Chiusa")}
+                            {t("portfolio.position_closed")}
                           </span>
                         )}
                       </div>
@@ -1234,17 +1361,14 @@ export function HoldingDetailPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 p-5 dark:border-slate-200">
             <div>
               <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
-                {t("portfolio.exit_history", "Uscite registrate")}
+                {t("portfolio.exit_history")}
               </h2>
               <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
-                {t(
-                  "portfolio.exit_history_hint",
-                  "Vendite a mercato, rimborsi a scadenza e rimborsi anticipati dell'emittente.",
-                )}
+                {t("portfolio.exit_history_hint")}
               </p>
             </div>
             <span className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 dark:bg-slate-100 dark:text-slate-800">
-              {exitHistory.length} {t("portfolio.exit_count", "uscite")}
+              {exitHistory.length} {t("portfolio.exit_count")}
             </span>
           </div>
 
@@ -1252,15 +1376,15 @@ export function HoldingDetailPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-850 text-xs uppercase text-slate-400 dark:border-slate-300 dark:bg-slate-50 dark:text-slate-600">
-                  <th className="p-3">{t("portfolio.exit_col_date", "Data")}</th>
-                  <th className="p-3">{t("portfolio.exit_col_type", "Tipo")}</th>
-                  <th className="p-3 text-right">{t("portfolio.exit_col_quantity", "Quantità")}</th>
-                  <th className="p-3 text-right">{t("portfolio.exit_col_price", "Prezzo")}</th>
-                  <th className="p-3 text-right">{t("portfolio.exit_col_net", "Incasso netto")}</th>
-                  <th className="p-3 text-right">{t("portfolio.exit_col_pnl", "P&L realizzato")}</th>
-                  <th className="p-3 text-right">{t("portfolio.exit_col_taxes", "Tasse")}</th>
-                  <th className="p-3">{t("portfolio.exit_col_notes", "Note")}</th>
-                  <th className="p-3 text-right">{t("portfolio.exit_col_actions", "Azioni")}</th>
+                  <th className="p-3">{t("portfolio.exit_col_date")}</th>
+                  <th className="p-3">{t("portfolio.exit_col_type")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_quantity")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_price")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_net")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_pnl")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_taxes")}</th>
+                  <th className="p-3">{t("portfolio.exit_col_notes")}</th>
+                  <th className="p-3 text-right">{t("portfolio.exit_col_actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1311,7 +1435,7 @@ export function HoldingDetailPage() {
                           onClick={() => setExitToDelete(item)}
                           className="rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 dark:text-red-700"
                         >
-                          {t("portfolio.exit_undo", "Annulla")}
+                          {t("portfolio.exit_undo")}
                         </button>
                       </div>
                     </td>
@@ -1349,8 +1473,8 @@ export function HoldingDetailPage() {
 
       {deleteTarget && (
         <ConfirmModal
-          message={`Sei sicuro di voler eliminare la tranche di ${deleteTarget.symbol}?`}
-          confirmLabel={t("portfolio.delete", "Elimina")}
+          message={t("holding_detail.delete_confirm", { symbol: deleteTarget.symbol })}
+          confirmLabel={t("portfolio.delete")}
           onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
           onCancel={() => setDeleteTarget(null)}
           isPending={deleteMutation.isPending}
@@ -1359,8 +1483,11 @@ export function HoldingDetailPage() {
 
       {exitToDelete && (
         <ConfirmModal
-          message={`Annullare l'uscita del ${formatDate(exitToDelete.exit_date, locale)} per ${exitToDelete.asset_symbol}? La quantità verrà ripristinata.`}
-          confirmLabel={t("portfolio.exit_undo", "Annulla uscita")}
+          message={t("holding_detail.undo_exit_confirm", {
+            date: formatDate(exitToDelete.exit_date, locale),
+            symbol: exitToDelete.asset_symbol,
+          })}
+          confirmLabel={t("portfolio.exit_undo")}
           onConfirm={() => deleteExitMutation.mutate(exitToDelete.id)}
           onCancel={() => setExitToDelete(null)}
           isPending={deleteExitMutation.isPending}

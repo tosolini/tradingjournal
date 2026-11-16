@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 # In-memory quote cache: {isin_mic: (timestamp, price_decimal)}
 _euronext_quote_cache: dict[str, tuple[float, Optional[Decimal]]] = {}
+_euronext_chart_cache: dict[str, tuple[float, dict[str, Decimal]]] = {}
 CACHE_TTL = 300  # 5 minutes
 
 USER_AGENT = (
@@ -73,7 +74,7 @@ def parse_euronext_bond_query(query: str) -> tuple[str, str]:
     if isin_match:
         return isin_match.group(1).upper(), "MOTX"
 
-    raise ValueError(f"Formato non riconosciuto per query Euronext: '{query}'. Inserisci un ISIN o URL Euronext.")
+    raise ValueError("errors.euronext_query_invalid")
 
 
 def _parse_dmy_date(d_str: str) -> Optional[date]:
@@ -144,6 +145,72 @@ def fetch_euronext_live_price(isin: str, mic: str = "MOTX") -> Optional[Decimal]
 
     _euronext_quote_cache[cache_key] = (now, None)
     return None
+
+
+def fetch_euronext_chart_prices(query: str, period: str = "max") -> dict[str, Decimal]:
+    """Fetch historical daily close prices from Euronext MOT for a bond."""
+    try:
+        isin, mic = parse_euronext_bond_query(query)
+    except Exception:
+        return {}
+
+    cache_key = f"{isin}-{mic}".upper()
+    now = time.monotonic()
+    cached = _euronext_chart_cache.get(cache_key)
+    if cached and (now - cached[0]) < CACHE_TTL:
+        return cached[1]
+
+    try:
+        url_main = f"https://live.euronext.com/en/product/bonds/{cache_key}"
+        headers = {"User-Agent": USER_AGENT}
+        req_main = urllib.request.Request(url_main, headers=headers)
+        with urllib.request.urlopen(req_main, timeout=10) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+
+        kye_match = re.search(r'\"ajax_secure\":\{\"kye\":\"([^\"]+)\"\}', html)
+        if not kye_match:
+            _euronext_chart_cache[cache_key] = (now, {})
+            return {}
+        kye = kye_match.group(1)
+
+        chart_url = f"https://live.euronext.com/intraday_chart/getChartData/{cache_key}/{period}"
+        q_req = urllib.request.Request(
+            chart_url,
+            headers={"User-Agent": USER_AGENT, "X-Requested-With": "XMLHttpRequest"},
+        )
+        with urllib.request.urlopen(q_req, timeout=10) as resp:
+            q_data = json.loads(resp.read().decode("utf-8"))
+
+        salt = binascii.unhexlify(q_data["s"])
+        iv = binascii.unhexlify(q_data["iv"])
+        ct = base64.b64decode(q_data["ct"])
+
+        key, _ = _evp_bytes_to_key(kye, salt, 32, 16)
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        padded = decryptor.update(ct) + decryptor.finalize()
+        pad_len = padded[-1]
+        decrypted = padded[:-pad_len].decode("utf-8")
+        data = json.loads(decrypted)
+
+        result: dict[str, Decimal] = {}
+        if isinstance(data, list):
+            for row in data:
+                t_str = row.get("time", "")[:10]
+                price = row.get("price")
+                if t_str and price is not None:
+                    try:
+                        result[t_str] = Decimal(str(price))
+                    except Exception:
+                        pass
+
+        _euronext_chart_cache[cache_key] = (now, result)
+        return result
+    except Exception as e:
+        logger.warning("Errore nel recupero dati grafico Euronext per %s: %s", cache_key, e)
+
+    _euronext_chart_cache[cache_key] = (now, {})
+    return {}
 
 
 def fetch_euronext_bond_details(query: str) -> dict[str, Any]:
@@ -309,7 +376,14 @@ BOND_INSTRUMENT_TYPES = {"bond", "government_bond", "titolo_di_stato"}
 
 
 class EuronextSyncError(Exception):
-    """Raised when an asset cannot be synchronized from Euronext."""
+    """Raised when an asset cannot be synchronized from Euronext.
+
+    ``code`` is an i18n catalog key that API layers can localize.
+    """
+
+    def __init__(self, code: str, *args: object) -> None:
+        super().__init__(code, *args)
+        self.code = code
 
 
 def apply_euronext_bond_data(asset: Any) -> None:
@@ -322,22 +396,20 @@ def apply_euronext_bond_data(asset: Any) -> None:
 
     instrument_type = (getattr(asset, "instrument_type", "") or "").strip().lower()
     if instrument_type not in BOND_INSTRUMENT_TYPES:
-        raise EuronextSyncError(
-            "L'asset non è un'obbligazione: sincronizzazione Euronext non disponibile"
-        )
+        raise EuronextSyncError("errors.euronext_asset_not_bond")
 
     query = getattr(asset, "isin", None) or getattr(asset, "symbol", None)
     if not query:
-        raise EuronextSyncError("Asset has no ISIN or symbol for Euronext lookup")
+        raise EuronextSyncError("errors.euronext_asset_missing_identifier")
 
     try:
         data = fetch_euronext_bond_details(query)
     except Exception as e:
-        raise EuronextSyncError(f"Errore Euronext: {e}") from e
+        raise EuronextSyncError("errors.euronext_sync_failed", str(e)) from e
 
     bd_data = data.get("bond_detail")
     if not bd_data:
-        raise EuronextSyncError("Nessun dato obbligazionario trovato su Euronext")
+        raise EuronextSyncError("errors.euronext_no_bond_data")
 
     if not asset.bond_detail:
         asset.bond_detail = BondDetail(asset_id=asset.id)

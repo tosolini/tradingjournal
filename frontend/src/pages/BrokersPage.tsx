@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolverTyped } from "../lib/zod-resolver";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { ApiError, Broker, Exchange, FeeMode, api, exchangesApi } from "../lib/api";
 import { BROKER_PRESETS, BrokerPresetConfig } from "../lib/fees";
 import { ConfirmModal } from "../components/ConfirmModal";
-import { formatNumber, getNumberLocale } from "../lib/numbers";
+import { formatMoney, formatNumber, getNumberLocale } from "../lib/numbers";
 
 const emptyToNullNumber = z.preprocess((val) => {
   if (val === "" || val === null || val === undefined) return null;
@@ -21,36 +22,44 @@ const emptyToNullTier = z.preprocess((val) => {
   return Number.isNaN(num) ? val : num;
 }, z.number().int().min(1).max(4).nullable().optional());
 
-const brokerSchema = z.object({
-  name: z.string().trim().min(2, "Inserisci un nome broker valido"),
-  broker_profile: z.string().default("custom"),
-  fee_mode: z.enum(["fixed", "percent", "percent_min_max", "tiered_volume", "under_30"]),
-  fee_value: z.coerce.number().min(0, "Inserisci un valore fee valido"),
-  fee_min: emptyToNullNumber,
-  fee_max: emptyToNullNumber,
-  fee_us_value: emptyToNullNumber,
-  fee_currency: z.string().trim().min(3, "Inserisci una valuta valida").max(8, "Valuta troppo lunga"),
-  monthly_fee: z.coerce.number().min(0, "Canone non valido").default(0),
-  fee_tier_override: emptyToNullTier,
-  capital_gain_mode: z.enum(["immediate", "year_end"]),
-  capital_gain_rate: z.coerce.number().min(0, "Inserisci una aliquota valida"),
-  capital_gain_rate_gov: z.coerce.number().min(0, "Inserisci una aliquota valida"),
-});
+function makeBrokerSchema(t: TFunction) {
+  return z.object({
+    name: z.string().trim().min(2, t("brokers.validation_name")),
+    broker_profile: z.string().default("custom"),
+    fee_mode: z.enum(["fixed", "percent", "percent_min_max", "tiered_volume", "under_30"]),
+    fee_value: z.coerce.number().min(0, t("brokers.validation_fee_value")),
+    fee_min: emptyToNullNumber,
+    fee_max: emptyToNullNumber,
+    fee_us_value: emptyToNullNumber,
+    fee_currency: z
+      .string()
+      .trim()
+      .min(3, t("brokers.validation_currency"))
+      .max(8, t("brokers.validation_currency_long")),
+    monthly_fee: z.coerce.number().min(0, t("brokers.validation_monthly_fee")).default(0),
+    fee_tier_override: emptyToNullTier,
+    capital_gain_mode: z.enum(["immediate", "year_end"]),
+    capital_gain_rate: z.coerce.number().min(0, t("brokers.validation_rate")),
+    capital_gain_rate_gov: z.coerce.number().min(0, t("brokers.validation_rate")),
+  });
+}
 
-type BrokerPayload = z.infer<typeof brokerSchema>;
+type BrokerPayload = z.infer<ReturnType<typeof makeBrokerSchema>>;
 
-const exchangeSchema = z.object({
-  name: z.string().trim().min(2, "Inserisci un nome valido"),
-  mic: z.string().trim().optional(),
-  suffix: z.string().trim().optional(),
-  country: z.string().trim().optional(),
-  currency: z.string().trim().min(3).max(8).default("EUR"),
-  timezone: z.string().trim().optional(),
-  open_time: z.string().trim().optional(),
-  close_time: z.string().trim().optional(),
-});
+function makeExchangeSchema(t: TFunction) {
+  return z.object({
+    name: z.string().trim().min(2, t("brokers.validation_exchange_name")),
+    mic: z.string().trim().optional(),
+    suffix: z.string().trim().optional(),
+    country: z.string().trim().optional(),
+    currency: z.string().trim().min(3).max(8).default("EUR"),
+    timezone: z.string().trim().optional(),
+    open_time: z.string().trim().optional(),
+    close_time: z.string().trim().optional(),
+  });
+}
 
-type ExchangePayload = z.infer<typeof exchangeSchema>;
+type ExchangePayload = z.infer<ReturnType<typeof makeExchangeSchema>>;
 
 function EditIcon() {
   return (
@@ -104,6 +113,8 @@ export function BrokersPage() {
   const { t, i18n } = useTranslation();
   const locale = getNumberLocale(i18n.resolvedLanguage);
   const qc = useQueryClient();
+  const brokerSchema = useMemo(() => makeBrokerSchema(t), [t]);
+  const exchangeSchema = useMemo(() => makeExchangeSchema(t), [t]);
 
   const [activeTab, setActiveTab] = useState<"brokers" | "markets">("brokers");
 
@@ -501,17 +512,32 @@ export function BrokersPage() {
   const smallInputCls = "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 placeholder-slate-500 focus:border-teal-500 focus:outline-none";
 
   const renderFeeDescription = (b: Broker) => {
+    const fmt = (value: string | number | null | undefined) =>
+      formatNumber(value || 0, { minDecimals: 2, maxDecimals: 2, locale });
     switch (b.fee_mode) {
       case "fixed":
-        return `Fissa ${formatNumber(b.fee_value || 0, { minDecimals: 2, maxDecimals: 2, locale })} ${b.fee_currency || "EUR"}`;
+        return t("brokers.fee_desc_fixed", {
+          value: fmt(b.fee_value),
+          currency: b.fee_currency || "EUR",
+        });
       case "percent":
-        return `${formatNumber(b.fee_value || 0, { minDecimals: 2, maxDecimals: 2, locale })}%`;
+        return t("brokers.fee_desc_percent", { value: fmt(b.fee_value) });
       case "percent_min_max":
-        return `${formatNumber(b.fee_value || 0, { minDecimals: 2, maxDecimals: 2, locale })}% (min ${formatNumber(b.fee_min || 0, { minDecimals: 2, maxDecimals: 2, locale })} / max ${formatNumber(b.fee_max || 0, { minDecimals: 2, maxDecimals: 2, locale })} ${b.fee_currency || "EUR"})`;
+        return t("brokers.fee_desc_percent_min_max", {
+          value: fmt(b.fee_value),
+          min: fmt(b.fee_min),
+          max: fmt(b.fee_max),
+          currency: b.fee_currency || "EUR",
+        });
       case "under_30":
-        return `Under 30: ${formatNumber(b.fee_value || 2.95, { minDecimals: 2, maxDecimals: 2, locale })} € / ${formatNumber(b.fee_us_value || 3.95, { minDecimals: 2, maxDecimals: 2, locale })} $ USA`;
+        return t("brokers.fee_desc_under_30", {
+          eur: fmt(b.fee_value || 2.95),
+          usd: fmt(b.fee_us_value || 3.95),
+        });
       case "tiered_volume":
-        return `A fasce mensili ${b.fee_tier_override ? `(Fascia ${b.fee_tier_override} fissa)` : "(Auto volume)"}`;
+        return b.fee_tier_override
+          ? t("brokers.fee_desc_tiered_fixed", { tier: b.fee_tier_override })
+          : t("brokers.fee_desc_tiered_auto");
       default:
         return b.fee_mode;
     }
@@ -567,7 +593,7 @@ export function BrokersPage() {
                 >
                   {BROKER_PRESETS.map((p) => (
                     <option key={p.profile} value={p.profile}>
-                      {p.label}
+                      {t(p.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -576,15 +602,23 @@ export function BrokersPage() {
 
             {selectedPreset !== "custom" && (
               <div className="rounded border border-teal-800/40 bg-teal-950/30 p-2 text-xs text-teal-300">
-                💡 {BROKER_PRESETS.find((p) => p.profile === selectedPreset)?.description}
+                💡{" "}
+                {(() => {
+                  const preset = BROKER_PRESETS.find((p) => p.profile === selectedPreset);
+                  return preset ? t(preset.descriptionKey) : null;
+                })()}
               </div>
             )}
 
             <form className="space-y-3" onSubmit={handleBrokerSubmit((values) => createBroker.mutate(values))}>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <label className="mb-1 block text-xs text-slate-400">Nome Broker</label>
-                  <input {...registerBroker("name")} placeholder="Es. Fineco - Conto Trading" className={`w-full ${inputCls}`} />
+                  <label className="mb-1 block text-xs text-slate-400">{t("brokers.name")}</label>
+                  <input
+                    {...registerBroker("name")}
+                    placeholder={t("brokers.name_placeholder")}
+                    className={`w-full ${inputCls}`}
+                  />
                 </div>
 
                 <div>
@@ -600,13 +634,21 @@ export function BrokersPage() {
 
                 <div>
                   <label className="mb-1 block text-xs text-slate-400">
-                    {currentFeeMode === "percent" || currentFeeMode === "percent_min_max" ? "Percentuale (%)" : "Fee / Base"}
+                    {currentFeeMode === "percent" || currentFeeMode === "percent_min_max"
+                      ? t("brokers.fee_percent_label")
+                      : t("brokers.fee_base_label")}
                   </label>
-                  <input type="number" step="0.0001" {...registerBroker("fee_value")} placeholder="Valore fee" className={`w-full ${inputCls}`} />
+                  <input
+                    type="number"
+                    step="0.0001"
+                    {...registerBroker("fee_value")}
+                    placeholder={t("brokers.fee_value_placeholder")}
+                    className={`w-full ${inputCls}`}
+                  />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs text-slate-400">Valuta</label>
+                  <label className="mb-1 block text-xs text-slate-400">{t("brokers.currency")}</label>
                   <input {...registerBroker("fee_currency")} placeholder="EUR" className={`w-full ${inputCls}`} />
                 </div>
 
@@ -615,11 +657,11 @@ export function BrokersPage() {
                   <>
                     <div>
                       <label className="mb-1 block text-xs text-slate-400">{t("brokers.fee_min")}</label>
-                      <input type="number" step="0.01" {...registerBroker("fee_min")} placeholder="Es. 2.95" className={`w-full ${inputCls}`} />
+                      <input type="number" step="0.01" {...registerBroker("fee_min")} placeholder={t("brokers.rate_placeholder")} className={`w-full ${inputCls}`} />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs text-slate-400">{t("brokers.fee_max")}</label>
-                      <input type="number" step="0.01" {...registerBroker("fee_max")} placeholder="Es. 19.00" className={`w-full ${inputCls}`} />
+                      <input type="number" step="0.01" {...registerBroker("fee_max")} placeholder={t("brokers.rate_placeholder")} className={`w-full ${inputCls}`} />
                     </div>
                   </>
                 )}
@@ -627,7 +669,7 @@ export function BrokersPage() {
                 {currentFeeMode === "under_30" && (
                   <div>
                     <label className="mb-1 block text-xs text-slate-400">{t("brokers.fee_us_value")}</label>
-                    <input type="number" step="0.01" {...registerBroker("fee_us_value")} placeholder="Es. 3.95" className={`w-full ${inputCls}`} />
+                    <input type="number" step="0.01" {...registerBroker("fee_us_value")} placeholder={t("brokers.rate_gov_placeholder")} className={`w-full ${inputCls}`} />
                   </div>
                 )}
 
@@ -645,49 +687,54 @@ export function BrokersPage() {
                 )}
 
                 <div>
-                  <label className="mb-1 block text-xs text-slate-400">{t("brokers.monthly_fee")} (€/mese)</label>
-                  <input type="number" step="0.01" {...registerBroker("monthly_fee")} placeholder="Es. 0, 3.95, 29.95" className={`w-full ${inputCls}`} />
+                  <label className="mb-1 block text-xs text-slate-400">
+                  {t("brokers.monthly_fee")} {t("brokers.monthly_fee_suffix")}
+                </label>
+                  <input type="number" step="0.01" {...registerBroker("monthly_fee")} placeholder={t("brokers.monthly_fee_placeholder")} className={`w-full ${inputCls}`} />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs text-slate-400">Regime Fiscale</label>
+                  <label className="mb-1 block text-xs text-slate-400">{t("brokers.tax_regime")}</label>
                   <select {...registerBroker("capital_gain_mode")} className={`w-full ${inputCls}`}>
-                    <option value="immediate">Capital gain immediato (amministrato)</option>
-                    <option value="year_end">Capital gain a fine anno</option>
+                    <option value="immediate">{t("brokers.tax_regime_immediate")}</option>
+                    <option value="year_end">{t("brokers.tax_regime_year_end")}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="mb-1 block text-xs text-slate-400">{t("brokers.capital_gain_standard")}</label>
-                  <input type="number" step="0.01" {...registerBroker("capital_gain_rate")} placeholder="Es. 26" className={`w-full ${inputCls}`} />
+                  <input type="number" step="0.01" {...registerBroker("capital_gain_rate")} placeholder={t("brokers.rate_placeholder")} className={`w-full ${inputCls}`} />
                 </div>
 
                 <div>
                   <label className="mb-1 block text-xs text-slate-400">{t("brokers.capital_gain_rate_gov")}</label>
-                  <input type="number" step="0.01" {...registerBroker("capital_gain_rate_gov")} placeholder="Es. 12.50" className={`w-full ${inputCls}`} />
+                  <input type="number" step="0.01" {...registerBroker("capital_gain_rate_gov")} placeholder={t("brokers.rate_gov_placeholder")} className={`w-full ${inputCls}`} />
                 </div>
               </div>
 
               {currentFeeMode === "tiered_volume" && (
                 <div className="rounded border border-slate-700/60 bg-slate-900/60 p-2.5 text-xs text-slate-400 space-y-1">
-                  <div className="font-semibold text-slate-300">Scaglioni Fineco per ordini Italia/Europa e USA:</div>
+                  <div className="font-semibold text-slate-300">{t("brokers.tiered_hint_title")}</div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                    <div className="rounded bg-slate-800/80 p-1.5 border border-slate-700/40">
-                      <div className="text-teal-400 font-semibold">Fascia 1 (&lt; 99 € comm.)</div>
-                      <div>19,00 € / 12,95 $</div>
-                    </div>
-                    <div className="rounded bg-slate-800/80 p-1.5 border border-slate-700/40">
-                      <div className="text-teal-400 font-semibold">Fascia 2 (100 - 1.499 €)</div>
-                      <div>9,95 € / 9,95 $</div>
-                    </div>
-                    <div className="rounded bg-slate-800/80 p-1.5 border border-slate-700/40">
-                      <div className="text-teal-400 font-semibold">Fascia 3 (1.500 - 2.499 €)</div>
-                      <div>6,95 € / 8,95 $</div>
-                    </div>
-                    <div className="rounded bg-slate-800/80 p-1.5 border border-slate-700/40">
-                      <div className="text-teal-400 font-semibold">Fascia 4 (≥ 2.500 €)</div>
-                      <div>2,95 € / 3,95 $</div>
-                    </div>
+                    {[
+                      { key: "tier_1", eur: 19, usd: 12.95 },
+                      { key: "tier_2", eur: 9.95, usd: 9.95 },
+                      { key: "tier_3", eur: 6.95, usd: 8.95 },
+                      { key: "tier_4", eur: 2.95, usd: 3.95 },
+                    ].map((tier) => (
+                      <div
+                        key={tier.key}
+                        className="rounded bg-slate-800/80 p-1.5 border border-slate-700/40"
+                      >
+                        <div className="text-teal-400 font-semibold">
+                          {t(`brokers.tiered_${tier.key}`)}
+                        </div>
+                        <div>
+                          {formatNumber(tier.eur, { minDecimals: 2, maxDecimals: 2, locale })} € /{" "}
+                          {formatNumber(tier.usd, { minDecimals: 2, maxDecimals: 2, locale })} $
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -712,12 +759,12 @@ export function BrokersPage() {
               <thead>
                 <tr className="border-b border-slate-700 dark:border-slate-300 text-left text-slate-400 dark:text-slate-900">
                   <th className="px-4 py-2">ID</th>
-                  <th className="px-4 py-2">Nome Broker</th>
-                  <th className="px-4 py-2">Struttura Fee</th>
-                  <th className="px-4 py-2">Canone Mensile</th>
-                  <th className="px-4 py-2">Fiscalità (Ord / TdS)</th>
+                  <th className="px-4 py-2">{t("brokers.name")}</th>
+                  <th className="px-4 py-2">{t("brokers.col_fee_structure")}</th>
+                  <th className="px-4 py-2">{t("brokers.col_monthly_fee")}</th>
+                  <th className="px-4 py-2">{t("brokers.col_tax")}</th>
                   <th className="px-4 py-2">{t("brokers.markets_column")}</th>
-                  <th className="px-4 py-2">Azioni</th>
+                  <th className="px-4 py-2">{t("brokers.col_actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -739,7 +786,12 @@ export function BrokersPage() {
                               <div className="font-semibold text-slate-200">{broker.name}</div>
                               {broker.broker_profile && broker.broker_profile !== "custom" && (
                                 <span className="inline-block mt-0.5 rounded-full bg-slate-800 px-2 py-0.2 text-[10px] text-teal-400 border border-slate-700">
-                                  {BROKER_PRESETS.find((p) => p.profile === broker.broker_profile)?.label || broker.broker_profile}
+                                  {(() => {
+                                    const preset = BROKER_PRESETS.find(
+                                      (p) => p.profile === broker.broker_profile,
+                                    );
+                                    return preset ? t(preset.labelKey) : broker.broker_profile;
+                                  })()}
                                 </span>
                               )}
                             </div>
@@ -751,11 +803,15 @@ export function BrokersPage() {
                           {isEditingThis ? (
                             <div className="space-y-1">
                               <select value={editFeeMode} onChange={(e) => setEditFeeMode(e.target.value as FeeMode)} className={smallInputCls}>
-                                <option value="fixed">Fissa</option>
-                                <option value="percent">Percentuale</option>
-                                <option value="percent_min_max">% con Min/Max</option>
-                                <option value="under_30">Under 30</option>
-                                <option value="tiered_volume">A fasce volume</option>
+                                <option value="fixed">{t("brokers.fee_mode_fixed_short")}</option>
+                                <option value="percent">{t("brokers.fee_mode_percent_short")}</option>
+                                <option value="percent_min_max">
+                                  {t("brokers.fee_mode_percent_min_max_short")}
+                                </option>
+                                <option value="under_30">{t("brokers.fee_mode_under_30_short")}</option>
+                                <option value="tiered_volume">
+                                  {t("brokers.fee_mode_tiered_volume_short")}
+                                </option>
                               </select>
                               <div className="flex gap-1 items-center">
                                 <input
@@ -764,7 +820,7 @@ export function BrokersPage() {
                                   value={editFeeValue}
                                   onChange={(e) => setEditFeeValue(Number(e.target.value))}
                                   className={`w-16 ${smallInputCls}`}
-                                  placeholder="Valore"
+                                  placeholder={t("brokers.fee_value_short_placeholder")}
                                 />
                                 {editFeeMode === "percent_min_max" && (
                                   <>
@@ -793,7 +849,7 @@ export function BrokersPage() {
                                     value={editFeeUsValue}
                                     onChange={(e) => setEditFeeUsValue(e.target.value === "" ? "" : Number(e.target.value))}
                                     className={`w-16 ${smallInputCls}`}
-                                    placeholder="USA $"
+                                    placeholder={t("brokers.usd_placeholder")}
                                   />
                                 )}
                                 {editFeeMode === "tiered_volume" && (
@@ -802,11 +858,12 @@ export function BrokersPage() {
                                     onChange={(e) => setEditFeeTierOverride(e.target.value === "" ? "" : Number(e.target.value))}
                                     className={smallInputCls}
                                   >
-                                    <option value="">Auto</option>
-                                    <option value="1">Fascia 1</option>
-                                    <option value="2">Fascia 2</option>
-                                    <option value="3">Fascia 3</option>
-                                    <option value="4">Fascia 4</option>
+                                    <option value="">{t("brokers.tier_auto_short")}</option>
+                                    {[1, 2, 3, 4].map((tier) => (
+                                      <option key={tier} value={tier}>
+                                        {t("brokers.tier_n_short", { n: tier })}
+                                      </option>
+                                    ))}
                                   </select>
                                 )}
                               </div>
@@ -833,7 +890,9 @@ export function BrokersPage() {
                               {formatNumber(broker.monthly_fee, { minDecimals: 2, maxDecimals: 2, locale })} €/m
                             </span>
                           ) : (
-                            <span className="text-slate-400">0,00 €</span>
+                            <span className="text-slate-400">
+                              {formatMoney(0, "EUR", locale)}
+                            </span>
                           )}
                         </td>
 
@@ -842,11 +901,15 @@ export function BrokersPage() {
                           {isEditingThis ? (
                             <div className="space-y-1">
                               <select value={editCapitalGainMode} onChange={(e) => setEditCapitalGainMode(e.target.value as "immediate" | "year_end")} className={smallInputCls}>
-                                <option value="immediate">immediato</option>
-                                <option value="year_end">fine anno</option>
+                                <option value="immediate">
+                                  {t("brokers.capital_gain_mode_immediate_short")}
+                                </option>
+                                <option value="year_end">
+                                  {t("brokers.capital_gain_mode_year_end_short")}
+                                </option>
                               </select>
                               <div className="flex gap-1 items-center text-xs">
-                                <span title="Aliquota standard">Ord:</span>
+                                <span title={t("brokers.tax_std_short_title")}>Ord:</span>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -854,7 +917,7 @@ export function BrokersPage() {
                                   onChange={(e) => setEditCapitalGainRate(Number(e.target.value))}
                                   className={`w-14 ${smallInputCls}`}
                                 />
-                                <span title="Aliquota Titoli di Stato">TdS:</span>
+                                <span title={t("brokers.tax_gov_short_title")}>TdS:</span>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -887,7 +950,7 @@ export function BrokersPage() {
                                   type="button"
                                   className="hover:text-red-400 transition-colors"
                                   onClick={() => unlinkExchange.mutate({ brokerId: broker.id, exchangeId: exc.id })}
-                                  title={`Rimuovi ${exc.name}`}
+                                  title={t("brokers.remove_exchange", { name: exc.name })}
                                 >
                                   ×
                                 </button>
@@ -900,7 +963,7 @@ export function BrokersPage() {
                                   onChange={(e) => setSelectedExchToLink(e.target.value === "" ? "" : Number(e.target.value))}
                                   className="rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs"
                                 >
-                                  <option value="">— mercato —</option>
+                                  <option value="">{t("brokers.market_placeholder")}</option>
                                   {getAvailableExchanges(broker).map((e) => (
                                     <option key={e.id} value={e.id}>{e.name}{e.suffix ? `.${e.suffix}` : ""}</option>
                                   ))}
@@ -931,7 +994,7 @@ export function BrokersPage() {
                                 onClick={() => { setAddingExchangeForBroker(broker.id); setSelectedExchToLink(""); }}
                                 className="rounded border border-slate-700 px-1.5 py-0.5 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-200 transition-colors"
                               >
-                                + mercato
+                                {t("brokers.add_market")}
                               </button>
                             )}
                           </div>
@@ -946,7 +1009,7 @@ export function BrokersPage() {
                                   type="button"
                                   onClick={saveEditing}
                                   className="rounded p-1 text-emerald-400 hover:bg-slate-700/60"
-                                  title="Salva"
+                                  title={t("common.save")}
                                 >
                                   <SaveIcon />
                                 </button>
@@ -954,7 +1017,7 @@ export function BrokersPage() {
                                   type="button"
                                   onClick={cancelEditing}
                                   className="rounded p-1 text-slate-400 hover:bg-slate-700/60"
-                                  title="Annulla"
+                                  title={t("common.cancel")}
                                 >
                                   <CancelIcon />
                                 </button>
@@ -965,7 +1028,7 @@ export function BrokersPage() {
                                   type="button"
                                   onClick={() => startEditing(broker)}
                                   className="rounded p-1 text-slate-400 hover:bg-slate-700/60 hover:text-slate-200"
-                                  title="Modifica"
+                                  title={t("common.edit")}
                                 >
                                   <EditIcon />
                                 </button>
@@ -973,7 +1036,7 @@ export function BrokersPage() {
                                   type="button"
                                   onClick={() => setDeletePendingId(broker.id)}
                                   className="rounded p-1 text-red-400 hover:bg-slate-700/60 hover:text-red-300"
-                                  title="Elimina"
+                                  title={t("common.delete")}
                                 >
                                   <DeleteIcon />
                                 </button>
@@ -1039,14 +1102,16 @@ export function BrokersPage() {
               <thead>
                 <tr className="border-b border-slate-700 text-left text-slate-400">
                   <th className="px-4 py-2">ID</th>
-                  <th className="px-4 py-2">Nome</th>
+                  <th className="px-4 py-2">{t("brokers.exchange_name")}</th>
                   <th className="px-4 py-2">MIC</th>
-                  <th className="px-4 py-2">Suffisso</th>
-                  <th className="px-4 py-2">Paese</th>
-                  <th className="px-4 py-2">Valuta</th>
-                  <th className="px-4 py-2">Fuso</th>
-                  <th className="px-4 py-2">Orari</th>
-                  <th className="px-4 py-2">Azioni</th>
+                  <th className="px-4 py-2">{t("brokers.exchange_suffix")}</th>
+                  <th className="px-4 py-2">{t("brokers.exchange_country")}</th>
+                  <th className="px-4 py-2">{t("brokers.exchange_currency")}</th>
+                  <th className="px-4 py-2">{t("brokers.exchange_timezone")}</th>
+                  <th className="px-4 py-2">
+                    {t("brokers.exchange_open")} / {t("brokers.exchange_close")}
+                  </th>
+                  <th className="px-4 py-2">{t("brokers.col_actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1147,7 +1212,7 @@ export function BrokersPage() {
       {deletePendingId !== null && (
         <ConfirmModal
           message={t("brokers.confirm_delete", { id: deletePendingId, name: brokersData?.find((b) => b.id === deletePendingId)?.name ?? "" })}
-          confirmLabel="Elimina"
+          confirmLabel={t("common.delete")}
           onConfirm={() => { if (deletePendingId !== null) { deleteBroker.mutate(deletePendingId); setDeletePendingId(null); } }}
           onCancel={() => setDeletePendingId(null)}
         />
@@ -1156,7 +1221,7 @@ export function BrokersPage() {
       {deleteExchPendingId !== null && (
         <ConfirmModal
           message={t("brokers.exchange_confirm_delete", { id: deleteExchPendingId, name: exchangesData?.find((e) => e.id === deleteExchPendingId)?.name ?? "" })}
-          confirmLabel="Elimina"
+          confirmLabel={t("common.delete")}
           onConfirm={() => { if (deleteExchPendingId !== null) { deleteExchange.mutate(deleteExchPendingId); setDeleteExchPendingId(null); } }}
           onCancel={() => setDeleteExchPendingId(null)}
         />

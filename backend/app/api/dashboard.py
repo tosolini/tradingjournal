@@ -105,53 +105,53 @@ def dashboard_kpis(
             else:
                 breakeven += 1
 
-        broker = trade.account.broker if trade.account and trade.account.broker else None
-        broker_id = broker.id if broker else trade.account_id
-        mode = str(broker.capital_gain_mode if broker else "immediate").lower()
-        std_rate = Decimal(str(broker.capital_gain_rate if broker else Decimal("26.00")))
-        gov_rate = Decimal(str(broker.capital_gain_rate_gov if broker else Decimal("12.50")))
-        is_gov = str(trade.instrument_type or "stock").strip().lower() in {"government_bond", "titolo_di_stato"}
-        rate = gov_rate if is_gov else std_rate
-        yearly_tax_currency.add((trade.account.base_currency if trade.account else "EUR").upper())
+            broker = trade.account.broker if trade.account and trade.account.broker else None
+            broker_id = broker.id if broker else trade.account_id
+            mode = str(broker.capital_gain_mode if broker else "immediate").lower()
+            std_rate = Decimal(str(broker.capital_gain_rate if broker else Decimal("26.00")))
+            gov_rate = Decimal(str(broker.capital_gain_rate_gov if broker else Decimal("12.50")))
+            is_gov = str(trade.instrument_type or "stock").strip().lower() in {"government_bond", "titolo_di_stato"}
+            rate = gov_rate if is_gov else std_rate
+            yearly_tax_currency.add((trade.account.base_currency if trade.account else "EUR").upper())
 
-        if closed_at >= year_start:
-            if mode == "year_end":
-                if is_gov:
-                    year_end_gov_buckets[broker_id] += net
+            if closed_at >= year_start:
+                if mode == "year_end":
+                    if is_gov:
+                        year_end_gov_buckets[broker_id] += net
+                    else:
+                        year_end_std_buckets[broker_id] += net
+                    year_end_std_rates.setdefault(broker_id, std_rate)
+                    year_end_gov_rates.setdefault(broker_id, gov_rate)
                 else:
-                    year_end_std_buckets[broker_id] += net
-                year_end_std_rates.setdefault(broker_id, std_rate)
-                year_end_gov_rates.setdefault(broker_id, gov_rate)
-            else:
-                if net > 0:
-                    tax = net * rate / Decimal("100")
-                    immediate_tax += tax
-                    if is_gov:
-                        immediate_tax_gov += tax
-                    else:
-                        immediate_tax_std += tax
-                elif net < 0:
-                    loss = abs(net)
-                    nominal_loss += loss
-                    if is_gov:
-                        loss_offset_gov += loss
-                        # Italian tax rule: Gov bond loss weighted at (12.5 / 26) in standard basket
-                        weighted_factor = (gov_rate / std_rate) if std_rate > 0 else Decimal("0.480769")
-                        loss_offset += loss * weighted_factor
-                    else:
-                        loss_offset_std += loss
-                        loss_offset += loss
+                    if net > 0:
+                        tax = net * rate / Decimal("100")
+                        immediate_tax += tax
+                        if is_gov:
+                            immediate_tax_gov += tax
+                        else:
+                            immediate_tax_std += tax
+                    elif net < 0:
+                        loss = abs(net)
+                        nominal_loss += loss
+                        if is_gov:
+                            loss_offset_gov += loss
+                            # Italian tax rule: Gov bond loss weighted at (12.5 / 26) in standard basket
+                            weighted_factor = (gov_rate / std_rate) if std_rate > 0 else Decimal("0.480769")
+                            loss_offset += loss * weighted_factor
+                        else:
+                            loss_offset_std += loss
+                            loss_offset += loss
 
-        month_key = closed_at.strftime("%Y-%m")
-        bucket = monthly.setdefault(month_key, {"realized": Decimal("0"), "count": 0})
-        bucket["realized"] += net
-        bucket["count"] += 1
+            month_key = closed_at.strftime("%Y-%m")
+            bucket = monthly.setdefault(month_key, {"realized": Decimal("0"), "count": 0})
+            bucket["realized"] += net
+            bucket["count"] += 1
 
-        iso_year, iso_week, _ = closed_at.isocalendar()
-        week_key = f"{iso_year}-W{iso_week:02d}"
-        w_bucket = weekly.setdefault(week_key, {"realized": Decimal("0"), "count": 0})
-        w_bucket["realized"] += net
-        w_bucket["count"] += 1
+            iso_year, iso_week, _ = closed_at.isocalendar()
+            week_key = f"{iso_year}-W{iso_week:02d}"
+            w_bucket = weekly.setdefault(week_key, {"realized": Decimal("0"), "count": 0})
+            w_bucket["realized"] += net
+            w_bucket["count"] += 1
 
         trade_rows.append(
             {

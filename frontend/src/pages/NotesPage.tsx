@@ -42,7 +42,7 @@ export function NotesPage() {
             }`}
           >
             <span>🎯</span>
-            <span>{t("notes.tab_scouting", "Scouting & Idee di Trading")}</span>
+            <span>{t("notes.tab_scouting")}</span>
             {unreadAlertsCount > 0 && (
               <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white animate-pulse">
                 {unreadAlertsCount}
@@ -60,7 +60,7 @@ export function NotesPage() {
             }`}
           >
             <span>📓</span>
-            <span>{t("notes.tab_daily", "Diario Giornaliero & Psicologia")}</span>
+            <span>{t("notes.tab_daily")}</span>
           </button>
         </div>
       </div>

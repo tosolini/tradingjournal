@@ -2,13 +2,14 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import SessionLocal, get_db
 from app.deps import get_current_user
+from app.i18n import get_request_locale
 from app.models import AnalysisReport, Asset, Holding, Trade, TradeIdea, User
 from app.schemas import (
     AnalysisPurgeRequest,
@@ -54,7 +55,7 @@ def _execute_analysis_background(report_id: int):
             # 2. Resolve client from user preferences or system fallback
             user = db.get(User, report.user_id)
             user_llm_cfg = (user.preferences or {}).get("llm_config") if user else None
-            llm_client = get_user_llm_client(user_llm_cfg)
+            llm_client = get_user_llm_client(user_llm_cfg, language=report.language)
 
             # 3. Run multi-agent pipeline
             state = run_agentic_analysis(bundle, language=report.language, client=llm_client)
@@ -324,6 +325,7 @@ def delete_analysis_report(
 @router.post("/test-llm", response_model=TestLlmResponse)
 def test_llm_endpoint(
     payload: TestLlmRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ):
     """Test connection and credentials for an LLM provider."""
@@ -343,6 +345,7 @@ def test_llm_endpoint(
         model=payload.model,
         api_key=api_key,
         base_url=base_url,
+        locale=get_request_locale(request),
     )
     return TestLlmResponse(
         success=success,

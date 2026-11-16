@@ -218,7 +218,7 @@ export function LlmSettingsWizard() {
       <section className="card p-6">
         <div className="flex items-center gap-3 text-slate-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-          <span>{t("common.loading", "Caricamento...")}</span>
+          <span>{t("common.loading")}</span>
         </div>
       </section>
     );
@@ -274,7 +274,7 @@ export function LlmSettingsWizard() {
                   <p className="mt-2 text-xs leading-relaxed text-slate-400">{t(p.descKey)}</p>
                 </div>
                 <div className="mt-4 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                  <span>{isSelected ? "● Selezionato" : "○ Seleziona"}</span>
+                  <span>{isSelected ? t("settings.llm.selected") : t("settings.llm.select")}</span>
                 </div>
               </button>
             );
@@ -368,7 +368,7 @@ export function LlmSettingsWizard() {
             />
             <p className="mt-1.5 text-xs text-slate-400">
               {t("settings.llm.base_url_hint")}{" "}
-              <span className="text-slate-300">Nota: all'interno dei container Docker usa host.docker.internal al posto di localhost.</span>
+              <span className="text-slate-300">{t("settings.llm.docker_note")}</span>
             </p>
           </div>
         )}
