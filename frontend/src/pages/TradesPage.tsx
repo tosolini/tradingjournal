@@ -1008,7 +1008,7 @@ export function TradesPage() {
                   onClick={() => navigate(`/trades/${trade.id}`)}
                   title={t("trades.view_trade")}
                 >
-                  {new Date(trade.created_at).toLocaleDateString()}
+                  {new Date(trade.created_at).toLocaleDateString(locale)}
                 </td>
                 <td
                   className="cursor-pointer px-3 py-2.5 font-bold text-teal-300 dark:text-teal-800 hover:underline text-sm"
