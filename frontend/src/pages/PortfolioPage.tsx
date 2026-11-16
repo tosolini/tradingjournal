@@ -283,10 +283,10 @@ function ChartPanel({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/60 pb-3 dark:border-slate-200">
         <div>
           <h3 className="text-sm font-semibold text-teal-200 dark:text-teal-900">
-            {t("portfolio.history_chart_title", "Andamento del Valore di Portafoglio")}
+            {t("portfolio.history_chart_title")}
           </h3>
           <p className="text-xs text-slate-400 dark:text-slate-600">
-            {t("portfolio.history_chart_subtitle", "Evoluzione storica del controvalore di mercato complessivo")}
+            {t("portfolio.history_chart_subtitle")}
           </p>
         </div>
         {latestVal > 0 && (
@@ -420,9 +420,9 @@ function BondRateoInput({
           className="text-xs font-semibold text-slate-300 dark:text-slate-800"
           title={t("portfolio.accrued_interest_in_hint")}
         >
-          {mode === "pct" && t("portfolio.rateo_pct_label", "Rateo all'Acquisto (% base 100)")}
-          {mode === "eur" && t("portfolio.rateo_eur_label", "Importo Rateo all'Acquisto (€)")}
-          {mode === "total" && t("portfolio.rateo_total_label", "Totale Pagato Regolato (€)")}
+          {mode === "pct" && t("portfolio.rateo_pct_label")}
+          {mode === "eur" && t("portfolio.rateo_eur_label")}
+          {mode === "total" && t("portfolio.rateo_total_label")}
         </label>
         {/* Mode selector pills */}
         <div className="flex rounded-md bg-slate-900/80 dark:bg-slate-200/80 p-0.5 text-[11px] shrink-0">
@@ -435,7 +435,7 @@ function BondRateoInput({
                 : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
             }`}
           >
-            {t("portfolio.rateo_mode_pct", "% Base 100")}
+            {t("portfolio.rateo_mode_pct")}
           </button>
           <button
             type="button"
@@ -446,7 +446,7 @@ function BondRateoInput({
                 : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
             }`}
           >
-            {t("portfolio.rateo_mode_eur", "Importo in €")}
+            {t("portfolio.rateo_mode_eur")}
           </button>
           <button
             type="button"
@@ -457,7 +457,7 @@ function BondRateoInput({
                 : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
             }`}
           >
-            {t("portfolio.rateo_mode_total", "Totale Pagato (€)")}
+            {t("portfolio.rateo_mode_total")}
           </button>
         </div>
       </div>
@@ -473,7 +473,7 @@ function BondRateoInput({
           />
           {currentAccruedPct > 15 && (
             <p className="mt-1 text-xs text-amber-400">
-              {t("portfolio.accrued_warning", "Attenzione: inserisci il rateo in percentuale (es. 0.50 per 0,50%), non in Euro. Un rateo > 15% è anomalo.")}
+              {t("portfolio.accrued_warning")}
             </p>
           )}
         </div>
@@ -493,7 +493,7 @@ function BondRateoInput({
           </div>
           {nominal <= 0 && (
             <p className="mt-1 text-[11px] text-amber-400">
-              {t("portfolio.nominal_needed_hint", "Inserisci prima il valore nominale per convertire l'importo in percentuale.")}
+              {t("portfolio.nominal_needed_hint")}
             </p>
           )}
         </div>
@@ -512,11 +512,11 @@ function BondRateoInput({
             <span className="absolute right-3 top-2.5 text-xs text-slate-400">€</span>
           </div>
           <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-            {t("portfolio.rateo_total_hint", "Inserisci il totale titoli pagato sul conto (escluse commissioni banca)")}
+            {t("portfolio.rateo_total_hint")}
           </p>
           {isNegativeDiff && (
             <p className="mt-1 text-[11px] text-amber-400">
-              {t("portfolio.rateo_negative_warning", "Attenzione: il totale pagato risulta inferiore al controvalore capitale (rateo negativo).")}
+              {t("portfolio.rateo_negative_warning")}
             </p>
           )}
         </div>
@@ -526,19 +526,19 @@ function BondRateoInput({
       {nominal > 0 && cleanPrice > 0 && (
         <div className="mt-2 rounded-lg border border-slate-700/40 dark:border-slate-300/40 bg-slate-900/60 dark:bg-white/80 p-2.5 text-xs space-y-1">
           <div className="flex justify-between text-slate-400 dark:text-slate-600">
-            <span>{t("portfolio.clean_capital_value", "Controvalore Corso Secco:")}</span>
+            <span>{t("portfolio.clean_capital_value")}</span>
             <span className="font-mono text-slate-200 dark:text-slate-800">
               {formatMoney(cleanCapital, undefined, locale)} <span className="text-[11px] text-slate-400">({formatNumber(cleanPrice, { minDecimals: 2, maxDecimals: 2, locale })}%)</span>
             </span>
           </div>
           <div className="flex justify-between text-teal-300 dark:text-teal-800 font-medium">
-            <span>{t("portfolio.accrued_amount_label", "Rateo all'acquisto:")}</span>
+            <span>{t("portfolio.accrued_amount_label")}</span>
             <span className="font-mono">
               +{formatMoney(accruedEur, undefined, locale)} <span className="text-[11px]">(+{formatNumber(currentAccruedPct, { minDecimals: 4, maxDecimals: 4, locale })}%)</span>
             </span>
           </div>
           <div className="border-t border-slate-700/50 dark:border-slate-200 pt-1 flex justify-between font-semibold text-slate-200 dark:text-slate-900">
-            <span>{t("portfolio.dirty_total_value", "Controvalore Tel Quel (Totale):")}</span>
+            <span>{t("portfolio.dirty_total_value")}</span>
             <span className="font-mono text-teal-300 dark:text-teal-900">
               {formatMoney(dirtyTotal, undefined, locale)} <span className="text-[11px] font-normal text-slate-400">({formatNumber(cleanPrice + currentAccruedPct, { minDecimals: 4, maxDecimals: 4, locale })}%)</span>
             </span>
@@ -615,7 +615,7 @@ function HoldingFormModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["bonds"] });
-      toast.success(t("portfolio.holding_created", "Posizione registrata con successo"));
+      toast.success(t("portfolio.holding_created"));
       onClose();
       setAccountId("");
       setAssetId("");
@@ -640,26 +640,26 @@ function HoldingFormModal({
 
           {accounts.length === 0 && (
             <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 flex items-center justify-between">
-              <span>{t("portfolio.no_accounts_hint", "Non hai ancora nessun conto. Creane uno per registrare la posizione.")}</span>
+              <span>{t("portfolio.no_accounts_hint")}</span>
               <button
                 type="button"
                 onClick={() => setShowAddAccount(true)}
                 className="ml-2 rounded bg-amber-400 text-slate-950 px-2.5 py-1 text-xs font-semibold whitespace-nowrap hover:bg-amber-300"
               >
-                + {t("portfolio.create_account", "Crea Conto")}
+                + {t("portfolio.create_account")}
               </button>
             </div>
           )}
 
           {assets.length === 0 && (
             <div className="mb-4 rounded-lg border border-teal-500/30 bg-teal-500/10 p-3 text-xs text-teal-200 flex items-center justify-between">
-              <span>{t("portfolio.no_assets_hint", "Nessun asset disponibile. Crea un ETF o titolo con ricerca ticker.")}</span>
+              <span>{t("portfolio.no_assets_hint")}</span>
               <button
                 type="button"
                 onClick={() => setShowAddAsset(true)}
                 className="ml-2 rounded bg-teal-400 text-slate-950 px-2.5 py-1 text-xs font-semibold whitespace-nowrap hover:bg-teal-300"
               >
-                + {t("portfolio.create_asset", "Crea Asset")}
+                + {t("portfolio.create_asset")}
               </button>
             </div>
           )}
@@ -673,7 +673,7 @@ function HoldingFormModal({
                   onClick={() => setShowAddAccount(true)}
                   className="text-[11px] font-medium text-teal-400 hover:text-teal-300"
                 >
-                  + {t("portfolio.new_account", "Nuovo Conto")}
+                  + {t("portfolio.new_account")}
                 </button>
               </div>
               <select
@@ -695,7 +695,7 @@ function HoldingFormModal({
                   onClick={() => setShowAddAsset(true)}
                   className="text-[11px] font-medium text-teal-400 hover:text-teal-300"
                 >
-                  + {t("portfolio.new_asset", "Nuovo Asset")}
+                  + {t("portfolio.new_asset")}
                 </button>
               </div>
               <select
@@ -716,7 +716,7 @@ function HoldingFormModal({
               <>
                 <div>
                   <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                    {isBond ? t("portfolio.nominal_value", "Valore Nominale (€)") : t("portfolio.quantity")}
+                    {isBond ? t("portfolio.nominal_value") : t("portfolio.quantity")}
                   </label>
                   <input
                     type="text"
@@ -728,7 +728,7 @@ function HoldingFormModal({
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                    {isBond ? t("portfolio.bond_clean_price", "Prezzo di Carico (% base 100)") : t("portfolio.avg_cost")}
+                    {isBond ? t("portfolio.bond_clean_price") : t("portfolio.avg_cost")}
                   </label>
                   <input
                     type="text"
@@ -755,14 +755,14 @@ function HoldingFormModal({
                         className="rounded border-slate-700 text-teal-500 focus:ring-teal-400"
                       />
                       <label htmlFor="eligibleForBonusCreate" className="text-xs text-slate-300 dark:text-slate-800 cursor-pointer">
-                        {t("portfolio.eligible_for_bonus", "Acquistato all'emissione (Diritto a Premio Fedeltà / CUM)")}
+                        {t("portfolio.eligible_for_bonus")}
                       </label>
                     </div>
                   </>
                 )}
                 <div>
                   <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                    {t("portfolio.fee_in", "Commissioni di acquisto")}
+                    {t("portfolio.fee_in")}
                   </label>
                   <input
                     type="text"
@@ -900,7 +900,7 @@ export function HoldingEditFormModal({
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["bonds"] });
       if (onUpdated) onUpdated();
-      toast.success(t("portfolio.holding_updated", "Posizione aggiornata con successo"));
+      toast.success(t("portfolio.holding_updated"));
       onClose();
     },
     onError: (err: Error) => {
@@ -918,7 +918,7 @@ export function HoldingEditFormModal({
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-              {isBondInstrumentType(holding.instrument_type) ? t("portfolio.nominal_value", "Valore Nominale (€)") : t("portfolio.quantity")}
+              {isBondInstrumentType(holding.instrument_type) ? t("portfolio.nominal_value") : t("portfolio.quantity")}
             </label>
             <input
               type="text"
@@ -929,7 +929,7 @@ export function HoldingEditFormModal({
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-              {isBondInstrumentType(holding.instrument_type) ? t("portfolio.bond_clean_price", "Prezzo di Carico (% base 100)") : t("portfolio.avg_cost")}
+              {isBondInstrumentType(holding.instrument_type) ? t("portfolio.bond_clean_price") : t("portfolio.avg_cost")}
             </label>
             <input
               type="text"
@@ -955,14 +955,14 @@ export function HoldingEditFormModal({
                   className="rounded border-slate-700 text-teal-500 focus:ring-teal-400"
                 />
                 <label htmlFor="eligibleForBonusEdit" className="text-xs text-slate-300 dark:text-slate-800 cursor-pointer">
-                  {t("portfolio.eligible_for_bonus", "Acquistato all'emissione (Diritto a Premio Fedeltà / CUM)")}
+                  {t("portfolio.eligible_for_bonus")}
                 </label>
               </div>
             </>
           )}
           <div>
             <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-              {t("portfolio.fee_in", "Commissioni di acquisto")}
+              {t("portfolio.fee_in")}
             </label>
             <input
               type="text"
@@ -1006,12 +1006,12 @@ export function PortfolioPage() {
   const locale = getNumberLocale(i18n.resolvedLanguage);
   const exitTypeLabel = (type: string) => {
     if (type === "maturity") {
-      return t("portfolio.exit_maturity", "Rimborso a scadenza");
+      return t("portfolio.exit_maturity");
     }
     if (type === "early_redemption") {
-      return t("portfolio.exit_early_redemption", "Rimborso anticipato emittente");
+      return t("portfolio.exit_early_redemption");
     }
-    return t("portfolio.exit_market_sale", "Vendita a mercato");
+    return t("portfolio.exit_market_sale");
   };
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [addTrancheTarget, setAddTrancheTarget] = useState<{ accountId?: number; assetId?: number } | null>(null);
@@ -1069,12 +1069,12 @@ export function PortfolioPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["bonds"] });
-      toast.success(t("portfolio.holding_deleted", "Posizione eliminata con successo"));
+      toast.success(t("portfolio.holding_deleted"));
       setDeleteId(null);
     },
     onError: (err: Error) => {
       console.error("Holding delete error:", err);
-      toast.error(err.message || "Errore durante l'eliminazione della posizione");
+      toast.error(t("portfolio.delete_error", { message: err.message }));
       setDeleteId(null);
     },
   });
@@ -1211,7 +1211,7 @@ export function PortfolioPage() {
               : "text-slate-400 dark:text-slate-500 hover:text-slate-200"
           }`}
         >
-          {t("portfolio.tab_all", "Tutte le Posizioni")}
+          {t("portfolio.tab_all")}
         </button>
         <button
           onClick={() => setActiveTab("bonds")}
@@ -1221,7 +1221,7 @@ export function PortfolioPage() {
               : "text-slate-400 dark:text-slate-500 hover:text-slate-200"
           }`}
         >
-          <span>{t("portfolio.tab_bonds", "Obbligazioni & Rendite")}</span>
+          <span>{t("portfolio.tab_bonds")}</span>
           {bondsCount > 0 && (
             <span className="rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-semibold text-teal-300 dark:text-teal-800">
               {bondsCount}
@@ -1236,7 +1236,7 @@ export function PortfolioPage() {
               : "text-slate-400 dark:text-slate-500 hover:text-slate-200"
           }`}
         >
-          <span>{t("portfolio.tab_exits", "Uscite registrate")}</span>
+          <span>{t("portfolio.tab_exits")}</span>
           {(portfolioExits?.length ?? 0) > 0 && (
             <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-300 dark:text-amber-800">
               {portfolioExits?.length}
@@ -1302,13 +1302,13 @@ export function PortfolioPage() {
                             <Link
                               to={`/portfolio/holdings/${h.id}`}
                               className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
-                              title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                              title={t("portfolio.view_detail")}
                             >
                               {h.asset_symbol}
                             </Link>
                             {h.eligible_for_bonus && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
-                                {t("portfolio.cum_badge", "CUM")}
+                                {t("portfolio.cum_badge")}
                               </span>
                             )}
                           </td>
@@ -1343,8 +1343,8 @@ export function PortfolioPage() {
                                   setShowAddHolding(true);
                                 }}
                                 className="rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 dark:text-teal-900 border border-teal-500/40 p-2"
-                                title={t("portfolio.add_tranche", "Nuova tranche")}
-                                aria-label={t("portfolio.add_tranche", "Nuova tranche")}
+                                title={t("portfolio.add_tranche")}
+                                aria-label={t("portfolio.add_tranche")}
                               >
                                 <PlusIcon className="h-4 w-4" />
                               </button>
@@ -1385,7 +1385,7 @@ export function PortfolioPage() {
                             <Link
                               to={`/portfolio/holdings/${g.tranches[0].id}`}
                               className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
-                              title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                              title={t("portfolio.view_detail")}
                             >
                               {g.asset_symbol}
                             </Link>
@@ -1398,11 +1398,11 @@ export function PortfolioPage() {
                             </button>
                             {g.allBonusEligible ? (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
-                                {t("portfolio.cum_badge", "CUM")}
+                                {t("portfolio.cum_badge")}
                               </span>
                             ) : g.hasBonusEligible ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title={t("portfolio.cum_partial_tooltip", "Alcune tranche con diritto al CUM")}>
-                                {t("portfolio.cum_partial", "CUM parz.")}
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title={t("portfolio.cum_partial_tooltip")}>
+                                {t("portfolio.cum_partial")}
                               </span>
                             ) : null}
                           </td>
@@ -1411,7 +1411,7 @@ export function PortfolioPage() {
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
                             {formatQuantity(g.totalQuantity, isBond, locale)}
                           </td>
-                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold" title={t("portfolio.weighted_avg", "Media ponderata")}>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold" title={t("portfolio.weighted_avg")}>
                             {formatPrice(g.avgCost, isBond, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-400 dark:text-slate-600 text-xs">
@@ -1437,8 +1437,8 @@ export function PortfolioPage() {
                                   setShowAddHolding(true);
                                 }}
                                 className="rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 dark:text-teal-900 border border-teal-500/40 p-2 flex items-center gap-1 text-xs font-semibold"
-                                title={t("portfolio.add_tranche", "Nuova tranche")}
-                                aria-label={t("portfolio.add_tranche", "Nuova tranche")}
+                                title={t("portfolio.add_tranche")}
+                                aria-label={t("portfolio.add_tranche")}
                               >
                                 <PlusIcon className="h-4 w-4" />
                               </button>
@@ -1453,7 +1453,7 @@ export function PortfolioPage() {
                                 <Link
                                   to={`/portfolio/holdings/${tItem.id}`}
                                   className="font-medium text-teal-300 hover:text-teal-200 dark:text-teal-800 dark:hover:text-teal-700 hover:underline"
-                                  title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                                  title={t("portfolio.view_detail")}
                                 >
                                   {t("portfolio.tranche_number", { number: idx + 1 })}
                                 </Link>
@@ -1547,7 +1547,7 @@ export function PortfolioPage() {
 
           <section>
             <h2 className="mb-3 text-lg font-semibold text-teal-200 dark:text-teal-900">
-              {t("portfolio.tab_bonds", "Obbligazioni")}
+              {t("portfolio.tab_bonds")}
             </h2>
             <div className="card overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -1585,13 +1585,13 @@ export function PortfolioPage() {
                             <Link
                               to={`/portfolio/holdings/${h.id}`}
                               className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
-                              title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                              title={t("portfolio.view_detail")}
                             >
                               {h.asset_symbol}
                             </Link>
                             {h.eligible_for_bonus && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
-                                {t("portfolio.cum_badge", "CUM")}
+                                {t("portfolio.cum_badge")}
                               </span>
                             )}
                           </td>
@@ -1625,8 +1625,8 @@ export function PortfolioPage() {
                                   setShowAddHolding(true);
                                 }}
                                 className="rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 dark:text-teal-900 border border-teal-500/40 p-2"
-                                title={t("portfolio.add_tranche", "Nuova tranche")}
-                                aria-label={t("portfolio.add_tranche", "Nuova tranche")}
+                                title={t("portfolio.add_tranche")}
+                                aria-label={t("portfolio.add_tranche")}
                               >
                                 <PlusIcon className="h-4 w-4" />
                               </button>
@@ -1667,7 +1667,7 @@ export function PortfolioPage() {
                             <Link
                               to={`/portfolio/holdings/${g.tranches[0].id}`}
                               className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-900 dark:hover:text-teal-700 hover:underline"
-                              title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                              title={t("portfolio.view_detail")}
                             >
                               {g.asset_symbol}
                             </Link>
@@ -1680,11 +1680,11 @@ export function PortfolioPage() {
                             </button>
                             {g.allBonusEligible ? (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 dark:text-teal-800 border border-teal-500/30">
-                                {t("portfolio.cum_badge", "CUM")}
+                                {t("portfolio.cum_badge")}
                               </span>
                             ) : g.hasBonusEligible ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title={t("portfolio.cum_partial_tooltip", "Alcune tranche con diritto al CUM")}>
-                                {t("portfolio.cum_partial", "CUM parz.")}
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30" title={t("portfolio.cum_partial_tooltip")}>
+                                {t("portfolio.cum_partial")}
                               </span>
                             ) : null}
                           </td>
@@ -1692,7 +1692,7 @@ export function PortfolioPage() {
                           <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold">
                             {Number(g.totalQuantity).toLocaleString(locale)} €
                           </td>
-                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold" title={t("portfolio.weighted_avg", "Media ponderata")}>
+                          <td className="p-3 text-right text-slate-200 dark:text-slate-900 font-mono font-semibold" title={t("portfolio.weighted_avg")}>
                             {formatPrice(g.avgCost, true, undefined, locale)}
                           </td>
                           <td className="p-3 text-right text-slate-300 dark:text-slate-700 font-mono text-xs">
@@ -1718,8 +1718,8 @@ export function PortfolioPage() {
                                   setShowAddHolding(true);
                                 }}
                                 className="rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 dark:text-teal-900 border border-teal-500/40 p-2"
-                                title={t("portfolio.add_tranche", "Nuova tranche")}
-                                aria-label={t("portfolio.add_tranche", "Nuova tranche")}
+                                title={t("portfolio.add_tranche")}
+                                aria-label={t("portfolio.add_tranche")}
                               >
                                 <PlusIcon className="h-4 w-4" />
                               </button>
@@ -1734,7 +1734,7 @@ export function PortfolioPage() {
                                 <Link
                                   to={`/portfolio/holdings/${tItem.id}`}
                                   className="font-medium text-teal-300 hover:text-teal-200 dark:text-teal-800 dark:hover:text-teal-700 hover:underline"
-                                  title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                                  title={t("portfolio.view_detail")}
                                 >
                                   {t("portfolio.tranche_number", { number: idx + 1 })}
                                 </Link>
@@ -1745,12 +1745,12 @@ export function PortfolioPage() {
                                 )}
                               </td>
                               <td className="p-2.5 text-slate-400 dark:text-slate-600 truncate max-w-[200px]">
-                                {tItem.entry_date} {asNumber(tItem.accrued_interest_in) > 0 ? ` (${t("portfolio.accrued_label", "Rateo")}: +${formatNumber(tItem.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%)` : ""}
+                                {tItem.entry_date} {asNumber(tItem.accrued_interest_in) > 0 ? ` (${t("portfolio.accrued_label")}: +${formatNumber(tItem.accrued_interest_in, { minDecimals: 2, maxDecimals: 4, locale })}%)` : ""}
                               </td>
                               <td className="p-2.5 text-right font-mono">
                                 {Number(tItem.quantity).toLocaleString(locale)} €
                               </td>
-                              <td className="p-2.5 text-right font-mono text-slate-400 dark:text-slate-600" title={t("portfolio.clean_price_tooltip", "Prezzo di carico (clean)")}>
+                              <td className="p-2.5 text-right font-mono text-slate-400 dark:text-slate-600" title={t("portfolio.clean_price_tooltip")}>
                                 {formatPrice(tItem.avg_cost, true, undefined, locale)}
                               </td>
                               <td className="p-2.5 text-right text-slate-400 dark:text-slate-600 font-mono text-[11px]">
@@ -1801,18 +1801,18 @@ export function PortfolioPage() {
           <section>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
-                {t("portfolio.calendar_title", "Scadenzario Cedole e Flussi Futuri")}
+                {t("portfolio.calendar_title")}
               </h2>
               <button
                 type="button"
                 onClick={() => downloadBondCalendarIcs({ aggregate: true })}
                 className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/20 dark:border-teal-700/30 dark:bg-teal-50 dark:text-teal-800 dark:hover:bg-teal-100 transition-colors"
-                title={t("portfolio.export_calendar_ics", "Esporta calendario (.ics)")}
+                title={t("portfolio.export_calendar_ics")}
               >
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 12l4.5 4.5m0 0l4.5-4.5M12 3v13.5" />
                 </svg>
-                <span>{t("portfolio.export_calendar_ics", "Esporta calendario (.ics)")}</span>
+                <span>{t("portfolio.export_calendar_ics")}</span>
               </button>
             </div>
             <div className="card overflow-x-auto">
@@ -1841,10 +1841,10 @@ export function PortfolioPage() {
                     const isBonus = item.flow_type === "bonus";
                     const isRedemption = item.flow_type === "redemption";
                     const flowLabel = isBonus
-                      ? t("portfolio.flow_bonus", "Premio Fedeltà")
+                      ? t("portfolio.flow_bonus")
                       : isRedemption
-                      ? t("portfolio.flow_redemption", "Rimborso Capitale")
-                      : t("portfolio.flow_coupon", "Cedola");
+                      ? t("portfolio.flow_redemption")
+                      : t("portfolio.flow_coupon");
 
                     return (
                       <tr key={`${item.holding_id}-${item.date}-${idx}`} className="border-b border-slate-800 hover:bg-slate-800/40">
@@ -1892,31 +1892,28 @@ export function PortfolioPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 p-5 dark:border-slate-200">
             <div>
               <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
-                {t("portfolio.tab_exits", "Uscite registrate")}
+                {t("portfolio.tab_exits")}
               </h2>
               <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
-                {t(
-                  "portfolio.exit_history_hint",
-                  "Vendite a mercato, rimborsi a scadenza e rimborsi anticipati dell'emittente.",
-                )}
+                {t("portfolio.exit_history_hint")}
               </p>
             </div>
             <span className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 dark:bg-slate-100 dark:text-slate-800">
-              {portfolioExits?.length ?? 0} {t("portfolio.exit_count", "uscite")}
+              {portfolioExits?.length ?? 0} {t("portfolio.exit_count")}
             </span>
           </div>
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-700 bg-slate-850 text-xs uppercase text-slate-400 dark:border-slate-300 dark:bg-slate-50 dark:text-slate-600">
-                <th className="p-3">{t("portfolio.exit_col_date", "Data")}</th>
-                <th className="p-3">{t("portfolio.asset", "Asset")}</th>
-                <th className="p-3">{t("portfolio.account", "Conto")}</th>
-                <th className="p-3">{t("portfolio.exit_col_type", "Tipo")}</th>
-                <th className="p-3 text-right">{t("portfolio.exit_col_quantity", "Quantità")}</th>
-                <th className="p-3 text-right">{t("portfolio.exit_col_net", "Incasso netto")}</th>
-                <th className="p-3 text-right">{t("portfolio.exit_col_pnl", "P&L realizzato")}</th>
-                <th className="p-3 text-right">{t("portfolio.exit_col_taxes", "Tasse")}</th>
-                <th className="p-3">{t("portfolio.exit_col_notes", "Note")}</th>
+                <th className="p-3">{t("portfolio.exit_col_date")}</th>
+                <th className="p-3">{t("portfolio.asset")}</th>
+                <th className="p-3">{t("portfolio.account")}</th>
+                <th className="p-3">{t("portfolio.exit_col_type")}</th>
+                <th className="p-3 text-right">{t("portfolio.exit_col_quantity")}</th>
+                <th className="p-3 text-right">{t("portfolio.exit_col_net")}</th>
+                <th className="p-3 text-right">{t("portfolio.exit_col_pnl")}</th>
+                <th className="p-3 text-right">{t("portfolio.exit_col_taxes")}</th>
+                <th className="p-3">{t("portfolio.exit_col_notes")}</th>
                 <th className="p-3"></th>
               </tr>
             </thead>
@@ -1924,7 +1921,7 @@ export function PortfolioPage() {
               {(!portfolioExits || portfolioExits.length === 0) && (
                 <tr>
                   <td colSpan={10} className="p-8 text-center text-slate-500 dark:text-slate-400">
-                    {t("portfolio.no_exits", "Nessuna uscita registrata.")}
+                    {t("portfolio.no_exits")}
                   </td>
                 </tr>
               )}
@@ -1969,7 +1966,7 @@ export function PortfolioPage() {
                       to={`/portfolio/holdings/${item.holding_id}`}
                       className="text-xs font-semibold text-teal-400 hover:text-teal-300 dark:text-teal-700"
                     >
-                      {t("portfolio.view_detail", "Dettaglio")}
+                      {t("portfolio.view_detail")}
                     </Link>
                   </td>
                 </tr>

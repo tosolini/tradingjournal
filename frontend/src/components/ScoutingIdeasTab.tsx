@@ -144,13 +144,10 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
         <div>
           <h2 className="text-xl font-bold text-slate-100 dark:text-slate-900 flex items-center gap-2">
             <span>🎯</span>
-            <span>{t("scouting.title", "Idee di Trading & Scouting")}</span>
+            <span>{t("scouting.title")}</span>
           </h2>
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-            {t(
-              "scouting.subtitle",
-              "Traccia titoli e setup tecnici individuati durante lo screening; ricevi alert quando toccano il prezzo trigger.",
-            )}
+            {t("scouting.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -163,7 +160,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
             <RefreshCwIcon
               className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? "animate-spin text-teal-400" : ""}`}
             />
-            <span>{t("scouting.refresh_prices", "Aggiorna Prezzi")}</span>
+            <span>{t("scouting.refresh_prices")}</span>
           </button>
           <button
             type="button"
@@ -174,7 +171,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
             className="flex items-center gap-1.5 rounded-lg bg-teal-500 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-md transition hover:bg-teal-400 active:scale-95 cursor-pointer"
           >
             <PlusIcon className="h-4 w-4 stroke-[2.5]" />
-            <span>{t("scouting.new_idea", "+ Nuova Idea")}</span>
+            <span>{t("scouting.new_idea")}</span>
           </button>
         </div>
       </div>
@@ -193,14 +190,14 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
           }`}
         >
           <div className="flex items-center justify-between text-xs font-medium text-emerald-400 dark:text-emerald-700">
-            <span>{t("scouting.kpi.triggered", "Trigger Raggiunto")}</span>
+            <span>{t("scouting.kpi.triggered")}</span>
             <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
           </div>
           <div className="mt-2 text-2xl font-extrabold text-slate-100 dark:text-slate-900">
             {counts.triggered}
           </div>
           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-            {t("scouting.kpi.ready_for_entry", "Pronti all'ingresso")}
+            {t("scouting.kpi.ready_for_entry")}
           </div>
         </div>
 
@@ -214,14 +211,14 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
           }`}
         >
           <div className="flex items-center justify-between text-xs font-medium text-sky-400 dark:text-sky-700">
-            <span>{t("scouting.kpi.watching", "In Osservazione")}</span>
+            <span>{t("scouting.kpi.watching")}</span>
             <EyeIcon className="h-3.5 w-3.5" />
           </div>
           <div className="mt-2 text-2xl font-extrabold text-slate-100 dark:text-slate-900">
             {counts.watching}
           </div>
           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-            {t("scouting.kpi.active_setups", "Monitorati attivamente")}
+            {t("scouting.kpi.active_setups")}
           </div>
         </div>
 
@@ -235,14 +232,14 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
           }`}
         >
           <div className="flex items-center justify-between text-xs font-medium text-amber-400 dark:text-amber-700">
-            <span>{t("scouting.kpi.stale", "Stale / Da Valutare")}</span>
+            <span>{t("scouting.kpi.stale")}</span>
             <ClockIcon className="h-3.5 w-3.5" />
           </div>
           <div className="mt-2 text-2xl font-extrabold text-slate-100 dark:text-slate-900">
             {counts.stale}
           </div>
           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-            {t("scouting.kpi.stale_desc", "Nessun trigger da 7+ gg")}
+            {t("scouting.kpi.stale_desc")}
           </div>
         </div>
 
@@ -256,17 +253,17 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
           }`}
         >
           <div className="flex items-center justify-between text-xs font-medium text-purple-400 dark:text-purple-700">
-            <span>{t("scouting.kpi.converted", "Convertiti / Storico")}</span>
+            <span>{t("scouting.kpi.converted")}</span>
             <CheckIcon className="h-3.5 w-3.5" />
           </div>
           <div className="mt-2 text-2xl font-extrabold text-slate-100 dark:text-slate-900">
             {counts.converted}{" "}
             <span className="text-xs font-normal text-slate-400">
-              (+{counts.closed} {t("scouting.kpi.closed_small", "chiusi")})
+              (+{counts.closed} {t("scouting.kpi.closed_small")})
             </span>
           </div>
           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-            {t("scouting.kpi.converted_desc", "Diventati posizioni")}
+            {t("scouting.kpi.converted_desc")}
           </div>
         </div>
       </div>
@@ -276,33 +273,33 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
         {/* Status Pills */}
         <div className="flex flex-wrap items-center gap-1.5">
           {[
-            { key: "all", label: t("scouting.filters.all", "Tutti"), count: counts.all },
+            { key: "all", label: t("scouting.filters.all"), count: counts.all },
             {
               key: "triggered",
-              label: t("scouting.filters.triggered", "Triggerati"),
+              label: t("scouting.filters.triggered"),
               count: counts.triggered,
               color: "emerald",
             },
             {
               key: "watching",
-              label: t("scouting.filters.watching", "In Osservazione"),
+              label: t("scouting.filters.watching"),
               count: counts.watching,
               color: "sky",
             },
             {
               key: "stale",
-              label: t("scouting.filters.stale", "Stale"),
+              label: t("scouting.filters.stale"),
               count: counts.stale,
               color: "amber",
             },
             {
               key: "converted",
-              label: t("scouting.filters.converted", "Convertiti"),
+              label: t("scouting.filters.converted"),
               count: counts.converted,
             },
             {
               key: "closed",
-              label: t("scouting.filters.closed", "Chiusi"),
+              label: t("scouting.filters.closed"),
               count: counts.closed,
             },
           ].map((pill) => {
@@ -341,7 +338,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("scouting.search_placeholder", "Cerca ticker o note...")}
+              placeholder={t("scouting.search_placeholder")}
               className="w-full rounded-lg border border-slate-700/80 bg-slate-900/80 pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 dark:border-slate-300 dark:bg-white dark:text-slate-900 dark:placeholder:text-slate-400"
             />
             {searchQuery && (
@@ -360,9 +357,9 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
             onChange={(e) => setSortBy(e.target.value as "distance" | "date" | "expiry")}
             className="rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 text-xs text-slate-200 dark:border-slate-300 dark:bg-white dark:text-slate-800 cursor-pointer"
           >
-            <option value="distance">{t("scouting.sort.distance", "Distanza trigger (%)")}</option>
-            <option value="date">{t("scouting.sort.date", "Più recenti")}</option>
-            <option value="expiry">{t("scouting.sort.expiry", "Scadenza più vicina")}</option>
+            <option value="distance">{t("scouting.sort.distance")}</option>
+            <option value="date">{t("scouting.sort.date")}</option>
+            <option value="expiry">{t("scouting.sort.expiry")}</option>
           </select>
         </div>
       </div>
@@ -371,7 +368,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
       {isLoading ? (
         <div className="flex items-center justify-center py-16 text-xs text-slate-500">
           <RefreshCwIcon className="h-5 w-5 animate-spin mr-2 text-teal-400" />
-          <span>{t("common.loading", "Caricamento in corso...")}</span>
+          <span>{t("common.loading")}</span>
         </div>
       ) : sortedIdeas.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-800 p-12 text-center dark:border-slate-300">
@@ -379,15 +376,12 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
             <EyeIcon className="h-6 w-6" />
           </div>
           <h3 className="text-sm font-semibold text-slate-200 dark:text-slate-800">
-            {t("scouting.empty_title", "Nessuna idea di scouting trovata")}
+            {t("scouting.empty_title")}
           </h3>
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto">
             {statusFilter !== "all"
-              ? t("scouting.empty_filter", "Nessuna idea corrisponde al filtro selezionato.")
-              : t(
-                  "scouting.empty_cta",
-                  "Inizia a catalogare i setup interessanti durante il tuo scouting per ricevere notifiche automatiche.",
-                )}
+              ? t("scouting.empty_filter")
+              : t("scouting.empty_cta")}
           </p>
           <button
             type="button"
@@ -397,7 +391,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
             }}
             className="mt-4 rounded-lg bg-teal-500 px-3.5 py-2 text-xs font-bold text-slate-950 transition hover:bg-teal-400 shadow-sm"
           >
-            {t("scouting.create_first", "+ Aggiungi la prima Idea")}
+            {t("scouting.create_first")}
           </button>
         </div>
       ) : (
@@ -472,14 +466,14 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                         }`}
                       >
                         {isTriggered
-                          ? t("scouting.status.triggered", "TRIGGER SCATTATO")
+                          ? t("scouting.status.triggered")
                           : isStale
-                            ? t("scouting.status.stale", "STALE")
+                            ? t("scouting.status.stale")
                             : isConverted
-                              ? t("scouting.status.converted", "CONVERTITO")
+                              ? t("scouting.status.converted")
                               : isClosed
-                                ? t("scouting.status.closed", "CHIUSO")
-                                : t("scouting.status.watching", "IN OSSERVAZIONE")}
+                                ? t("scouting.status.closed")
+                                : t("scouting.status.watching")}
                       </span>
 
                       {/* Chart preview button */}
@@ -487,7 +481,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                         type="button"
                         onClick={() => setChartIdea(idea)}
                         className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white dark:hover:bg-slate-100"
-                        title={t("scouting.view_chart", "Vedi Grafico")}
+                        title={t("scouting.view_chart")}
                       >
                         <ExternalLinkIcon className="h-3.5 w-3.5" />
                       </button>
@@ -499,7 +493,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div>
                         <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-medium">
-                          {t("scouting.initial_price", "Prezzo Scouting")}
+                          {t("scouting.initial_price")}
                         </div>
                         <div className="font-mono text-xs font-semibold text-slate-300 dark:text-slate-700 mt-0.5">
                           {idea.initial_price} €
@@ -508,7 +502,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
 
                       <div className="border-x border-slate-800 dark:border-slate-200 px-1">
                         <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-medium">
-                          {t("scouting.current_price", "Prezzo Attuale")}
+                          {t("scouting.current_price")}
                         </div>
                         <div className="font-mono text-sm font-bold text-slate-100 dark:text-slate-900 mt-0.5">
                           {idea.current_price ? `${idea.current_price} €` : "—"}
@@ -517,7 +511,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
 
                       <div>
                         <div className="text-[10px] text-teal-400 dark:text-teal-700 uppercase font-bold">
-                          {t("scouting.trigger_target", "Target Trigger")}
+                          {t("scouting.trigger_target")}
                         </div>
                         <div className="font-mono text-xs font-extrabold text-teal-300 dark:text-teal-800 mt-0.5">
                           {idea.trigger_condition} {idea.trigger_price} €
@@ -528,13 +522,13 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                     {/* Proximity / Distance bar */}
                     {isTriggered ? (
                       <div className="mt-2.5 rounded bg-emerald-500/20 px-2 py-1 text-center text-xs font-bold text-emerald-300 dark:bg-emerald-100 dark:text-emerald-800">
-                        ⚡ {t("scouting.reached_notice", "Prezzo trigger raggiunto!")}{" "}
+                        ⚡ {t("scouting.reached_notice")}{" "}
                         {idea.triggered_price && `(${idea.triggered_price} €)`}
                       </div>
                     ) : distanceNum !== null ? (
                       <div className="mt-2.5 flex items-center justify-between text-xs">
                         <span className="text-slate-400 dark:text-slate-500 text-[11px]">
-                          {t("scouting.distance_label", "Distanza dal trigger:")}
+                          {t("scouting.distance_label")}
                         </span>
                         <span
                           className={`font-mono font-bold ${
@@ -594,20 +588,20 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                   <div className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
                     <CalendarIcon className="h-3 w-3" />
                     {isConverted ? (
-                      <span>{t("scouting.converted_label", "Convertito in Trade")}</span>
+                      <span>{t("scouting.converted_label")}</span>
                     ) : isClosed ? (
-                      <span>{t("scouting.closed_label", "Idea archiviata")}</span>
+                      <span>{t("scouting.closed_label")}</span>
                     ) : isStale ? (
                       <span className="text-amber-400 dark:text-amber-600 font-semibold">
                         {daysToExpiry > 0
-                          ? t("scouting.expires_in_days", { count: daysToExpiry, defaultValue: `Chiusura tra ${daysToExpiry} gg` })
-                          : t("scouting.expires_today", "In scadenza oggi")}
+                          ? t("scouting.expires_in_days", { count: daysToExpiry })
+                          : t("scouting.expires_today")}
                       </span>
                     ) : (
                       <span>
                         {daysToStale > 0
-                          ? t("scouting.stale_in_days", { count: daysToStale, defaultValue: `Stale tra ${daysToStale} gg` })
-                          : t("scouting.stale_soon", "In stale presto")}
+                          ? t("scouting.stale_in_days", { count: daysToStale })
+                          : t("scouting.stale_soon")}
                       </span>
                     )}
                   </div>
@@ -621,7 +615,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                         className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-sm transition hover:bg-teal-400 active:scale-95 cursor-pointer flex items-center gap-1"
                       >
                         <span>⚡</span>
-                        <span>{t("scouting.actions.convert", "Converti in Trade")}</span>
+                        <span>{t("scouting.actions.convert")}</span>
                       </button>
                     )}
 
@@ -633,7 +627,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                           disabled={renewMutation.isPending}
                           className="rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-bold text-slate-950 transition hover:bg-amber-400 cursor-pointer shadow-xs"
                         >
-                          {t("scouting.actions.renew_7d", "Rinnova (+7gg)")}
+                          {t("scouting.actions.renew_7d")}
                         </button>
                         <button
                           type="button"
@@ -641,7 +635,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                           disabled={closeMutation.isPending}
                           className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-slate-500 hover:text-white dark:border-slate-300 dark:text-slate-700"
                         >
-                          {t("scouting.actions.close", "Archivia")}
+                          {t("scouting.actions.close")}
                         </button>
                       </>
                     )}
@@ -656,14 +650,14 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                           }}
                           className="rounded border border-slate-700 bg-slate-900/60 px-2 py-1 text-xs text-slate-300 hover:border-teal-500/50 hover:text-white dark:border-slate-300 dark:bg-slate-100 dark:text-slate-700"
                         >
-                          {t("common.edit", "Modifica")}
+                          {t("common.edit")}
                         </button>
                         <button
                           type="button"
                           onClick={() => closeMutation.mutate(idea.id)}
                           className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 hover:border-slate-500 hover:text-white dark:border-slate-300 dark:text-slate-600"
                         >
-                          {t("scouting.actions.close", "Archivia")}
+                          {t("scouting.actions.close")}
                         </button>
                       </>
                     )}
@@ -673,7 +667,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
                       type="button"
                       onClick={() => setIdeaToDelete(idea)}
                       className="rounded p-1 text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition"
-                      title={t("common.delete", "Elimina")}
+                      title={t("common.delete")}
                     >
                       <TrashIcon className="h-3.5 w-3.5" />
                     </button>
@@ -745,7 +739,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
             "scouting.confirm_delete",
             `Sei sicuro di voler eliminare l'idea di scouting per ${ideaToDelete.symbol}?`,
           )}
-          confirmLabel={t("common.delete", "Elimina")}
+          confirmLabel={t("common.delete")}
           onConfirm={() => deleteMutation.mutate(ideaToDelete.id)}
           onCancel={() => setIdeaToDelete(null)}
           isPending={deleteMutation.isPending}
@@ -850,8 +844,8 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 dark:border-slate-200">
           <h3 className="text-base font-bold text-slate-100 dark:text-slate-900">
             {initialData
-              ? t("scouting.modal.edit_title", "Modifica Idea di Scouting")
-              : t("scouting.modal.new_title", "Nuova Idea di Scouting")}
+              ? t("scouting.modal.edit_title")
+              : t("scouting.modal.new_title")}
           </h3>
           <button
             type="button"
@@ -873,7 +867,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
           <div className="grid grid-cols-2 gap-3">
             <div className="relative">
               <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                {t("scouting.modal.symbol", "Simbolo / Ticker *")}
+                {t("scouting.modal.symbol")}
               </label>
               <input
                 type="text"
@@ -904,7 +898,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                {t("scouting.modal.market", "Mercato")}
+                {t("scouting.modal.market")}
               </label>
               <input
                 type="text"
@@ -919,7 +913,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
           {/* Direction Segmented Control */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-              {t("scouting.modal.direction", "Direzione Setup")}
+              {t("scouting.modal.direction")}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -959,7 +953,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                {t("scouting.modal.condition", "Condizione Trigger")}
+                {t("scouting.modal.condition")}
               </label>
               <select
                 value={triggerCondition}
@@ -973,7 +967,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
 
             <div>
               <label className="block text-xs font-bold text-teal-400 dark:text-teal-700 mb-1">
-                {t("scouting.modal.trigger_price", "Prezzo Trigger (€) *")}
+                {t("scouting.modal.trigger_price")}
               </label>
               <input
                 type="number"
@@ -988,14 +982,14 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                {t("scouting.modal.initial_price", "Prezzo Attuale (€)")}
+                {t("scouting.modal.initial_price")}
               </label>
               <input
                 type="number"
                 step="any"
                 value={initialPrice}
                 onChange={(e) => setInitialPrice(e.target.value)}
-                placeholder="Auto da mercato"
+                placeholder={t("scouting.market_auto_placeholder")}
                 className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-300 dark:border-slate-300 dark:bg-white dark:text-slate-700"
               />
             </div>
@@ -1005,7 +999,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                {t("scouting.modal.stop_loss", "Stop Loss stimato (€)")}
+                {t("scouting.modal.stop_loss")}
               </label>
               <input
                 type="number"
@@ -1018,7 +1012,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                {t("scouting.modal.target_price", "Target Take Profit (€)")}
+                {t("scouting.modal.target_price")}
               </label>
               <input
                 type="number"
@@ -1034,13 +1028,13 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
           {/* Thesis Notes */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-              {t("scouting.modal.thesis", "Tesi di Scouting & Setup Tecnico")}
+              {t("scouting.modal.thesis")}
             </label>
             <textarea
               rows={3}
               value={thesisNotes}
               onChange={(e) => setThesisNotes(e.target.value)}
-              placeholder="es. Titolo sotto EMA 60 su grafico giornaliero, attendere pullback a 20.03 con retest del supporto prima di aprire posizione short."
+              placeholder={t("scouting.thesis_placeholder")}
               className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-2 text-xs text-slate-100 leading-relaxed dark:border-slate-300 dark:bg-white dark:text-slate-900"
             />
           </div>
@@ -1048,7 +1042,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
           {/* Tags */}
           <div>
             <TagInput
-              label={t("scouting.modal.tags", "Tag Setup")}
+              label={t("scouting.modal.tags")}
               placeholder="es. ema60, breakdown, pullback"
               value={tags}
               suggestions={["ema60", "breakout", "pullback", "supporto", "resistenza", "doji", "fomo"]}
@@ -1064,14 +1058,14 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
               className="text-xs text-slate-400 hover:text-teal-400 dark:text-slate-600 flex items-center gap-1 font-medium transition cursor-pointer"
             >
               <span>{showAdvanced ? "▼" : "▶"}</span>
-              <span>{t("scouting.modal.advanced_timing", "Impostazioni Scadenza e Stale (Opzionali)")}</span>
+              <span>{t("scouting.modal.advanced_timing")}</span>
             </button>
 
             {showAdvanced && (
               <div className="mt-2.5 rounded-lg border border-slate-800 bg-slate-900/50 p-3 grid grid-cols-2 gap-3 dark:border-slate-200 dark:bg-slate-50">
                 <div>
                   <label className="block text-[11px] text-slate-400 dark:text-slate-600 mb-1">
-                    {t("scouting.modal.stale_days", "Passa a Stale dopo (giorni)")}
+                    {t("scouting.modal.stale_days")}
                   </label>
                   <input
                     type="number"
@@ -1081,11 +1075,11 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
                     onChange={(e) => setStaleDays(parseInt(e.target.value) || 7)}
                     className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs dark:border-slate-300 dark:bg-white"
                   />
-                  <span className="text-[10px] text-slate-500">Default: 7 giorni</span>
+                  <span className="text-[10px] text-slate-500">{t("scouting.default_days", { count: 7 })}</span>
                 </div>
                 <div>
                   <label className="block text-[11px] text-slate-400 dark:text-slate-600 mb-1">
-                    {t("scouting.modal.expire_days", "Chiusura automatica dopo (giorni)")}
+                    {t("scouting.modal.expire_days")}
                   </label>
                   <input
                     type="number"
@@ -1095,7 +1089,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
                     onChange={(e) => setExpireDays(parseInt(e.target.value) || 10)}
                     className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs dark:border-slate-300 dark:bg-white"
                   />
-                  <span className="text-[10px] text-slate-500">Default: 10 giorni</span>
+                  <span className="text-[10px] text-slate-500">{t("scouting.default_days", { count: 10 })}</span>
                 </div>
               </div>
             )}
@@ -1109,7 +1103,7 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
               disabled={saveMutation.isPending}
               className="rounded-lg border border-slate-700 px-3.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 dark:border-slate-300 dark:text-slate-700 dark:hover:bg-slate-100"
             >
-              {t("common.cancel", "Annulla")}
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
@@ -1117,10 +1111,10 @@ function TradeIdeaModal({ open, initialData, onClose, onSuccess }: TradeIdeaModa
               className="rounded-lg bg-teal-500 px-4 py-2 text-xs font-bold text-slate-950 shadow-md transition hover:bg-teal-400 disabled:opacity-50"
             >
               {saveMutation.isPending
-                ? t("common.saving", "Salvataggio...")
+                ? t("common.saving")
                 : initialData
-                  ? t("common.save_changes", "Salva Modifiche")
-                  : t("scouting.modal.submit", "Crea Idea di Scouting")}
+                  ? t("common.save_changes")
+                  : t("scouting.modal.submit")}
             </button>
           </div>
         </form>

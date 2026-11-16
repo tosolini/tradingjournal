@@ -3,7 +3,7 @@ import { Broker, BrokerProfile, FeeMode } from "./api";
 export interface BrokerPresetConfig {
   profile: BrokerProfile;
   name: string;
-  label: string;
+  labelKey: string;
   fee_mode: FeeMode;
   fee_value: number;
   fee_min?: number | null;
@@ -15,14 +15,14 @@ export interface BrokerPresetConfig {
   capital_gain_mode: "immediate" | "year_end";
   capital_gain_rate: number;
   capital_gain_rate_gov: number;
-  description: string;
+  descriptionKey: string;
 }
 
 export const BROKER_PRESETS: BrokerPresetConfig[] = [
   {
     profile: "custom",
     name: "Broker Personalizzato",
-    label: "Personalizzato",
+    labelKey: "brokers.presets.custom.label",
     fee_mode: "fixed",
     fee_value: 0,
     fee_currency: "EUR",
@@ -30,12 +30,12 @@ export const BROKER_PRESETS: BrokerPresetConfig[] = [
     capital_gain_mode: "immediate",
     capital_gain_rate: 26,
     capital_gain_rate_gov: 12.5,
-    description: "Configurazione manuale libera",
+    descriptionKey: "brokers.presets.custom.description",
   },
   {
     profile: "fineco_trading",
     name: "Fineco - Conto Trading",
-    label: "Fineco (Conto Trading)",
+    labelKey: "brokers.presets.fineco_trading.label",
     fee_mode: "percent_min_max",
     fee_value: 0.19,
     fee_min: 2.95,
@@ -45,12 +45,12 @@ export const BROKER_PRESETS: BrokerPresetConfig[] = [
     capital_gain_mode: "immediate",
     capital_gain_rate: 26,
     capital_gain_rate_gov: 12.5,
-    description: "0,19% (min 2,95 € / max 19 €) su azioni, ETF e obbligazioni. Canone 0 €.",
+    descriptionKey: "brokers.presets.fineco_trading.description",
   },
   {
     profile: "fineco_trading_under30",
     name: "Fineco - Conto Trading (Under 30)",
-    label: "Fineco (Conto Trading Under 30)",
+    labelKey: "brokers.presets.fineco_trading_under30.label",
     fee_mode: "under_30",
     fee_value: 2.95,
     fee_us_value: 3.95,
@@ -59,12 +59,12 @@ export const BROKER_PRESETS: BrokerPresetConfig[] = [
     capital_gain_mode: "immediate",
     capital_gain_rate: 26,
     capital_gain_rate_gov: 12.5,
-    description: "Fisso 2,95 € su Italia/Europa, 3,95 $ su USA. Canone 0 €.",
+    descriptionKey: "brokers.presets.fineco_trading_under30.description",
   },
   {
     profile: "fineco_one",
     name: "Fineco - Conto One",
-    label: "Fineco (Conto One - a fasce)",
+    labelKey: "brokers.presets.fineco_one.label",
     fee_mode: "tiered_volume",
     fee_value: 19,
     fee_currency: "EUR",
@@ -73,12 +73,12 @@ export const BROKER_PRESETS: BrokerPresetConfig[] = [
     capital_gain_mode: "immediate",
     capital_gain_rate: 26,
     capital_gain_rate_gov: 12.5,
-    description: "Fasce commissioni mensili (19€ / 9,95€ / 6,95€ / 2,95€). Canone 0 €.",
+    descriptionKey: "brokers.presets.fineco_one.description",
   },
   {
     profile: "fineco_classic",
     name: "Fineco - Conto Classic",
-    label: "Fineco (Conto Classic - a fasce)",
+    labelKey: "brokers.presets.fineco_classic.label",
     fee_mode: "tiered_volume",
     fee_value: 19,
     fee_currency: "EUR",
@@ -87,12 +87,12 @@ export const BROKER_PRESETS: BrokerPresetConfig[] = [
     capital_gain_mode: "immediate",
     capital_gain_rate: 26,
     capital_gain_rate_gov: 12.5,
-    description: "Fasce commissioni mensili (19€ / 9,95€ / 6,95€ / 2,95€). Canone 3,95 €/mese.",
+    descriptionKey: "brokers.presets.fineco_classic.description",
   },
   {
     profile: "fineco_max",
     name: "Fineco - Conto Max",
-    label: "Fineco (Conto Max - a fasce)",
+    labelKey: "brokers.presets.fineco_max.label",
     fee_mode: "tiered_volume",
     fee_value: 19,
     fee_currency: "EUR",
@@ -101,12 +101,12 @@ export const BROKER_PRESETS: BrokerPresetConfig[] = [
     capital_gain_mode: "immediate",
     capital_gain_rate: 26,
     capital_gain_rate_gov: 12.5,
-    description: "Fasce commissioni mensili (19€ / 9,95€ / 6,95€ / 2,95€). Canone 29,95 €/mese.",
+    descriptionKey: "brokers.presets.fineco_max.description",
   },
   {
     profile: "directa_semplice",
     name: "Directa - Profilo Semplice",
-    label: "Directa (Profilo Semplice)",
+    labelKey: "brokers.presets.directa_semplice.label",
     fee_mode: "fixed",
     fee_value: 5.0,
     fee_currency: "EUR",
@@ -114,12 +114,12 @@ export const BROKER_PRESETS: BrokerPresetConfig[] = [
     capital_gain_mode: "immediate",
     capital_gain_rate: 26,
     capital_gain_rate_gov: 12.5,
-    description: "Commissione fissa 5,00 € per eseguito. Canone 0 €.",
+    descriptionKey: "brokers.presets.directa_semplice.description",
   },
   {
     profile: "directa_variabile",
     name: "Directa - Profilo Variabile",
-    label: "Directa (Profilo Variabile)",
+    labelKey: "brokers.presets.directa_variabile.label",
     fee_mode: "percent_min_max",
     fee_value: 0.19,
     fee_min: 1.5,
@@ -129,7 +129,7 @@ export const BROKER_PRESETS: BrokerPresetConfig[] = [
     capital_gain_mode: "immediate",
     capital_gain_rate: 26,
     capital_gain_rate_gov: 12.5,
-    description: "0,19% (min 1,50 € / max 18,00 €). Canone 0 €.",
+    descriptionKey: "brokers.presets.directa_variabile.description",
   },
 ];
 

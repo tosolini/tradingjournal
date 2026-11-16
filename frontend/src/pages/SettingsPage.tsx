@@ -875,13 +875,10 @@ function PortfolioSettingsSection() {
   return (
     <section className="card p-4">
       <h2 className="mb-2 text-lg font-semibold">
-        {t("settings.portfolio.title", "Portafoglio")}
+        {t("settings.portfolio.title")}
       </h2>
       <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">
-        {t(
-          "settings.portfolio.description",
-          "Automatizza la registrazione dei rimborsi obbligazionari a scadenza.",
-        )}
+        {t("settings.portfolio.description")}
       </p>
       <label className="flex items-center gap-2 text-sm text-slate-300 dark:text-slate-900">
         <input
@@ -894,10 +891,7 @@ function PortfolioSettingsSection() {
           className="rounded border-slate-700 text-teal-500 focus:ring-teal-400"
         />
         <span>
-          {t(
-            "settings.portfolio.auto_maturity",
-            "Registra automaticamente i rimborsi a scadenza",
-          )}
+          {t("settings.portfolio.auto_maturity")}
         </span>
       </label>
       <div className="mt-4 flex items-center gap-3">
@@ -908,17 +902,17 @@ function PortfolioSettingsSection() {
           className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
         >
           {save.isPending
-            ? t("settings.portfolio.saving", "Salvataggio...")
-            : t("settings.portfolio.save", "Salva")}
+            ? t("settings.portfolio.saving")
+            : t("settings.portfolio.save")}
         </button>
         {state === "saved" && (
           <span className="text-sm text-teal-400">
-            {t("settings.portfolio.saved", "Salvato")}
+            {t("settings.portfolio.saved")}
           </span>
         )}
         {state === "error" && (
           <span className="text-sm text-rose-400">
-            {t("settings.portfolio.error", "Errore")}
+            {t("settings.portfolio.error")}
           </span>
         )}
       </div>

@@ -202,7 +202,7 @@ export function Layout({ children }: PropsWithChildren) {
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
               className="rounded-lg border border-slate-800 bg-slate-900 p-2 text-slate-300 hover:bg-slate-800 hover:text-white active:scale-95 transition dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700 dark:hover:bg-slate-200"
-              aria-label="Apri menu navigazione"
+              aria-label={t("layout.controls.open_navigation_menu")}
             >
               <MenuIcon className="h-5 w-5" />
             </button>
@@ -217,8 +217,8 @@ export function Layout({ children }: PropsWithChildren) {
               type="button"
               onClick={() => setIsCommandPaletteOpen(true)}
               className="rounded-lg border border-slate-800 bg-slate-900 p-1.5 text-slate-300 transition hover:text-white dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700"
-              title="Cerca o comandi (⌘K)"
-              aria-label="Cerca o comandi"
+              title={t("layout.controls.search_commands_title")}
+              aria-label={t("layout.controls.search_commands_aria")}
             >
               <SearchIcon className="h-4 w-4" />
             </button>
@@ -235,7 +235,7 @@ export function Layout({ children }: PropsWithChildren) {
               type="button"
               onClick={toggleLanguage}
               className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-300 uppercase transition hover:text-white dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700"
-              title="Cambia lingua"
+              title={t("layout.controls.change_language")}
             >
               {currentLang}
             </button>
@@ -243,7 +243,11 @@ export function Layout({ children }: PropsWithChildren) {
               type="button"
               onClick={toggleTheme}
               className="rounded-lg border border-slate-800 bg-slate-900 p-1.5 text-slate-300 transition hover:text-white dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700"
-              title={theme === "dark" ? "Passa a tema chiaro" : "Passa a tema scuro"}
+              title={
+                theme === "dark"
+                  ? t("layout.controls.switch_to_light")
+                  : t("layout.controls.switch_to_dark")
+              }
             >
               {theme === "dark" ? (
                 <SunIcon className="h-4 w-4 text-amber-300" />
@@ -271,7 +275,7 @@ export function Layout({ children }: PropsWithChildren) {
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-100"
-                  aria-label="Chiudi menu navigazione"
+                  aria-label={t("layout.controls.close_navigation_menu")}
                 >
                   <XIcon className="h-5 w-5" />
                 </button>
@@ -346,7 +350,7 @@ export function Layout({ children }: PropsWithChildren) {
             >
               <div className="flex items-center gap-2">
                 <SearchIcon className="h-3.5 w-3.5 text-slate-400" />
-                <span>{t("layout.search_short", "Cerca...")}</span>
+                <span>{t("layout.search_short")}</span>
               </div>
               <kbd className="rounded border border-slate-700 bg-slate-800 px-1 py-0.2 text-[10px] font-mono text-slate-400 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-600">
                 ⌘K
@@ -386,7 +390,7 @@ export function Layout({ children }: PropsWithChildren) {
                   type="button"
                   onClick={toggleLanguage}
                   className="flex items-center gap-1.5 rounded-md px-2 py-1 font-semibold uppercase hover:bg-slate-800 hover:text-white dark:hover:bg-slate-100 transition"
-                  title="Cambia lingua"
+                  title={t("layout.controls.change_language")}
                 >
                   <GlobeIcon className="h-3.5 w-3.5" />
                   <span>{currentLang}</span>
@@ -397,17 +401,21 @@ export function Layout({ children }: PropsWithChildren) {
                   type="button"
                   onClick={toggleTheme}
                   className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-slate-800 hover:text-white dark:hover:bg-slate-100 transition"
-                  title={theme === "dark" ? "Passa a tema chiaro" : "Passa a tema scuro"}
+                  title={
+                    theme === "dark"
+                      ? t("layout.controls.switch_to_light")
+                      : t("layout.controls.switch_to_dark")
+                  }
                 >
                   {theme === "dark" ? (
                     <>
                       <SunIcon className="h-3.5 w-3.5 text-amber-300" />
-                      <span>Light</span>
+                      <span>{t("layout.controls.light")}</span>
                     </>
                   ) : (
                     <>
                       <MoonIcon className="h-3.5 w-3.5 text-slate-700" />
-                      <span>Dark</span>
+                      <span>{t("layout.controls.dark")}</span>
                     </>
                   )}
                 </button>
@@ -421,13 +429,13 @@ export function Layout({ children }: PropsWithChildren) {
                   rel="noreferrer"
                   className="underline hover:text-slate-300 dark:hover:text-slate-700"
                 >
-                  Bug Report
+                  {t("layout.controls.bug_report")}
                 </a>
                 <button
                   type="button"
                   onClick={() => setIsCreditsModalOpen(true)}
                   className="hover:text-teal-400 dark:hover:text-teal-700 transition cursor-pointer underline underline-offset-2 decoration-dotted font-medium"
-                  title="Informazioni e Credits"
+                  title={t("layout.credits_modal.open_button_title")}
                 >
                   © {currentYear} W. Tosolini
                 </button>
@@ -453,7 +461,7 @@ export function Layout({ children }: PropsWithChildren) {
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <SearchIcon className="h-3.5 w-3.5 text-slate-500 group-hover:text-teal-400 dark:text-slate-400 dark:group-hover:text-teal-700 transition-colors shrink-0" />
-                    <span className="truncate">{t("layout.search_placeholder", "Cerca azioni, pagine o premi ⌘K...")}</span>
+                    <span className="truncate">{t("layout.search_placeholder")}</span>
                   </div>
                   <kbd className="shrink-0 rounded border border-slate-700/80 bg-slate-800/80 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 shadow-2xs group-hover:border-teal-500/40 group-hover:text-teal-300 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-600">
                     ⌘K
@@ -469,7 +477,7 @@ export function Layout({ children }: PropsWithChildren) {
                     type="button"
                     onClick={() => navigate("/accounts")}
                     className="hidden lg:flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-2.5 py-1 text-xs text-slate-300 hover:border-slate-700 hover:text-white transition dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-                    title="Gestione conti"
+                    title={t("layout.controls.accounts_management")}
                   >
                     <WalletIcon className="h-3.5 w-3.5 text-teal-400 dark:text-teal-600" />
                     <span className="font-medium max-w-[120px] truncate">{accounts[0].name}</span>
@@ -487,7 +495,7 @@ export function Layout({ children }: PropsWithChildren) {
                     type="button"
                     onClick={() => navigate("/settings")}
                     className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/50 px-2 py-1 text-xs text-slate-300 hover:border-slate-700 hover:text-white transition dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-                    title={`Profilo utente (${me.username})`}
+                    title={t("layout.controls.user_profile", { username: me.username })}
                   >
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-500/20 text-[10px] font-bold text-teal-300 border border-teal-500/40 dark:bg-teal-100 dark:text-teal-800 dark:border-teal-300">
                       {(me.username?.[0] || "U").toUpperCase()}

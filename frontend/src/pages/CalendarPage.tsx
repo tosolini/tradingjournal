@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { DailyPnlPoint, api, exchangesApi, fetchDailyPnl, getMe } from "../lib/api";
 import { MarketGantt } from "../components/MarketGantt";
+import { getNumberLocale } from "../lib/numbers";
 import {
   BookOpenIcon,
   CalendarIcon,
@@ -91,11 +92,16 @@ function parseTags(raw?: string | null): string[] {
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const isItalian = i18n.resolvedLanguage === "it";
-  const locale = isItalian ? "it-IT" : "en-US";
-  const weekDays = isItalian
-    ? ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
-    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const locale = getNumberLocale(i18n.resolvedLanguage);
+  const weekDays = [
+    t("calendar.weekday_mon"),
+    t("calendar.weekday_tue"),
+    t("calendar.weekday_wed"),
+    t("calendar.weekday_thu"),
+    t("calendar.weekday_fri"),
+    t("calendar.weekday_sat"),
+    t("calendar.weekday_sun"),
+  ];
 
   const [activeTab, setActiveTab] = useState<"calendar" | "markets">("calendar");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -343,9 +349,7 @@ export function CalendarPage() {
             {t("calendar.title")}
           </h1>
           <p className="text-sm text-slate-400 dark:text-slate-500">
-            {isItalian
-              ? "Monitora i tuoi risultati giornalieri, le esecuzioni e le note operative."
-              : "Track your daily PnL, trade executions, and journal notes."}
+            {t("calendar.subtitle")}
           </p>
         </div>
 
@@ -389,7 +393,7 @@ export function CalendarPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 fade-up">
             <div className="card p-3.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {isItalian ? "PnL Netto Mese" : "Month Net PnL"}
+                {t("calendar.kpi_month_pnl")}
               </span>
               <div
                 className={`mt-1 text-xl font-bold tabular-nums ${
@@ -406,7 +410,7 @@ export function CalendarPage() {
 
             <div className="card p-3.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {isItalian ? "Giorni Profitto / Perdita" : "Green / Red Days"}
+                {t("calendar.kpi_green_red_days")}
               </span>
               <div className="mt-1 flex items-baseline gap-2 text-xl font-bold tabular-nums">
                 <span className="text-emerald-400 dark:text-emerald-700">{monthKpis.greenDays}W</span>
@@ -417,7 +421,7 @@ export function CalendarPage() {
 
             <div className="card p-3.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {isItalian ? "Win Rate Giornaliero" : "Daily Win Rate"}
+                {t("calendar.kpi_daily_win_rate")}
               </span>
               <div className="mt-1 text-xl font-bold tabular-nums text-slate-100 dark:text-slate-800">
                 {Math.round(monthKpis.winRate)}%
@@ -426,7 +430,7 @@ export function CalendarPage() {
 
             <div className="card p-3.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {isItalian ? "Ordini Eseguiti" : "Total Executions"}
+                {t("calendar.kpi_executions")}
               </span>
               <div className="mt-1 text-xl font-bold tabular-nums text-teal-300 dark:text-teal-800">
                 {monthKpis.executionsCount}
@@ -478,7 +482,7 @@ export function CalendarPage() {
                     : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
                 }`}
               >
-                {t("calendar.filter_all", "Tutti")}
+                {t("calendar.filter_all")}
               </button>
               <button
                 type="button"
@@ -489,7 +493,7 @@ export function CalendarPage() {
                     : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
                 }`}
               >
-                {t("calendar.filter_stock", "Azionario")}
+                {t("calendar.filter_stock")}
               </button>
               <button
                 type="button"
@@ -500,7 +504,7 @@ export function CalendarPage() {
                     : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
                 }`}
               >
-                {t("calendar.filter_etf", "ETF")}
+                {t("calendar.filter_etf")}
               </button>
             </div>
           </div>
@@ -526,7 +530,7 @@ export function CalendarPage() {
                   </div>
                 ))}
                 <div className="hidden lg:flex items-center justify-center rounded-lg border border-teal-500/30 bg-teal-500/10 px-2 py-1 text-center text-xs font-bold uppercase tracking-wider text-teal-300 dark:border-teal-300 dark:bg-teal-50 dark:text-teal-800">
-                  {t("calendar.col_week_pnl", "Tot. Settimana")}
+                  {t("calendar.col_week_pnl")}
                 </div>
               </div>
 
@@ -666,10 +670,14 @@ export function CalendarPage() {
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                          Sett. {weekRow.weekNumber}
+                          {t("calendar.week_short", { week: weekRow.weekNumber })}
                         </span>
                         <span className="rounded bg-slate-800/80 px-1 py-0.2 text-[9px] font-mono text-slate-400 dark:bg-slate-200 dark:text-slate-600">
-                          {assetFilter === "all" ? `W${weekRow.weekNumber}` : assetFilter === "stock" ? "AZIONI" : "ETF"}
+                          {assetFilter === "all"
+                            ? `W${weekRow.weekNumber}`
+                            : assetFilter === "stock"
+                              ? t("calendar.stocks_upper")
+                              : "ETF"}
                         </span>
                       </div>
 
@@ -696,7 +704,7 @@ export function CalendarPage() {
                       {assetFilter === "all" && (
                         <div className="space-y-0.5 border-t border-slate-800/60 dark:border-slate-200/60 pt-1 pb-0.5 text-[9px] text-slate-400 dark:text-slate-500">
                           <div className="flex items-center justify-between">
-                            <span>{t("calendar.breakdown_stock", "Azioni")}:</span>
+                            <span>{t("calendar.breakdown_stock")}:</span>
                             <span
                               className={`font-semibold tabular-nums ${
                                 weekRow.weekStockPnl > 0.001
@@ -710,7 +718,7 @@ export function CalendarPage() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span>{t("calendar.breakdown_etf", "ETF")}:</span>
+                            <span>{t("calendar.breakdown_etf")}:</span>
                             <span
                               className={`font-semibold tabular-nums ${
                                 weekRow.weekEtfPnl > 0.001
@@ -727,7 +735,7 @@ export function CalendarPage() {
                       )}
 
                       <div className="text-[10px] text-slate-400 dark:text-slate-500 text-center border-t border-slate-800/60 dark:border-slate-200/60 pt-1">
-                        {weekRow.executionsCount} {t("dashboard.cards.trades", "trade")}
+                        {weekRow.executionsCount} {t("dashboard.cards.trades")}
                       </div>
                     </div>
 
@@ -736,7 +744,7 @@ export function CalendarPage() {
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-slate-400 dark:text-slate-600">
                           Settimana {weekRow.weekNumber}
-                          {assetFilter !== "all" && ` (${assetFilter === "stock" ? t("calendar.filter_stock", "Azionario") : "ETF"})`}
+                          {assetFilter !== "all" && ` (${assetFilter === "stock" ? t("calendar.filter_stock") : "ETF"})`}
                         </span>
                         <span
                           className={`font-bold tabular-nums ${
@@ -753,7 +761,7 @@ export function CalendarPage() {
                       {assetFilter === "all" && (
                         <div className="flex items-center justify-end gap-3 text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-800/60 dark:border-slate-200/60">
                           <span>
-                            {t("calendar.breakdown_stock", "Azioni")}:{" "}
+                            {t("calendar.breakdown_stock")}:{" "}
                             <strong
                               className={
                                 weekRow.weekStockPnl > 0.001
@@ -767,7 +775,7 @@ export function CalendarPage() {
                             </strong>
                           </span>
                           <span>
-                            {t("calendar.breakdown_etf", "ETF")}:{" "}
+                            {t("calendar.breakdown_etf")}:{" "}
                             <strong
                               className={
                                 weekRow.weekEtfPnl > 0.001
@@ -802,7 +810,7 @@ export function CalendarPage() {
                 <div className="flex items-start justify-between border-b border-slate-800 pb-4 dark:border-slate-200">
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wider text-teal-400 dark:text-teal-700">
-                      {isItalian ? "Riepilogo Giornaliero" : "Daily Summary"}
+                      {t("calendar.day_summary")}
                     </span>
                     <h2 className="text-lg font-bold text-slate-100 dark:text-slate-900">
                       {new Date(selectedDay).toLocaleDateString(locale, {
@@ -828,8 +836,9 @@ export function CalendarPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                          {isItalian ? "PnL Giornaliero" : "Day PnL"}
-                          {assetFilter !== "all" && ` · ${assetFilter === "stock" ? (isItalian ? "Azionario" : "Stocks") : "ETF"}`}
+                          {t("calendar.day_pnl")}
+                          {assetFilter !== "all" &&
+                            ` · ${assetFilter === "stock" ? t("calendar.stocks") : "ETF"}`}
                         </div>
                         <div
                           className={`text-2xl font-bold tabular-nums mt-0.5 ${
@@ -850,7 +859,7 @@ export function CalendarPage() {
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 dark:border-slate-200/80 text-xs">
                         <div className="rounded-lg bg-slate-900/80 p-2 border border-slate-800/60 dark:bg-slate-100 dark:border-slate-200/60">
                           <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold">
-                            {isItalian ? "Azionario" : "Stocks"}
+                            {t("calendar.stocks")}
                           </div>
                           <div
                             className={`text-sm font-bold tabular-nums ${
@@ -894,7 +903,7 @@ export function CalendarPage() {
 
                   {!displayedExecutions.length ? (
                     <div className="rounded-xl border border-dashed border-slate-800 p-4 text-center text-xs text-slate-500 dark:border-slate-200">
-                      {isItalian ? "Nessuna operazione registrata in questa data" : "No executions recorded on this date"}
+                      {t("calendar.no_executions")}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -918,7 +927,7 @@ export function CalendarPage() {
                                 {exec.action}
                               </span>
                               <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono uppercase text-slate-400 dark:bg-slate-200 dark:text-slate-600">
-                                {exec.instrument_type === "etf" ? "ETF" : isItalian ? "Azione" : "Stock"}
+                                {exec.instrument_type === "etf" ? "ETF" : t("calendar.stock")}
                               </span>
                             </div>
                             <div className="mt-1 text-slate-400 dark:text-slate-500">
@@ -930,7 +939,7 @@ export function CalendarPage() {
                             to={`/trades/${exec.trade_id}`}
                             className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-semibold text-slate-200 transition hover:bg-slate-700 hover:text-white dark:border-slate-300 dark:bg-white dark:text-slate-800"
                           >
-                            <span>Dettagli</span>
+                            <span>{t("calendar.details")}</span>
                             <ChevronRightIcon className="h-3 w-3" />
                           </Link>
                         </div>
@@ -950,13 +959,13 @@ export function CalendarPage() {
                       to={`/notes?date=${selectedDay}`}
                       className="text-xs font-semibold text-teal-400 hover:underline dark:text-teal-700"
                     >
-                      + {isItalian ? "Aggiungi Nota" : "Add Note"}
+                      + {t("calendar.add_note")}
                     </Link>
                   </div>
 
                   {!selectedDayData?.notes.length ? (
                     <div className="rounded-xl border border-dashed border-slate-800 p-4 text-center text-xs text-slate-500 dark:border-slate-200">
-                      {isItalian ? "Nessuna nota per questa data" : "No notes recorded for this date"}
+                      {t("calendar.no_notes")}
                     </div>
                   ) : (
                     <div className="space-y-2.5">
@@ -1001,7 +1010,7 @@ export function CalendarPage() {
                     onClick={() => setSelectedDay(null)}
                     className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-800"
                   >
-                    {t("common.close", "Chiudi")}
+                    {t("common.close")}
                   </button>
                   <button
                     type="button"
@@ -1011,7 +1020,7 @@ export function CalendarPage() {
                     }}
                     className="rounded-lg bg-teal-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-teal-400 transition"
                   >
-                    {isItalian ? "Vai alle Note" : "Open in Notes"}
+                    {t("calendar.open_notes")}
                   </button>
                 </div>
               </div>

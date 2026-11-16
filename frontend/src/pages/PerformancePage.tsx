@@ -153,22 +153,19 @@ function EquityChartPanel({ data }: { data: DailyPnlPoint[] }) {
               : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
           }`}
         >
-          {t("performance.mode_invested", "Investito")}
+          {t("performance.mode_invested")}
         </button>
         <button
           type="button"
           onClick={() => setMode("wealth")}
-          title={t(
-            "performance.mode_wealth_hint",
-            "Include cedole, rimborsi e vendite incassate",
-          )}
+          title={t("performance.mode_wealth_hint")}
           className={`rounded px-2 py-1 font-medium transition ${
             mode === "wealth"
               ? "bg-teal-500 font-bold text-slate-950"
               : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
           }`}
         >
-          {t("performance.mode_wealth", "Patrimonio totale")}
+          {t("performance.mode_wealth")}
         </button>
       </div>
       <div ref={ref} />

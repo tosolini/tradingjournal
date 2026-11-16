@@ -62,14 +62,14 @@ export const AnalysisHistoryView: React.FC<Props> = ({
   const deleteMutation = useMutation({
     mutationFn: (id: number) => analysisApi.delete(id),
     onSuccess: (_, id) => {
-      toast.success(t("analysis.history.delete_success", "Report eliminato con successo."));
+      toast.success(t("analysis.history.delete_success"));
       queryClient.invalidateQueries({ queryKey: ["analysisHistory"] });
       if (selectedReportId === id) {
         setSelectedReportId(null);
       }
     },
     onError: () => {
-      toast.error(t("common.error_occurred", "Si è verificato un errore"));
+      toast.error(t("common.error_occurred"));
     },
   });
 
@@ -80,7 +80,6 @@ export const AnalysisHistoryView: React.FC<Props> = ({
       toast.success(
         t("analysis.history.purge_toast_success", {
           count: res.deleted_count,
-          defaultValue: `${res.deleted_count} report eliminati dallo storico.`,
         })
       );
       queryClient.invalidateQueries({ queryKey: ["analysisHistory"] });
@@ -88,7 +87,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
       setSelectedReportId(null);
     },
     onError: (err: any) => {
-      toast.error(err.message || t("common.error_occurred", "Si è verificato un errore"));
+      toast.error(err.message || t("common.error_occurred"));
     },
   });
 
@@ -163,7 +162,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
     } else if (purgeOption === "failed") {
       purgeMutation.mutate({ only_failed: true });
     } else if (purgeOption === "all") {
-      if (window.confirm(t("analysis.history.purge_opt_all_sub", "Attenzione: azzera completamente lo storico dei report salvati."))) {
+      if (window.confirm(t("analysis.history.purge_opt_all_sub"))) {
         purgeMutation.mutate({ all_reports: true });
       }
     }
@@ -187,7 +186,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-all border border-slate-700/80 cursor-pointer group active:scale-95"
             >
               <span>←</span>
-              <span>{t("analysis.history.back_to_list", "Torna all'elenco dello storico")}</span>
+              <span>{t("analysis.history.back_to_list")}</span>
             </button>
 
             {reportDetail && (
@@ -214,16 +213,16 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                 type="button"
                 onClick={() => onSelectForReanalysis(reportDetail.symbol, reportDetail.market)}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer"
-                title={t("analysis.history.reanalyze_now", "Rigenera con Dati Odierni")}
+                title={t("analysis.history.reanalyze_now")}
               >
                 <RefreshCwIcon className="h-3.5 w-3.5" />
-                <span>{t("analysis.history.reanalyze_now", "Rigenera con Dati Odierni")}</span>
+                <span>{t("analysis.history.reanalyze_now")}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm(t("analysis.history.delete_confirm_msg", "Sei sicuro di voler eliminare definitivamente questo report dallo storico?"))) {
+                  if (window.confirm(t("analysis.history.delete_confirm_msg"))) {
                     deleteMutation.mutate(reportDetail.id);
                   }
                 }}
@@ -231,7 +230,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-semibold transition-all cursor-pointer"
               >
                 <TrashIcon className="h-3.5 w-3.5" />
-                <span>{t("analysis.history.delete_btn", "Elimina")}</span>
+                <span>{t("analysis.history.delete_btn")}</span>
               </button>
             </div>
           )}
@@ -243,13 +242,10 @@ export const AnalysisHistoryView: React.FC<Props> = ({
             <span className="text-base shrink-0">⚠️</span>
             <div className="flex-1 space-y-1">
               <strong className="block font-semibold">
-                {t("analysis.history.stale_tag", "Obsoleta (> 30gg)")}
+                {t("analysis.history.stale_tag")}
               </strong>
               <p className="text-amber-300/90 leading-relaxed">
-                {t(
-                  "analysis.history.stale_notice",
-                  "Questa analisi è stata generata più di 30 giorni fa. Prezzi di mercato, indicatori tecnici e cicli temporali potrebbero essere cambiati significativamente."
-                )}
+                {t("analysis.history.stale_notice")}
               </p>
             </div>
           </div>
@@ -260,7 +256,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center space-y-4">
             <div className="inline-block animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full" />
             <p className="text-sm text-slate-400">
-              {t("analysis.display.loading", "Caricamento del report in corso...")}
+              {t("analysis.display.loading")}
             </p>
           </div>
         ) : reportDetail ? (
@@ -277,40 +273,40 @@ export const AnalysisHistoryView: React.FC<Props> = ({
         {/* Card 1: Total Reports */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition-all">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-            {t("analysis.history.stat_total", "Totale Analisi")}
+            {t("analysis.history.stat_total")}
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             {stats.total}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {t("analysis.history.title", "Storico Analisi")}
+            {t("analysis.history.title")}
           </div>
         </div>
 
         {/* Card 2: Average Score */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition-all">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-            {t("analysis.history.stat_avg_score", "Score Medio")}
+            {t("analysis.history.stat_avg_score")}
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 tracking-tight flex items-baseline gap-1">
             <span>{stats.avgScore ?? "—"}</span>
             {stats.avgScore && <span className="text-xs text-slate-500 font-mono">/10</span>}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {t("analysis.gauge.high", "Rating Complessivo")}
+            {t("analysis.gauge.high")}
           </div>
         </div>
 
         {/* Card 3: Fresh Reports (<30d) */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition-all">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-teal-400 mb-1">
-            {t("analysis.history.stat_fresh", "Recenti (< 30gg)")}
+            {t("analysis.history.stat_fresh")}
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-teal-300 tracking-tight">
             {stats.fresh}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {t("analysis.existing_hint", "Mercato recente")}
+            {t("analysis.existing_hint")}
           </div>
         </div>
 
@@ -321,7 +317,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
             : "bg-slate-900 border-slate-800"
         }`}>
           <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 mb-1">
-            {t("analysis.history.stat_stale", "Obsolete (> 30gg)")}
+            {t("analysis.history.stat_stale")}
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-amber-300 tracking-tight">
             {stats.staleCount}
@@ -347,7 +343,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder={t("analysis.history.search_placeholder", "Cerca per simbolo (es. NVDA, UCG, AAPL)...")}
+                placeholder={t("analysis.history.search_placeholder")}
                 className="w-full h-10 pl-9 pr-3 rounded-xl bg-slate-950/80 border border-slate-700/80 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
               {searchTerm && (
@@ -370,10 +366,10 @@ export const AnalysisHistoryView: React.FC<Props> = ({
               }}
               className="h-10 px-3 rounded-xl bg-slate-950/80 border border-slate-700/80 text-white text-xs font-medium focus:outline-none focus:border-primary cursor-pointer"
             >
-              <option value="all">{t("analysis.history.filter_status_all", "Tutti gli stati")}</option>
-              <option value="completed">{t("analysis.history.filter_status_completed", "Completate")}</option>
-              <option value="running">{t("analysis.history.filter_status_running", "In corso")}</option>
-              <option value="failed">{t("analysis.history.filter_status_failed", "Con errore")}</option>
+              <option value="all">{t("analysis.history.filter_status_all")}</option>
+              <option value="completed">{t("analysis.history.filter_status_completed")}</option>
+              <option value="running">{t("analysis.history.filter_status_running")}</option>
+              <option value="failed">{t("analysis.history.filter_status_failed")}</option>
             </select>
 
             {/* Time Filter */}
@@ -385,10 +381,10 @@ export const AnalysisHistoryView: React.FC<Props> = ({
               }}
               className="h-10 px-3 rounded-xl bg-slate-950/80 border border-slate-700/80 text-white text-xs font-medium focus:outline-none focus:border-primary cursor-pointer"
             >
-              <option value="all">{t("analysis.history.filter_time_all", "Qualsiasi data")}</option>
-              <option value="7d">{t("analysis.history.filter_time_7d", "Ultimi 7 giorni")}</option>
-              <option value="30d">{t("analysis.history.filter_time_30d", "Ultimi 30 giorni")}</option>
-              <option value="older">{t("analysis.history.filter_time_older", "Oltre 30 giorni")}</option>
+              <option value="all">{t("analysis.history.filter_time_all")}</option>
+              <option value="7d">{t("analysis.history.filter_time_7d")}</option>
+              <option value="30d">{t("analysis.history.filter_time_30d")}</option>
+              <option value="older">{t("analysis.history.filter_time_older")}</option>
             </select>
           </div>
 
@@ -400,7 +396,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
               className="h-10 px-4 rounded-xl bg-slate-800 hover:bg-slate-700/90 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
             >
               <span aria-hidden="true">🧹</span>
-              <span>{t("analysis.history.purge_btn", "Gestione & Pulizia Storico")}</span>
+              <span>{t("analysis.history.purge_btn")}</span>
               {stats.staleCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold">
                   {stats.staleCount}
@@ -417,7 +413,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
           <div className="p-12 text-center space-y-3">
             <div className="inline-block animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
             <p className="text-xs text-slate-400">
-              {t("analysis.display.loading", "Caricamento storico analisi...")}
+              {t("analysis.display.loading")}
             </p>
           </div>
         ) : filteredHistory.length === 0 ? (
@@ -425,13 +421,13 @@ export const AnalysisHistoryView: React.FC<Props> = ({
             <span className="text-4xl block mb-1">📜</span>
             <h3 className="text-sm font-bold text-white">
               {history.length === 0
-                ? t("analysis.history.empty", "Nessuna analisi passata presente.")
-                : t("analysis.history.no_results_filtered", "Nessuna analisi corrisponde ai filtri di ricerca selezionati.")}
+                ? t("analysis.history.empty")
+                : t("analysis.history.no_results_filtered")}
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
               {history.length === 0
-                ? t("analysis.display.no_selection_subtitle", "Avvia la tua prima analisi multi-agente selezionando un asset o ticker sopra.")
-                : "Prova a modificare i termini di ricerca o i filtri di stato/tempo."}
+                ? t("analysis.display.no_selection_subtitle")
+                : t("analysis.history.no_results_hint")}
             </p>
           </div>
         ) : (
@@ -439,12 +435,12 @@ export const AnalysisHistoryView: React.FC<Props> = ({
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-950/60 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
                 <tr>
-                  <th className="py-3.5 px-4">{t("analysis.history.col_symbol", "Simbolo / Titolo")}</th>
-                  <th className="py-3.5 px-4">{t("analysis.history.col_score", "Score AI")}</th>
-                  <th className="py-3.5 px-4 hidden md:table-cell">{t("analysis.history.col_model", "Modello AI")}</th>
-                  <th className="py-3.5 px-4">{t("analysis.history.col_date", "Data")}</th>
-                  <th className="py-3.5 px-4">{t("analysis.history.col_status", "Stato")}</th>
-                  <th className="py-3.5 px-4 text-right">{t("analysis.history.col_actions", "Azioni")}</th>
+                  <th className="py-3.5 px-4">{t("analysis.history.col_symbol")}</th>
+                  <th className="py-3.5 px-4">{t("analysis.history.col_score")}</th>
+                  <th className="py-3.5 px-4 hidden md:table-cell">{t("analysis.history.col_model")}</th>
+                  <th className="py-3.5 px-4">{t("analysis.history.col_date")}</th>
+                  <th className="py-3.5 px-4">{t("analysis.history.col_status")}</th>
+                  <th className="py-3.5 px-4 text-right">{t("analysis.history.col_actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/70">
@@ -471,7 +467,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                           {stale && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">
                               <span>⚠️</span>
-                              <span className="hidden sm:inline">{t("analysis.history.stale_tag", "Obsoleta (> 30gg)")}</span>
+                              <span className="hidden sm:inline">{t("analysis.history.stale_tag")}</span>
                             </span>
                           )}
                         </div>
@@ -529,12 +525,12 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                         {isRunning ? (
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                            <span>{t("analysis.history.in_progress", "In corso...")}</span>
+                            <span>{t("analysis.history.in_progress")}</span>
                           </span>
                         ) : isFailed ? (
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
                             <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
-                            <span>{t("analysis.display.failed_title", "Errore")}</span>
+                            <span>{t("analysis.display.failed_title")}</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -551,16 +547,16 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                             type="button"
                             onClick={() => setSelectedReportId(rep.id)}
                             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium text-xs transition-colors cursor-pointer"
-                            title={t("analysis.history.view_report_btn", "Visualizza Report")}
+                            title={t("analysis.history.view_report_btn")}
                           >
-                            {t("analysis.history.view_report_btn", "Visualizza")}
+                            {t("analysis.history.view_report_btn")}
                           </button>
 
                           <button
                             type="button"
                             onClick={() => onSelectForReanalysis(rep.symbol, rep.market)}
                             className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors cursor-pointer"
-                            title={t("analysis.history.reanalyze_btn", "Rianalizza")}
+                            title={t("analysis.history.reanalyze_btn")}
                           >
                             <RefreshCwIcon className="h-3.5 w-3.5" />
                           </button>
@@ -568,12 +564,12 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              if (window.confirm(t("analysis.history.delete_confirm_msg", "Sei sicuro di voler eliminare definitivamente questo report dallo storico?"))) {
+                              if (window.confirm(t("analysis.history.delete_confirm_msg"))) {
                                 deleteMutation.mutate(rep.id);
                               }
                             }}
                             className="px-2 py-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                            title={t("analysis.history.delete_btn", "Elimina")}
+                            title={t("analysis.history.delete_btn")}
                           >
                             <TrashIcon className="h-3.5 w-3.5" />
                           </button>
@@ -594,7 +590,6 @@ export const AnalysisHistoryView: React.FC<Props> = ({
               {t("analysis.history.pagination_page", {
                 current: currentPage,
                 total: totalPages,
-                defaultValue: `Pagina ${currentPage} di ${totalPages}`,
               })}
             </span>
             <div className="flex items-center gap-1.5">
@@ -604,7 +599,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                 disabled={currentPage === 1}
                 className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
               >
-                {t("analysis.history.prev_page", "Precedente")}
+                {t("analysis.history.prev_page")}
               </button>
               <button
                 type="button"
@@ -612,7 +607,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                 disabled={currentPage === totalPages}
                 className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
               >
-                {t("analysis.history.next_page", "Successiva")}
+                {t("analysis.history.next_page")}
               </button>
             </div>
           </div>
@@ -636,13 +631,10 @@ export const AnalysisHistoryView: React.FC<Props> = ({
               </div>
               <div>
                 <h3 className="text-base font-bold text-white">
-                  {t("analysis.history.purge_modal_title", "Pulizia e Ottimizzazione Storico Analisi")}
+                  {t("analysis.history.purge_modal_title")}
                 </h3>
                 <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-                  {t(
-                    "analysis.history.purge_modal_desc",
-                    "Con il passare del tempo, le analisi accumulate occupano spazio sul database e perdono efficacia predittiva perché i mercati evolvono. Scegli un'opzione di pulizia:"
-                  )}
+                  {t("analysis.history.purge_modal_desc")}
                 </p>
               </div>
             </div>
@@ -668,17 +660,14 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-white">
-                      {t("analysis.history.purge_opt_30d", "Elimina analisi più vecchie di 30 giorni")}
+                      {t("analysis.history.purge_opt_30d")}
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
-                      {stats.staleCount} {t("common.reports", "report")}
+                      {t("common.reports", { count: stats.staleCount })}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    {t(
-                      "analysis.history.purge_opt_30d_sub",
-                      "Rimuove le analisi storiche ormai superate dai movimenti di mercato."
-                    )}
+                    {t("analysis.history.purge_opt_30d_sub")}
                   </p>
                 </div>
               </label>
@@ -702,17 +691,14 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-white">
-                      {t("analysis.history.purge_opt_failed", "Elimina solo analisi fallite con errore")}
+                      {t("analysis.history.purge_opt_failed")}
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">
-                      {stats.failedCount} {t("common.reports", "report")}
+                      {t("common.reports", { count: stats.failedCount })}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    {t(
-                      "analysis.history.purge_opt_failed_sub",
-                      "Ripulisce tentativi non andati a buon fine (es. rate limit o errori provider)."
-                    )}
+                    {t("analysis.history.purge_opt_failed_sub")}
                   </p>
                 </div>
               </label>
@@ -736,17 +722,14 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-rose-300">
-                      {t("analysis.history.purge_opt_all", "Svuota l'intero archivio (Tutte le analisi)")}
+                      {t("analysis.history.purge_opt_all")}
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">
-                      {stats.total} {t("common.reports", "report")}
+                      {t("common.reports", { count: stats.total })}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    {t(
-                      "analysis.history.purge_opt_all_sub",
-                      "Attenzione: azzera completamente lo storico dei report salvati."
-                    )}
+                    {t("analysis.history.purge_opt_all_sub")}
                   </p>
                 </div>
               </label>
@@ -760,7 +743,7 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                 disabled={purgeMutation.isPending}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
               >
-                {t("analysis.history.purge_cancel", "Annulla")}
+                {t("analysis.history.purge_cancel")}
               </button>
               <button
                 type="button"
@@ -779,10 +762,10 @@ export const AnalysisHistoryView: React.FC<Props> = ({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    <span>{t("common.processing", "Elaborazione...")}</span>
+                    <span>{t("common.processing")}</span>
                   </>
                 ) : (
-                  <span>{t("analysis.history.purge_confirm_action", "Procedi con l'eliminazione")}</span>
+                  <span>{t("analysis.history.purge_confirm_action")}</span>
                 )}
               </button>
             </div>

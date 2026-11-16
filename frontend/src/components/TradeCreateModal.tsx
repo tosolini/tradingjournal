@@ -285,19 +285,19 @@ function RiskRewardPreview({
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-2 dark:border-red-200 dark:bg-red-50">
           <div className="text-[10px] text-red-300 dark:text-red-700 uppercase font-semibold">
-            {t("trades.new_trade.max_risk", "Rischio Max (Stop Loss)")}
+            {t("trades.new_trade.max_risk")}
           </div>
           <div className="text-sm font-bold text-red-400 dark:text-red-600 tabular-nums mt-0.5">
-            {totalRisk !== null ? `-€${totalRisk.toFixed(2)}` : t("trades.new_trade.not_set", "Non impostato")}
+            {totalRisk !== null ? `-€${totalRisk.toFixed(2)}` : t("trades.new_trade.not_set")}
           </div>
         </div>
 
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 dark:border-emerald-200 dark:bg-emerald-50">
           <div className="text-[10px] text-emerald-300 dark:text-emerald-700 uppercase font-semibold">
-            {t("trades.new_trade.max_target", "Target Max (Take Profit)")}
+            {t("trades.new_trade.max_target")}
           </div>
           <div className="text-sm font-bold text-emerald-400 dark:text-emerald-600 tabular-nums mt-0.5">
-            {totalReward !== null ? `+€${totalReward.toFixed(2)}` : t("trades.new_trade.not_set", "Non impostato")}
+            {totalReward !== null ? `+€${totalReward.toFixed(2)}` : t("trades.new_trade.not_set")}
           </div>
         </div>
       </div>
@@ -509,8 +509,8 @@ function QuickTradeForm({ onClose, initialValues }: { onClose: () => void; initi
       <div>
         <label className="text-sm text-slate-300 dark:text-slate-900 block">
           <span className="inline-flex items-center mb-1">
-            {t("trades.new_trade.labels.instrument_type", "Tipo Strumento")}
-            <FieldHelp text={t("trades.new_trade.tooltips.instrument_type", "I Titoli di Stato sono tassati con aliquota agevolata al 12,5%, mentre azioni, ETF e obbligazioni societarie sono al 26%.")} />
+            {t("trades.new_trade.labels.instrument_type")}
+            <FieldHelp text={t("trades.new_trade.tooltips.instrument_type")} />
           </span>
           <select
             value={instrumentType}
@@ -924,7 +924,7 @@ export function TradeCreateModal({ open, onClose, initialValues }: Props) {
                     onClick={() => setShowQuickAccount(true)}
                     className="text-[11px] font-medium text-teal-400 hover:text-teal-300"
                   >
-                    + {t("trades.new_trade.add_account", "Nuovo Conto")}
+                    + {t("trades.new_trade.add_account")}
                   </button>
                 </div>
                 <select
@@ -995,8 +995,8 @@ export function TradeCreateModal({ open, onClose, initialValues }: Props) {
             <div className="mt-3">
               <label className="text-sm text-slate-300 dark:text-slate-900 block mb-1">
                 <span className="inline-flex items-center">
-                  {t("trades.new_trade.labels.instrument_type", "Tipo Strumento")}
-                  <FieldHelp text={t("trades.new_trade.tooltips.instrument_type", "I Titoli di Stato sono tassati con aliquota agevolata al 12,5%, mentre azioni, ETF e obbligazioni societarie sono al 26%.")} />
+                  {t("trades.new_trade.labels.instrument_type")}
+                  <FieldHelp text={t("trades.new_trade.tooltips.instrument_type")} />
                 </span>
               </label>
               <select
@@ -1424,7 +1424,7 @@ export function TradeCreateModal({ open, onClose, initialValues }: Props) {
                 : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
             }`}
           >
-            {t("trades.new_trade.mode_quick", "⚡ Inserimento Rapido")}
+            {t("trades.new_trade.mode_quick")}
           </button>
           <button
             type="button"
@@ -1435,7 +1435,7 @@ export function TradeCreateModal({ open, onClose, initialValues }: Props) {
                 : "text-slate-400 hover:text-slate-200 dark:text-slate-600 dark:hover:text-slate-900"
             }`}
           >
-            {t("trades.new_trade.mode_wizard", "🧭 Wizard Guidato (6 Step)")}
+            {t("trades.new_trade.mode_wizard")}
           </button>
         </div>
 

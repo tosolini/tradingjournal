@@ -30,7 +30,7 @@ export function QuickBrokerModal({ open, onClose, onCreated }: Props) {
       }),
     onSuccess: (broker) => {
       qc.invalidateQueries({ queryKey: ["brokers"] });
-      toast.success(t("brokers.created_success", "Broker creato con successo"));
+      toast.success(t("brokers.created_success"));
       setName("");
       setFeeValue("0");
       onCreated?.(broker);
@@ -47,12 +47,12 @@ export function QuickBrokerModal({ open, onClose, onCreated }: Props) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
       <div className="w-full max-w-sm rounded-xl border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white p-5 shadow-2xl">
         <h3 className="mb-3 text-base font-semibold text-teal-200 dark:text-teal-900">
-          {t("brokers.quick_add_title", "Nuovo Broker Rapido")}
+          {t("brokers.quick_add_title")}
         </h3>
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-              {t("brokers.name", "Nome Broker")} *
+              {t("brokers.name")} *
             </label>
             <input
               type="text"
@@ -66,20 +66,20 @@ export function QuickBrokerModal({ open, onClose, onCreated }: Props) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                {t("brokers.fee_mode", "Tipo Fee")}
+                {t("brokers.fee_mode")}
               </label>
               <select
                 value={feeMode}
                 onChange={(e) => setFeeMode(e.target.value as "fixed" | "percent")}
                 className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
               >
-                <option value="fixed">{t("brokers.fixed", "Fissa")}</option>
-                <option value="percent">{t("brokers.percent", "Percentuale (%)")}</option>
+                <option value="fixed">{t("brokers.fixed")}</option>
+                <option value="percent">{t("brokers.percent")}</option>
               </select>
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                {t("brokers.fee_value", "Valore Fee")}
+                {t("brokers.fee_value")}
               </label>
               <input
                 type="number"
@@ -97,7 +97,7 @@ export function QuickBrokerModal({ open, onClose, onCreated }: Props) {
             onClick={onClose}
             className="rounded-lg border border-slate-700 dark:border-slate-300 px-3 py-1.5 text-xs text-slate-300 dark:text-slate-700 hover:bg-slate-800 dark:hover:bg-slate-100"
           >
-            {t("common.cancel", "Annulla")}
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -105,7 +105,7 @@ export function QuickBrokerModal({ open, onClose, onCreated }: Props) {
             disabled={!name.trim() || mutation.isPending}
             className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-50"
           >
-            {mutation.isPending ? t("common.saving", "Salvataggio...") : t("common.save", "Salva")}
+            {mutation.isPending ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>

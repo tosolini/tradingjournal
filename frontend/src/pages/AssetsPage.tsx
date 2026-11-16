@@ -195,11 +195,14 @@ export function AssetFormModal({
         }
       }
       toast.success(
-        `${t("assets.euronext_import_success", "Dati obbligazione importati con successo!")} Prezzo live: ${data.live_price ?? "N/A"}%`
+        t("assets.euronext_import_success_price", {
+          message: t("assets.euronext_import_success"),
+          price: data.live_price ?? "N/A",
+        }),
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Errore importazione Euronext: ${msg}`);
+      toast.error(t("assets.euronext_import_error", { message: msg }));
     } finally {
       setLoadingEuronext(false);
     }
@@ -218,7 +221,7 @@ export function AssetFormModal({
 
       if (instrumentType === "bond") {
         if (!maturityDate.trim()) {
-          throw new Error(t("assets.maturity_date_required", "Data di scadenza obbligatoria"));
+          throw new Error(t("assets.maturity_date_required"));
         }
         payload.bond_detail = {
           bond_type: bondType,
@@ -240,14 +243,14 @@ export function AssetFormModal({
     },
     onSuccess: (savedAsset) => {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
-      toast.success(isEditing ? t("assets.updated_success", "Asset aggiornato") : t("assets.created_success", "Asset creato"));
+      toast.success(isEditing ? t("assets.updated_success") : t("assets.created_success"));
       onCreated?.(savedAsset);
       onClose();
     },
     onError: (err: Error) => {
       console.error("Asset mutation error:", err);
       if (err.message.includes("409") || err.message.toLowerCase().includes("already exists")) {
-        toast.error(t("assets.error_already_exists", "Un asset con questo simbolo esiste già"));
+        toast.error(t("assets.error_already_exists"));
       } else {
         toast.error(`Error: ${err.message}`);
       }
@@ -265,7 +268,7 @@ export function AssetFormModal({
 
         {autofilled && (
           <div className="mb-3 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs text-teal-300 dark:text-teal-800 flex items-center justify-between">
-            <span>{t("assets.autofilled_badge", "✓ Campi compilati automaticamente dal ticker")}</span>
+            <span>{t("assets.autofilled_badge")}</span>
             <button
               type="button"
               onClick={() => setAutofilled(false)}
@@ -280,13 +283,13 @@ export function AssetFormModal({
         <div className="mb-4 rounded-lg border border-teal-500/30 bg-teal-500/10 dark:bg-teal-50 p-3 space-y-2">
           <div className="text-xs font-semibold text-teal-300 dark:text-teal-900 flex items-center justify-between">
             <span>
-              {t("assets.euronext_import_prefix", "Importa automaticamente da")}{" "}
+              {t("assets.euronext_import_prefix")}{" "}
               <a
                 href="https://live.euronext.com/en/products/bonds/mot/list"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-teal-200 dark:hover:text-teal-700 transition-colors inline-flex items-center gap-1"
-                title="Apri Euronext MOT"
+                title={t("assets.euronext_open_title")}
               >
                 Euronext / MOT
                 <svg viewBox="0 0 24 24" className="h-3 w-3 inline" fill="none" stroke="currentColor" strokeWidth="2">
@@ -308,7 +311,7 @@ export function AssetFormModal({
                   handleEuronextLookup();
                 }
               }}
-              placeholder={t("assets.euronext_import_placeholder", "Incolla URL Euronext o codice ISIN (es. IT0005611741)")}
+              placeholder={t("assets.euronext_import_placeholder")}
               className="flex-1 rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-xs text-slate-200 dark:text-slate-900 font-mono"
             />
             <button
@@ -318,10 +321,10 @@ export function AssetFormModal({
               className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-50 whitespace-nowrap"
             >
               {loadingEuronext
-                ? t("assets.euronext_import_loading", "Caricamento...")
+                ? t("assets.euronext_import_loading")
                 : isEditing
-                  ? t("assets.euronext_apply_btn", "Compila da Euronext")
-                  : t("assets.euronext_import_btn", "Importa Live")}
+                  ? t("assets.euronext_apply_btn")
+                  : t("assets.euronext_import_btn")}
             </button>
           </div>
         </div>
@@ -333,7 +336,7 @@ export function AssetFormModal({
               </label>
               {!isEditing && (
                 <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                  {t("assets.symbol_autocomplete_hint", "Cerca tra i ticker o digita un simbolo")}
+                  {t("assets.symbol_autocomplete_hint")}
                 </span>
               )}
             </div>
@@ -404,7 +407,7 @@ export function AssetFormModal({
               {INSTRUMENT_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {type === "government_bond"
-                    ? t("assets.instrument_government_bond", "Titolo di Stato")
+                    ? t("assets.instrument_government_bond")
                     : type.toUpperCase()}
                 </option>
               ))}
@@ -420,7 +423,7 @@ export function AssetFormModal({
                 value={exchange}
                 onChange={(e) => setExchange(e.target.value)}
                 className="w-full rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-800 dark:bg-slate-100 p-2 text-sm text-slate-200 dark:text-slate-900"
-                placeholder="es. XETRA, Borsa Italiana"
+                placeholder={t("assets.market_placeholder")}
               />
             </div>
             <div>
@@ -440,7 +443,7 @@ export function AssetFormModal({
           {instrumentType === "bond" && (
             <div className="rounded-lg border border-teal-500/30 bg-teal-500/5 dark:bg-teal-50 p-3 space-y-3">
               <div className="text-xs font-semibold text-teal-300 dark:text-teal-900 uppercase tracking-wider">
-                {t("assets.bond_section", "Parametri Obbligazionari")}
+                {t("assets.bond_section")}
               </div>
 
               <div>
@@ -496,7 +499,7 @@ export function AssetFormModal({
                 {bondType !== "zero_coupon" && (
                   <div>
                     <label className="mb-1 block text-xs text-slate-400 dark:text-slate-900">
-                      {bondType === "step_up" ? t("assets.rate_pct", "Tasso Base %") : t("assets.coupon_rate")}
+                      {bondType === "step_up" ? t("assets.rate_pct") : t("assets.coupon_rate")}
                     </label>
                     <input
                       type="number"
@@ -670,7 +673,7 @@ export function AssetsPage() {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["bonds"] });
-      toast.success(t("assets.deleted_success", "Asset eliminato con successo"));
+      toast.success(t("assets.deleted_success"));
       setDeleteId(null);
     },
     onError: (err: Error) => {
@@ -686,7 +689,7 @@ export function AssetsPage() {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["bonds"] });
-      toast.success(t("assets.sync_euronext_success", "Dati obbligazione aggiornati con successo da Euronext"));
+      toast.success(t("assets.sync_euronext_success"));
     },
     onError: (err: Error) => {
       toast.error(`Errore sincronizzazione: ${err.message}`);
@@ -711,7 +714,7 @@ export function AssetsPage() {
               else next.delete("search");
               setSearchParams(next, { replace: true });
             }}
-            placeholder={t("assets.search_placeholder", "Cerca per simbolo, nome o ISIN...")}
+            placeholder={t("assets.search_placeholder")}
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:border-teal-500 focus:outline-none dark:border-slate-300 dark:bg-white dark:text-slate-800"
           />
           <button
@@ -743,7 +746,7 @@ export function AssetsPage() {
             {isLoading ? (
               <tr>
                 <td colSpan={7} className="px-3 py-4 text-center text-slate-400 dark:text-slate-600">
-                  {t("common.loading", "Caricamento...")}
+                  {t("common.loading")}
                 </td>
               </tr>
             ) : filteredAssets.length === 0 ? (
@@ -751,10 +754,10 @@ export function AssetsPage() {
                 <td colSpan={7} className="px-3 py-8 text-center">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <p className="text-slate-400 dark:text-slate-600 text-sm">
-                      {t("assets.no_assets", "Nessun asset registrato.")}
+                      {t("assets.no_assets")}
                     </p>
                     <p className="text-xs text-slate-500 max-w-sm">
-                      {t("assets.empty_hint", "Registra ETF, azioni o fondi con ricerca ticker automatica per tracciare le tue posizioni in Portafoglio.")}
+                      {t("assets.empty_hint")}
                     </p>
                     <button
                       onClick={() => {
@@ -763,7 +766,7 @@ export function AssetsPage() {
                       }}
                       className="mt-2 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400"
                     >
-                      + {t("assets.add_first", "Aggiungi il tuo primo Asset")}
+                      + {t("assets.add_first")}
                     </button>
                   </div>
                 </td>
@@ -784,8 +787,8 @@ export function AssetsPage() {
                           onClick={() => syncAssetMutation.mutate(asset.id)}
                           disabled={syncAssetMutation.isPending}
                           className="rounded bg-teal-500 p-1.5 text-slate-950 hover:bg-teal-400 disabled:opacity-50"
-                          title={t("assets.sync_euronext", "Sincronizza con Euronext")}
-                          aria-label={t("assets.sync_euronext", "Sincronizza con Euronext")}
+                          title={t("assets.sync_euronext")}
+                          aria-label={t("assets.sync_euronext")}
                         >
                           <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 ${syncAssetMutation.isPending ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
@@ -854,7 +857,7 @@ export function AssetsPage() {
                 disabled={deleteMutation.isPending}
                 className="rounded-lg bg-red-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-50"
               >
-                {deleteMutation.isPending ? t("assets.saving", "Eliminazione...") : t("assets.delete")}
+                {deleteMutation.isPending ? t("assets.saving") : t("assets.delete")}
               </button>
             </div>
           </div>

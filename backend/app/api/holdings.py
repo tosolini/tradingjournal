@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user
+from app.i18n import get_request_locale, localized_error
 from app.models import Account, Asset, Holding, User
 from app.schemas import (
     HoldingCreate,
@@ -124,13 +125,19 @@ def delete_holding(
 def preview_exit(
     holding_id: int,
     payload: HoldingExitCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     try:
-        preview = preview_holding_exit(db, current_user.id, holding_id, payload)
+        preview = preview_holding_exit(
+            db, current_user.id, holding_id, payload, locale=get_request_locale(request)
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        message = str(exc)
+        if message.startswith("errors."):
+            raise localized_error(status_code=422, code=message, request=request) from exc
+        raise HTTPException(status_code=422, detail=message) from exc
     if not preview:
         raise HTTPException(status_code=404, detail="Holding not found")
     return preview
@@ -140,13 +147,19 @@ def preview_exit(
 def create_exit(
     holding_id: int,
     payload: HoldingExitCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     try:
-        exit_event = create_holding_exit(db, current_user.id, holding_id, payload)
+        exit_event = create_holding_exit(
+            db, current_user.id, holding_id, payload, locale=get_request_locale(request)
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        message = str(exc)
+        if message.startswith("errors."):
+            raise localized_error(status_code=422, code=message, request=request) from exc
+        raise HTTPException(status_code=422, detail=message) from exc
     if not exit_event:
         raise HTTPException(status_code=404, detail="Holding not found")
     return to_exit_response(exit_event)
@@ -156,15 +169,23 @@ def create_exit(
 def preview_bulk_exit(
     holding_id: int,
     payload: HoldingExitCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     try:
         preview = preview_holding_group_exit(
-            db, current_user.id, holding_id, payload
+            db,
+            current_user.id,
+            holding_id,
+            payload,
+            locale=get_request_locale(request),
         )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        message = str(exc)
+        if message.startswith("errors."):
+            raise localized_error(status_code=422, code=message, request=request) from exc
+        raise HTTPException(status_code=422, detail=message) from exc
     if not preview:
         raise HTTPException(status_code=404, detail="Holding not found")
     return preview
@@ -174,13 +195,19 @@ def preview_bulk_exit(
 def create_bulk_exit(
     holding_id: int,
     payload: HoldingExitCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     try:
-        exits = create_holding_group_exits(db, current_user.id, holding_id, payload)
+        exits = create_holding_group_exits(
+            db, current_user.id, holding_id, payload, locale=get_request_locale(request)
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        message = str(exc)
+        if message.startswith("errors."):
+            raise localized_error(status_code=422, code=message, request=request) from exc
+        raise HTTPException(status_code=422, detail=message) from exc
     if not exits:
         raise HTTPException(status_code=404, detail="Holding not found")
     return [to_exit_response(item) for item in exits]

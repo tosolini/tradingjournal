@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 type Tool = "arrow" | "rectangle" | "circle" | "highlight" | "text";
 
@@ -16,13 +17,7 @@ type Annotation = {
   text?: string;
 };
 
-const TOOL_LABELS: Array<{ value: Tool; label: string }> = [
-  { value: "arrow", label: "Arrow" },
-  { value: "rectangle", label: "Rectangle" },
-  { value: "circle", label: "Circle" },
-  { value: "text", label: "Text" },
-  { value: "highlight", label: "Highlight" },
-];
+const TOOLS: Tool[] = ["arrow", "rectangle", "circle", "text", "highlight"];
 
 type ImageAnnotationEditorProps = {
   initialImageSrc?: string | null;
@@ -155,6 +150,7 @@ export function ImageAnnotationEditor({
   onSaveAnnotated,
   showFileLoader = true,
 }: ImageAnnotationEditorProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [tool, setTool] = useState<Tool>("arrow");
   const [color, setColor] = useState<string>("#2dd4bf");
@@ -332,13 +328,13 @@ export function ImageAnnotationEditor({
             resolve(value);
             return;
           }
-          reject(new Error("Impossibile generare PNG annotato"));
+          reject(new Error(t("image_editor.png_error")));
         }, "image/png");
       });
       await onSaveAnnotated(blob);
-      setSaveSuccess("Annotazione salvata con successo.");
+      setSaveSuccess(t("image_editor.save_success"));
     } catch {
-      setSaveError("Salvataggio annotazione non riuscito.");
+      setSaveError(t("image_editor.save_error"));
     } finally {
       setIsSaving(false);
     }
@@ -347,7 +343,7 @@ export function ImageAnnotationEditor({
   return (
     <section className="card space-y-4 p-4">
       <div>
-        <h2 className="text-lg font-semibold">Image Annotation Editor</h2>
+        <h2 className="text-lg font-semibold">{t("image_editor.title")}</h2>
         <p className="text-sm text-slate-400 dark:text-slate-900">
           Tools: arrow, rectangle, circle, text, highlight. Load an image, annotate, then export PNG.
         </p>
@@ -371,9 +367,9 @@ export function ImageAnnotationEditor({
           onChange={(event) => setTool(event.target.value as Tool)}
           className="rounded border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-2"
         >
-          {TOOL_LABELS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
+          {TOOLS.map((tool) => (
+            <option key={tool} value={tool}>
+              {t(`image_editor.tool_${tool}`)}
             </option>
           ))}
         </select>
@@ -417,7 +413,7 @@ export function ImageAnnotationEditor({
           onClick={onExport}
           className="rounded bg-teal-500 px-3 py-2 font-semibold text-slate-950"
         >
-          Export PNG
+          {t("image_editor.export_png")}
         </button>
         {onSaveAnnotated ? (
           <button
@@ -426,7 +422,7 @@ export function ImageAnnotationEditor({
             disabled={isSaving}
             className="rounded bg-emerald-500 px-3 py-2 font-semibold text-slate-950"
           >
-            {isSaving ? "Saving..." : "Salva annotata"}
+            {isSaving ? t("image_editor.saving") : t("image_editor.save_annotated")}
           </button>
         ) : null}
       </div>

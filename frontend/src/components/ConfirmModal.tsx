@@ -39,7 +39,7 @@ export function ConfirmModal({ message, confirmLabel, onConfirm, onCancel, isPen
           </div>
           <div className="flex-1">
             <h3 className="text-base font-semibold text-slate-100 dark:text-slate-900">
-              {t("common.confirm", "Conferma operazione")}
+              {t("common.confirm")}
             </h3>
             <p className="mt-1 text-sm text-slate-300 dark:text-slate-600 leading-relaxed">
               {message}
@@ -61,7 +61,7 @@ export function ConfirmModal({ message, confirmLabel, onConfirm, onCancel, isPen
             disabled={isPending}
             className="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:opacity-50"
           >
-            {isPending ? "..." : (confirmLabel ?? t("assets.delete", "Elimina"))}
+            {isPending ? "..." : (confirmLabel ?? t("assets.delete"))}
           </button>
         </div>
       </div>

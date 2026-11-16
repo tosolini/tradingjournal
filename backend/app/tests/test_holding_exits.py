@@ -115,7 +115,7 @@ def test_partial_bond_sale_updates_quantity_and_can_be_undone(db):
     assert preview.realized_pnl == Decimal("476.25")
     assert preview.taxes == Decimal("59.53")
     assert preview.net_proceeds == Decimal("5416.72")
-    assert any("parziale" in warning.lower() for warning in preview.warnings)
+    assert any("partial" in warning.lower() for warning in preview.warnings)
 
     exit_event = create_holding_exit(db, user.id, holding.id, payload)
     assert exit_event is not None
@@ -256,12 +256,12 @@ def test_exit_api_endpoints(db):
     )
 
     preview = preview_exit(
-        holding_id=holding.id, payload=payload, db=db, current_user=user
+        holding_id=holding.id, payload=payload, request=None, db=db, current_user=user
     )
     assert preview.quantity_after == Decimal("8000.000000")
 
     created = create_exit(
-        holding_id=holding.id, payload=payload, db=db, current_user=user
+        holding_id=holding.id, payload=payload, request=None, db=db, current_user=user
     )
     assert created.holding_id == holding.id
     assert created.asset_symbol == "IT0005583486"
@@ -486,13 +486,13 @@ def test_bulk_exit_api_endpoints(db):
     )
 
     preview = preview_bulk_exit(
-        holding_id=holdings[0].id, payload=payload, db=db, current_user=user
+        holding_id=holdings[0].id, payload=payload, request=None, db=db, current_user=user
     )
     assert preview.quantity == Decimal("25000.000000")
     assert preview.fees == Decimal("4.00")
 
     created = create_bulk_exit(
-        holding_id=holdings[0].id, payload=payload, db=db, current_user=user
+        holding_id=holdings[0].id, payload=payload, request=None, db=db, current_user=user
     )
     assert len(created) == 2
     assert {item.holding_id for item in created} == {item.id for item in holdings}

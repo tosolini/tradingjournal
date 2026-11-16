@@ -109,8 +109,8 @@ export function AlertsBellMenu() {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative rounded-lg border border-slate-800 bg-slate-900 p-1.5 text-slate-300 transition hover:text-white dark:border-slate-200 dark:bg-slate-100 dark:text-slate-700 cursor-pointer"
-        title={t("layout.alerts.title", "Notifiche e Alert di Trading & Portafoglio")}
-        aria-label={t("layout.alerts.title", "Notifiche e Alert di Trading & Portafoglio")}
+        title={t("layout.alerts.title")}
+        aria-label={t("layout.alerts.title")}
       >
         <BellIcon className="h-4 w-4" />
         {unreadCount > 0 && (
@@ -136,16 +136,16 @@ export function AlertsBellMenu() {
                 )}
               </span>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-200 dark:text-slate-800">
-                {t("layout.alerts.header", "Centro Notifiche & Alert")}
+                {t("layout.alerts.header")}
               </span>
             </div>
             {unreadCount > 0 ? (
               <span className="rounded-full bg-teal-500/15 border border-teal-500/30 px-2 py-0.5 text-[10px] font-semibold text-teal-300 dark:bg-teal-50 dark:border-teal-200 dark:text-teal-800">
-                {unreadCount} {t("layout.alerts.ready", "attivi")}
+                {unreadCount} {t("layout.alerts.ready")}
               </span>
             ) : (
               <span className="text-[10px] text-slate-500 font-medium">
-                {t("layout.alerts.empty_header", "0 attivi")}
+                {t("layout.alerts.empty_header")}
               </span>
             )}
           </div>
@@ -161,7 +161,7 @@ export function AlertsBellMenu() {
                   : "bg-[#161f30] text-slate-300 hover:text-white dark:bg-slate-200 dark:text-slate-700 dark:hover:text-slate-950"
               }`}
             >
-              {t("layout.alerts.tab_all", "Tutti")} ({counts.all})
+              {t("layout.alerts.tab_all")} ({counts.all})
             </button>
             <button
               type="button"
@@ -172,7 +172,7 @@ export function AlertsBellMenu() {
                   : "bg-[#161f30] text-slate-300 hover:text-white dark:bg-slate-200 dark:text-slate-700 dark:hover:text-slate-950"
               }`}
             >
-              {t("layout.alerts.tab_trades", "Trade")} ({counts.trades})
+              {t("layout.alerts.tab_trades")} ({counts.trades})
             </button>
             <button
               type="button"
@@ -183,7 +183,7 @@ export function AlertsBellMenu() {
                   : "bg-[#161f30] text-slate-300 hover:text-white dark:bg-slate-200 dark:text-slate-700 dark:hover:text-slate-950"
               }`}
             >
-              {t("layout.alerts.tab_coupons", "Cedole")} ({counts.coupons})
+              {t("layout.alerts.tab_coupons")} ({counts.coupons})
             </button>
             <button
               type="button"
@@ -194,7 +194,7 @@ export function AlertsBellMenu() {
                   : "bg-[#161f30] text-slate-300 hover:text-white dark:bg-slate-200 dark:text-slate-700 dark:hover:text-slate-950"
               }`}
             >
-              {t("layout.alerts.tab_maturities", "Scadenze")} ({counts.maturities})
+              {t("layout.alerts.tab_maturities")} ({counts.maturities})
             </button>
             <button
               type="button"
@@ -205,7 +205,7 @@ export function AlertsBellMenu() {
                   : "bg-[#161f30] text-slate-300 hover:text-white dark:bg-slate-200 dark:text-slate-700 dark:hover:text-slate-950"
               }`}
             >
-              {t("layout.alerts.tab_scouting", "Scouting")} ({counts.scouting})
+              {t("layout.alerts.tab_scouting")} ({counts.scouting})
             </button>
           </div>
 
@@ -238,8 +238,8 @@ export function AlertsBellMenu() {
                         }`}
                       >
                         {alert.alert_type === "take_profit"
-                          ? t("layout.alerts.take_profit", "Take Profit Raggiunto")
-                          : t("layout.alerts.stop_loss", "Stop Loss Raggiunto")}
+                          ? t("layout.alerts.take_profit")
+                          : t("layout.alerts.stop_loss")}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -248,7 +248,7 @@ export function AlertsBellMenu() {
                         onClick={() => handleNavigateToTrades(alert.symbol)}
                         className="rounded bg-teal-500 px-2 py-1 text-[11px] font-bold text-slate-950 transition hover:bg-teal-400 cursor-pointer shadow-xs"
                       >
-                        {t("layout.alerts.action_view_trade", "Dettagli Trade")}
+                        {t("layout.alerts.action_view_trade")}
                       </button>
                       {alert.alert_key && (
                         <button
@@ -256,8 +256,8 @@ export function AlertsBellMenu() {
                           onClick={() => acknowledgeMutation.mutate(alert.alert_key)}
                           disabled={acknowledgeMutation.isPending}
                           className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-700/70 bg-slate-800/80 text-slate-400 hover:border-teal-500 hover:bg-teal-500/20 hover:text-teal-300 transition-all cursor-pointer dark:border-slate-300 dark:bg-slate-100 dark:text-slate-600 dark:hover:bg-teal-50 dark:hover:text-teal-700 active:scale-90"
-                          title={t("layout.alerts.acknowledge_tooltip", "Segna come letto")}
-                          aria-label={t("layout.alerts.acknowledge_tooltip", "Segna come letto")}
+                          title={t("layout.alerts.acknowledge_tooltip")}
+                          aria-label={t("layout.alerts.acknowledge_tooltip")}
                         >
                           <CheckIcon className="h-3 w-3 stroke-[2.5]" />
                         </button>
@@ -267,15 +267,15 @@ export function AlertsBellMenu() {
                   <div className="mt-1 flex items-baseline justify-between text-xs text-slate-400 dark:text-slate-500">
                     <span>
                       {alert.alert_type === "take_profit"
-                        ? t("layout.alerts.target_price", "Target")
-                        : t("layout.alerts.stop_price", "Stop")}
+                        ? t("layout.alerts.target_price")
+                        : t("layout.alerts.stop_price")}
                       :{" "}
                       <strong className="text-slate-200 dark:text-slate-800">
                         {alert.threshold_price}
                       </strong>
                     </span>
                     <span className="text-[11px]">
-                      {t("layout.alerts.current_price", "Prezzo attuale")}:{" "}
+                      {t("layout.alerts.current_price")}:{" "}
                       <strong className="text-teal-400 dark:text-teal-600 font-mono">
                         {alert.current_price}
                       </strong>
@@ -302,7 +302,7 @@ export function AlertsBellMenu() {
                         {coupon.asset_symbol}
                       </span>
                       <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-bold text-amber-300 dark:bg-amber-100 dark:text-amber-800">
-                        {t("layout.alerts.coupon_today", "Cedola Oggi")}
+                        {t("layout.alerts.coupon_today")}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -311,7 +311,7 @@ export function AlertsBellMenu() {
                         onClick={() => handleNavigateToPortfolio(coupon.holding_id)}
                         className="rounded bg-amber-500 px-2 py-1 text-[11px] font-bold text-slate-950 transition hover:bg-amber-400 cursor-pointer shadow-xs"
                       >
-                        {t("layout.alerts.action_view_portfolio", "Dettagli BTP")}
+                        {t("layout.alerts.action_view_portfolio")}
                       </button>
                       {coupon.alert_key && (
                         <button
@@ -319,8 +319,8 @@ export function AlertsBellMenu() {
                           onClick={() => acknowledgeMutation.mutate(coupon.alert_key)}
                           disabled={acknowledgeMutation.isPending}
                           className="flex h-6 w-6 items-center justify-center rounded-md border border-amber-800/80 bg-amber-950/40 text-amber-300 hover:border-amber-500 hover:bg-amber-500/20 transition-all cursor-pointer dark:border-amber-300 dark:bg-amber-100 dark:text-amber-800 active:scale-90"
-                          title={t("layout.alerts.acknowledge_tooltip", "Segna come letto")}
-                          aria-label={t("layout.alerts.acknowledge_tooltip", "Segna come letto")}
+                          title={t("layout.alerts.acknowledge_tooltip")}
+                          aria-label={t("layout.alerts.acknowledge_tooltip")}
                         >
                           <CheckIcon className="h-3 w-3 stroke-[2.5]" />
                         </button>
@@ -332,7 +332,7 @@ export function AlertsBellMenu() {
                   </div>
                   <div className="mt-1 flex items-baseline justify-between text-xs text-slate-400 dark:text-slate-500">
                     <span>
-                      {t("layout.alerts.net_estimate", "Netto stimato")}:{" "}
+                      {t("layout.alerts.net_estimate")}:{" "}
                       <strong className="text-amber-300 dark:text-amber-800 font-mono">
                         {coupon.net_amount} {coupon.currency}
                       </strong>
@@ -359,7 +359,7 @@ export function AlertsBellMenu() {
                         {mat.asset_symbol}
                       </span>
                       <span className="rounded bg-indigo-500/20 px-1.5 py-0.2 text-[10px] font-bold text-indigo-300 dark:bg-indigo-100 dark:text-indigo-800">
-                        {t("layout.alerts.maturity_warning", "Scadenza BTP")}
+                        {t("layout.alerts.maturity_warning")}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -368,7 +368,7 @@ export function AlertsBellMenu() {
                         onClick={() => handleNavigateToPortfolio(mat.holding_id)}
                         className="rounded bg-indigo-500 px-2 py-1 text-[11px] font-bold text-white transition hover:bg-indigo-400 cursor-pointer shadow-xs"
                       >
-                        {t("layout.alerts.action_view_portfolio", "Dettagli BTP")}
+                        {t("layout.alerts.action_view_portfolio")}
                       </button>
                       {mat.alert_key && (
                         <button
@@ -376,8 +376,8 @@ export function AlertsBellMenu() {
                           onClick={() => acknowledgeMutation.mutate(mat.alert_key)}
                           disabled={acknowledgeMutation.isPending}
                           className="flex h-6 w-6 items-center justify-center rounded-md border border-indigo-800/80 bg-indigo-950/40 text-indigo-300 hover:border-indigo-500 hover:bg-indigo-500/20 transition-all cursor-pointer dark:border-indigo-300 dark:bg-indigo-100 dark:text-indigo-800 active:scale-90"
-                          title={t("layout.alerts.acknowledge_tooltip", "Segna come letto")}
-                          aria-label={t("layout.alerts.acknowledge_tooltip", "Segna come letto")}
+                          title={t("layout.alerts.acknowledge_tooltip")}
+                          aria-label={t("layout.alerts.acknowledge_tooltip")}
                         >
                           <CheckIcon className="h-3 w-3 stroke-[2.5]" />
                         </button>
@@ -390,14 +390,11 @@ export function AlertsBellMenu() {
                   <div className="mt-1 flex items-baseline justify-between text-xs text-slate-400 dark:text-slate-500">
                     <span className="font-semibold text-indigo-300 dark:text-indigo-700">
                       {mat.days_remaining === 1
-                        ? t("layout.alerts.days_left_one", "Manca 1 giorno")
-                        : t("layout.alerts.days_left", {
-                            count: mat.days_remaining,
-                            defaultValue: `Mancano ${mat.days_remaining} giorni`,
-                          })}
+                        ? t("layout.alerts.days_left_one")
+                        : t("layout.alerts.days_left", { count: mat.days_remaining })}
                     </span>
                     <span>
-                      {t("layout.alerts.nominal", "Nominale")}:{" "}
+                      {t("layout.alerts.nominal")}:{" "}
                       <strong className="text-slate-200 dark:text-slate-800 font-mono">
                         {mat.nominal_value} {mat.currency}
                       </strong>
@@ -443,7 +440,7 @@ export function AlertsBellMenu() {
                         }
                         className="rounded bg-teal-500 px-2 py-1 text-[11px] font-bold text-slate-950 transition hover:bg-teal-400 cursor-pointer shadow-xs"
                       >
-                        {t("layout.alerts.create_trade", "⚡ Trade")}
+                        {t("layout.alerts.create_trade")}
                       </button>
                       <button
                         type="button"
@@ -453,8 +450,8 @@ export function AlertsBellMenu() {
                         }}
                         disabled={acknowledgeMutation.isPending}
                         className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-700/70 bg-slate-800/80 text-slate-400 hover:border-teal-500 hover:bg-teal-500/20 hover:text-teal-300 transition-all cursor-pointer dark:border-slate-300 dark:bg-slate-100 dark:text-slate-600 dark:hover:bg-teal-50 dark:hover:text-teal-700 active:scale-90"
-                        title={t("layout.alerts.acknowledge_tooltip", "Segna come letto")}
-                        aria-label={t("layout.alerts.acknowledge_tooltip", "Segna come letto")}
+                        title={t("layout.alerts.acknowledge_tooltip")}
+                        aria-label={t("layout.alerts.acknowledge_tooltip")}
                       >
                         <CheckIcon className="h-3 w-3 stroke-[2.5]" />
                       </button>
@@ -462,14 +459,14 @@ export function AlertsBellMenu() {
                   </div>
                   <div className="mt-1 flex items-baseline justify-between text-xs text-slate-400 dark:text-slate-500">
                     <span>
-                      {t("layout.alerts.trigger_price", "Trigger")}:{" "}
+                      {t("layout.alerts.trigger_price")}:{" "}
                       <strong className="text-slate-200 dark:text-slate-800">
                         {alert.trigger_price} €
                       </strong>
                     </span>
                     {alert.triggered_price && (
                       <span className="text-[11px]">
-                        {t("layout.alerts.detected_price", "Rilevato")}: {alert.triggered_price} €
+                        {t("layout.alerts.detected_price")}: {alert.triggered_price} €
                       </span>
                     )}
                   </div>
@@ -484,27 +481,27 @@ export function AlertsBellMenu() {
             {/* Empty States */}
             {selectedTab === "all" && counts.all === 0 && (
               <div className="py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                {t("layout.alerts.empty", "Nessun alert attivo al momento.")}
+                {t("layout.alerts.empty")}
               </div>
             )}
             {selectedTab === "trades" && counts.trades === 0 && (
               <div className="py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                {t("layout.alerts.empty_trades", "Nessun trade aperto ha toccato Take Profit o Stop Loss.")}
+                {t("layout.alerts.empty_trades")}
               </div>
             )}
             {selectedTab === "coupons" && counts.coupons === 0 && (
               <div className="py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                {t("layout.alerts.empty_coupons", "Nessuna cedola o stacco programmato per oggi.")}
+                {t("layout.alerts.empty_coupons")}
               </div>
             )}
             {selectedTab === "maturities" && counts.maturities === 0 && (
               <div className="py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                {t("layout.alerts.empty_maturities", "Nessuna obbligazione o BTP in scadenza imminente.")}
+                {t("layout.alerts.empty_maturities")}
               </div>
             )}
             {selectedTab === "scouting" && counts.scouting === 0 && (
               <div className="py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                {t("layout.alerts.empty_scouting", "Nessuna idea di scouting pronta al prezzo trigger.")}
+                {t("layout.alerts.empty_scouting")}
               </div>
             )}
           </div>
@@ -517,10 +514,10 @@ export function AlertsBellMenu() {
                 onClick={() => acknowledgeAllMutation.mutate()}
                 disabled={acknowledgeAllMutation.isPending}
                 className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800/60 py-1.5 text-xs font-semibold text-slate-300 transition-all hover:border-teal-500/50 hover:bg-teal-500/10 hover:text-teal-300 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-700 dark:hover:bg-slate-200 dark:hover:text-slate-900 cursor-pointer shadow-2xs active:scale-[0.99]"
-                title={t("layout.alerts.acknowledge_all_tooltip", "Segna tutti gli alert attivi come letti")}
+                title={t("layout.alerts.acknowledge_all_tooltip")}
               >
                 <CheckIcon className="h-3.5 w-3.5 text-teal-400 dark:text-teal-600 stroke-[2.5]" />
-                <span>{t("layout.alerts.acknowledge_all", "Segna tutti come letti")}</span>
+                <span>{t("layout.alerts.acknowledge_all")}</span>
               </button>
             )}
 
@@ -531,7 +528,7 @@ export function AlertsBellMenu() {
                   onClick={handleNavigateToScouting}
                   className="w-full text-center font-semibold text-teal-400 hover:text-teal-300 dark:text-teal-700 dark:hover:text-teal-800 transition cursor-pointer text-[11px]"
                 >
-                  {t("layout.alerts.view_all_scouting", "Vedi tutte le Idee di Scouting ➔")}
+                  {t("layout.alerts.view_all_scouting")}
                 </button>
               ) : selectedTab === "trades" ? (
                 <button
@@ -539,7 +536,7 @@ export function AlertsBellMenu() {
                   onClick={() => handleNavigateToTrades()}
                   className="w-full text-center font-semibold text-teal-400 hover:text-teal-300 dark:text-teal-700 dark:hover:text-teal-800 transition cursor-pointer text-[11px]"
                 >
-                  {t("layout.alerts.view_all_trades", "Vedi tutti i Trade ➔")}
+                  {t("layout.alerts.view_all_trades")}
                 </button>
               ) : selectedTab === "coupons" || selectedTab === "maturities" ? (
                 <button
@@ -547,7 +544,7 @@ export function AlertsBellMenu() {
                   onClick={() => handleNavigateToPortfolio()}
                   className="w-full text-center font-semibold text-amber-400 hover:text-amber-300 dark:text-amber-700 dark:hover:text-amber-800 transition cursor-pointer text-[11px]"
                 >
-                  {t("layout.alerts.view_all_bonds", "Vedi Portafoglio ➔")}
+                  {t("layout.alerts.view_all_bonds")}
                 </button>
               ) : (
                 <div className="w-full flex items-center justify-between text-[11px] text-slate-400">
@@ -556,7 +553,7 @@ export function AlertsBellMenu() {
                     onClick={() => handleNavigateToTrades()}
                     className="hover:text-teal-300 dark:hover:text-teal-700 transition cursor-pointer"
                   >
-                    {t("layout.alerts.tab_trades", "Trade")}
+                    {t("layout.alerts.tab_trades")}
                   </button>
                   <span>•</span>
                   <button
@@ -564,7 +561,7 @@ export function AlertsBellMenu() {
                     onClick={() => handleNavigateToPortfolio()}
                     className="hover:text-amber-300 dark:hover:text-amber-700 transition cursor-pointer"
                   >
-                    {t("layout.alerts.tab_coupons", "Cedole")}
+                    {t("layout.alerts.tab_coupons")}
                   </button>
                   <span>•</span>
                   <button
@@ -572,7 +569,7 @@ export function AlertsBellMenu() {
                     onClick={handleNavigateToScouting}
                     className="hover:text-teal-300 dark:hover:text-teal-700 transition cursor-pointer"
                   >
-                    {t("layout.alerts.tab_scouting", "Scouting")}
+                    {t("layout.alerts.tab_scouting")}
                   </button>
                 </div>
               )}

@@ -104,3 +104,138 @@ msgstr "You cannot deactivate your own account"
 
 msgid "errors.user_has_data"
 msgstr "User still owns data, disable the account instead of deleting it"
+
+msgid "errors.cannot_delete_self"
+msgstr "You cannot delete your own account"
+
+msgid "errors.current_password_required"
+msgstr "Current password is required"
+
+msgid "errors.euronext_sync_failed"
+msgstr "Euronext sync failed: {detail}"
+
+msgid "errors.exchange_name_required"
+msgstr "Exchange name is required"
+
+msgid "errors.exchange_not_euronext"
+msgstr "Exchange is not linked to Euronext"
+
+msgid "errors.exchange_not_found"
+msgstr "Exchange not found"
+
+msgid "errors.not_found"
+msgstr "Not found"
+
+msgid "errors.trade_idea_not_found"
+msgstr "Trade idea not found"
+
+msgid "errors.exit_tranche_closed"
+msgstr "This tranche is already closed"
+
+msgid "errors.exit_type_invalid"
+msgstr "Invalid exit type"
+
+msgid "errors.exit_bonds_only"
+msgstr "This exit type is available for bonds only"
+
+msgid "errors.exit_maturity_bonds_only"
+msgstr "Natural maturity is available for bonds only"
+
+msgid "errors.exit_maturity_not_reached"
+msgstr "Maturity redemption date has not been reached yet"
+
+msgid "errors.exit_date_future"
+msgstr "Exit date cannot be in the future"
+
+msgid "errors.exit_date_before_entry"
+msgstr "Exit date cannot be earlier than the entry date"
+
+msgid "errors.exit_quantity_invalid"
+msgstr "Invalid quantity"
+
+msgid "errors.exit_price_invalid"
+msgstr "Invalid exit price"
+
+msgid "errors.exit_accrued_invalid"
+msgstr "Invalid exit accrued interest"
+
+msgid "errors.exit_fees_invalid"
+msgstr "Invalid fees"
+
+msgid "errors.exit_coupons_invalid"
+msgstr "Invalid coupons/bonus"
+
+msgid "errors.exit_taxes_invalid"
+msgstr "Invalid taxes"
+
+msgid "errors.euronext_query_invalid"
+msgstr "Unrecognized Euronext query: '{query}'. Enter an ISIN or a Euronext URL."
+
+msgid "errors.euronext_lookup_failed"
+msgstr "Error fetching Euronext data for '{query}': {detail}"
+
+msgid "errors.euronext_asset_not_bond"
+msgstr "This asset is not a bond: Euronext sync is not available"
+
+msgid "errors.euronext_asset_missing_identifier"
+msgstr "The asset has no ISIN or symbol for the Euronext lookup"
+
+msgid "errors.euronext_no_bond_data"
+msgstr "No bond data found on Euronext"
+
+msgid "warnings.exit_bonus_forfeited"
+msgstr "Early sale: the CUM loyalty bonus is not recognized on the sold quantity."
+
+msgid "warnings.exit_partial_remaining"
+msgstr "Partial sale: {quantity} remains in the tranche."
+
+msgid "warnings.exit_tranche_closed"
+msgstr "The tranche will be closed."
+
+msgid "warnings.exit_capital_gain_deferred"
+msgstr "Capital gain tax is deferred to year end according to the broker configuration."
+
+msgid "test.mock_ready"
+msgstr "Mock provider (Offline) ready to use."
+
+msgid "test.success"
+msgstr "{provider} connection successful ({model})!"
+
+msgid "test.success_ollama"
+msgstr "Ollama connection successful ({url})!"
+
+msgid "test.connection_failed"
+msgstr "Connection failed"
+
+msgid "test.missing_api_key"
+msgstr "Missing API key for {provider}."
+
+msgid "test.missing_model"
+msgstr "Model identifier missing. Enter the model name to use."
+
+msgid "test.api_error"
+msgstr "{provider} API error"
+
+msgid "test.ollama_error"
+msgstr "Ollama error"
+
+msgid "test.unsupported_provider"
+msgstr "Unsupported provider"
+
+msgid "test.unknown_provider"
+msgstr "Unknown provider: {provider}"
+
+msgid "test.connection_error"
+msgstr "Connection error"
+
+msgid "test.host_unreachable"
+msgstr "Cannot reach the host server: {detail}"
+
+msgid "test.timeout"
+msgstr "Connection timeout"
+
+msgid "test.timeout_detail"
+msgstr "The request took longer than 12 seconds."
+
+msgid "test.unexpected_error"
+msgstr "Unexpected error"
