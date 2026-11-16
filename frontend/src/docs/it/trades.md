@@ -49,6 +49,12 @@ Se hai popolato l'archivio titoli (vedi [Ticker](tickers.md)), il campo ticker s
 
 La sezione **Trade** offre una panoramica tabellare avanzata per consultare, filtrare e revisionare lo storico operativo.
 
+### Alert Prezzi di Uscita (Take Profit & Stop Loss Raggiunti)
+
+Quando un'operazione aperta raggiunge il livello di prezzo impostato come Take Profit o Stop Loss:
+- **Banner superiore in evidenza**: in cima alla pagina compare un banner riepilogativo con il conteggio dei trade coinvolti e pillole di filtro rapido con cui isolare all'istante il titolo interessato.
+- **Badge animato nella tabella**: accanto al ticker nella colonna simbolo compare un badge pulsante (`🎯 TP` o `🛑 SL`), che segnala visivamente la necessità di intervenire sulla posizione (es. presa di profitto parziale, chiusura o trailing stop).
+
 ### 1. Preset di Data e Filtri Rapidi
 
 In cima alla tabella sono presenti comandi di filtraggio avanzati:

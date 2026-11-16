@@ -1,16 +1,33 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.1] - 2026-11-16
 
-- Full internationalization (i18n) sweep across frontend and backend
-  - Migrated all remaining hardcoded Italian UI copy to `react-i18next` keys (Holding detail, Brokers, Accounts, Calendar, Trades, right-side editor toolbar, analysis history/purge, notes, scouting, dashboard widgets).
-  - Removed Italian default values from `t()` calls: the locale catalogs are now the single source of truth, so a missing key can no longer leak Italian into the English UI.
-  - Added the missing `common.*`, `assets.*`, `portfolio.*`, `trades.*`, `notes.*`, `dashboard.*`, `analysis.*` and `trade_detail.*` keys; fixed i18next pluralization (`_one`/`_other`) for counted strings.
-  - Replaced the manual `isItalian ? ... : ...` branches in the Calendar page with regular translation keys.
+- Unified Notifications & Alert Center
+  - Live Take Profit & Stop Loss alerts for open trades (evaluating Long and Short positions against real-time market prices) with high-visibility badges in the topbar bell menu and an alert banner atop `TradesPage`.
+  - Today's coupon distribution alerts for active bond and ETF holdings with estimated net and gross cash flow amounts and direct navigation to the Bond Calendar.
+  - Natural maturity alerts for BTPs and bonds maturing within a customizable threshold window (default: 30 days) displaying nominal values and remaining countdown.
+  - Multi-category tabbed filtering (`Tutti`, `Trade`, `Cedole`, `Scadenze`, `Scouting`) with unified badge counting.
+- Persistent Multi-Device Alert Acknowledgment
+  - Single-alert acknowledgment ("✓") on each card to dismiss seen notifications without needing to close or modify positions immediately.
+  - Global "Segna tutti come letti" action to zero active alerts simultaneously.
+  - Server-side persistence in PostgreSQL user preferences JSONB (`user.preferences.acknowledged_alerts`), ensuring read state is synced across all devices and sessions.
+  - Undo endpoint (`DELETE /api/alerts/acknowledge/{alert_key}`) and support for displaying already-acknowledged notifications.
+- TradingView Layering & Frontend Design Overhaul
+  - Fixed hardware-accelerated HTML5 `<canvas>` compositing bug where underlying TradingView lightweight-charts shone through the dropdown popover by removing `backdrop-blur` and replacing semi-transparent containers with 100% solid, opaque backgrounds.
+  - Redesigned `AlertsBellMenu` popup with an uncluttered header, distinctive colored left-accent borders (`border-l-[3px]`) for instant category scanning, and a dedicated bottom action footer.
+- Holding Price History & Dashboard KPI Aggregation Fixes
+  - Integrated realistic historical market prices (Euronext/yfinance series) decoupled from pull-to-par amortization projections on holding detail charts.
+  - Corrected dashboard KPI daily PnL and tax aggregation when no holding exits exist.
+- Full Internationalization (i18n) Sweep across Frontend and Backend
+  - Migrated all remaining hardcoded Italian UI copy to `react-i18next` keys (Holding detail, Brokers, Accounts, Calendar, Trades, rich text editor toolbar, analysis history/purge, notes, scouting, dashboard widgets).
+  - Removed Italian default values from `t()` calls: the locale catalogs are now the single source of truth, preventing missing keys from leaking Italian into the English UI.
+  - Added missing `common.*`, `assets.*`, `portfolio.*`, `trades.*`, `notes.*`, `dashboard.*`, `analysis.*`, and `trade_detail.*` keys; standardized i18next pluralization (`_one`/`_other`).
+  - Replaced manual language-branching logic with regular translation keys.
   - Number and date formatting now follows the active UI language by default (`getActiveLocale()`), and `<html lang>` is kept in sync on language change.
-  - zod validation messages are now localized through schema factories.
-  - Backend: added the 8 missing `localized_error` catalog entries, converted the holding-exit service messages and warnings to translatable codes, localized Euronext sync/lookup errors, and made the LLM connectivity test and mock reports follow the request language.
-  - New `npm run i18n:check` guardrail (key parity, missing/unused keys, hardcoded Italian strings) wired into CI together with the frontend build.
+  - Zod validation messages localized through schema factories.
+  - Backend: added missing `localized_error` catalog entries, converted holding-exit service messages and warnings to translatable codes, localized Euronext sync/lookup errors, and aligned LLM connectivity tests and mock reports with the request language.
+  - New automated `npm run i18n:check` guardrail in CI verifying key parity, placeholders, and absence of hardcoded literals.
+- Version bump to 0.3.1 (Backend 0.3.1 / Frontend 0.3.1)
 
 ## [0.3.0] - 2026-11-15
 

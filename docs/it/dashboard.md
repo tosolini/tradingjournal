@@ -21,6 +21,19 @@ La pagina principale offre una sintesi operativa completa e avanzata dell'intero
 
 ---
 
+### Centro Notifiche & Alert (Campanella)
+
+Nella barra superiore è sempre accessibile il **Centro Notifiche & Alert**, che consolida in un unico punto tutte le segnalazioni operative rilevanti:
+
+- **🎯 Trade Take Profit / Stop Loss**: allerta in tempo reale se un'operazione aperta tocca o supera il target price o scende sotto lo stop loss.
+- **💰 Cedole Oggi**: notifica automatica nella giornata esatta di stacco cedola per obbligazioni, BTP ed ETF a distribuzione, con indicazione dell'importo stimato netto e del conto di accredito.
+- **⏳ Scadenza BTP**: promemoria progressivo (countdown) per le obbligazioni che giungono alla loro scadenza naturale (finestra configurabile nelle Impostazioni, predefinita a 30 giorni).
+- **⚡ Scouting**: idee di trading monitorate che hanno raggiunto il prezzo trigger impostato.
+
+Ogni notifica include una spunta (**✓**) per confermare la **presa visione (Acknowledge)**; è inoltre disponibile il pulsante **Segna tutti come letti** a piè di pagina per azzerare il badge numerico. Lo stato letto viene sincronizzato sul server e memorizzato nel profilo utente su tutti i dispositivi.
+
+---
+
 ### Grafici e Pannelli Analitici
 
 | Pannello | Contenuto e Funzionalità |

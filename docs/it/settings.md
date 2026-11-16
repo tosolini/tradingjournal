@@ -95,6 +95,12 @@ Gestisci il comportamento automatico delle posizioni di portafoglio:
 
 L'operazione è idempotente e viene eseguita una sola volta per tranche. La preferenza è disattivata di default; puoi comunque registrare manualmente il rimborso dal dettaglio posizione.
 
+## Notifiche & Alert
+
+Configura i parametri di avviso personalizzati:
+
+- **Preavviso Scadenza BTP / Obbligazioni (giorni)**: imposta con quanti giorni di anticipo rispetto alla data di scadenza naturale dei titoli desideri visualizzare la notifica nella campanella e nel banner del portafoglio (predefinito: **30 giorni**).
+
 ## Sessione
 
 - **Logout** — termina la sessione corrente e torna alla pagina di login
