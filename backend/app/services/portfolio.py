@@ -449,7 +449,7 @@ def get_holding_price_history(
             from app.services.euronext import fetch_euronext_chart_prices
             chart_prices = fetch_euronext_chart_prices(sym_upper)
             for d_str, price in chart_prices.items():
-                if start_history_date.isoformat() <= d_str <= today.isoformat() and price > Decimal("0"):
+                if (snapshots[-1].snapshot_date + timedelta(days=1) if snapshots else start_history_date).isoformat() <= d_str <= today.isoformat() and price > Decimal("0"):
                     points_dict[d_str] = price
         except Exception as e:
             logger.warning("Error fetching Euronext chart prices for %s: %s", h.asset.symbol, e)
@@ -459,11 +459,11 @@ def get_holding_price_history(
             import yfinance as yf
             yf_symbol = _normalize_yfinance_symbol(h.asset.symbol, h.asset.exchange)
             ticker = yf.Ticker(yf_symbol)
-            hist = ticker.history(start=start_history_date.isoformat(), end=(today + timedelta(days=1)).isoformat())
+            hist = ticker.history(start=(snapshots[-1].snapshot_date + timedelta(days=1) if snapshots else start_history_date).isoformat(), end=(today + timedelta(days=1)).isoformat())
             if not hist.empty:
                 for idx, row in hist.iterrows():
                     d_str = idx.strftime("%Y-%m-%d")
-                    if start_history_date.isoformat() <= d_str <= today.isoformat():
+                    if (snapshots[-1].snapshot_date + timedelta(days=1) if snapshots else start_history_date).isoformat() <= d_str <= today.isoformat():
                         val = row.get("Close")
                         if val is not None and not (isinstance(val, float) and val != val):
                             points_dict[d_str] = Decimal(str(round(float(val), 4)))
