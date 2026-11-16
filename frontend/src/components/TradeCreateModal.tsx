@@ -436,11 +436,13 @@ function QuickTradeForm({ onClose, initialValues }: { onClose: () => void; initi
     onSuccess: async (created: Trade) => {
       qc.invalidateQueries({ queryKey: ["trades"] });
       qc.invalidateQueries({ queryKey: ["recent-executions"] });
+      qc.invalidateQueries({ queryKey: ["unified-alerts"] });
       if (initialValues?.tradeIdeaId && created?.id) {
         try {
           await tradeIdeasApi.convert(initialValues.tradeIdeaId, created.id);
           qc.invalidateQueries({ queryKey: ["trade-ideas"] });
           qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+          qc.invalidateQueries({ queryKey: ["unified-alerts"] });
         } catch (e) {
           console.error("Failed to mark trade idea as converted", e);
         }
@@ -873,11 +875,13 @@ export function TradeCreateModal({ open, onClose, initialValues }: Props) {
     onSuccess: async (createdTrade) => {
       qc.invalidateQueries({ queryKey: ["trades"] });
       qc.invalidateQueries({ queryKey: ["recent-executions"] });
+      qc.invalidateQueries({ queryKey: ["unified-alerts"] });
       if (initialValues?.tradeIdeaId && createdTrade?.id) {
         try {
           await tradeIdeasApi.convert(initialValues.tradeIdeaId, createdTrade.id);
           qc.invalidateQueries({ queryKey: ["trade-ideas"] });
           qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+          qc.invalidateQueries({ queryKey: ["unified-alerts"] });
         } catch (e) {
           console.error("Failed to mark trade idea as converted", e);
         }

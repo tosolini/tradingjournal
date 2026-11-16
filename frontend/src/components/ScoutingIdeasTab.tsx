@@ -66,6 +66,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trade-ideas"] });
       qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+      qc.invalidateQueries({ queryKey: ["unified-alerts"] });
     },
   });
 
@@ -74,6 +75,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trade-ideas"] });
       qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+      qc.invalidateQueries({ queryKey: ["unified-alerts"] });
     },
   });
 
@@ -82,6 +84,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trade-ideas"] });
       qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+      qc.invalidateQueries({ queryKey: ["unified-alerts"] });
     },
   });
 
@@ -91,6 +94,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
       setIdeaToDelete(null);
       qc.invalidateQueries({ queryKey: ["trade-ideas"] });
       qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+      qc.invalidateQueries({ queryKey: ["unified-alerts"] });
     },
   });
 
@@ -695,6 +699,7 @@ export function ScoutingIdeasTab({ initialSelectedIdeaId }: ScoutingIdeasTabProp
             setEditingIdea(null);
             qc.invalidateQueries({ queryKey: ["trade-ideas"] });
             qc.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+            qc.invalidateQueries({ queryKey: ["unified-alerts"] });
           }}
         />
       )}

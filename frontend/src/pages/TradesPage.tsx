@@ -2,11 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { ApiError, RecentExecution, Trade, api } from "../lib/api";
+import { ApiError, RecentExecution, Trade, alertsApi, api } from "../lib/api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { useToast } from "../contexts/ToastContext";
 import { formatNumber, getNumberLocale } from "../lib/numbers";
 import {
+  AlertCircleIcon,
   EditIcon,
   EyeIcon as ViewIcon,
   ImageIcon,
@@ -330,6 +331,15 @@ export function TradesPage() {
       }),
   });
 
+  const { data: unifiedAlerts } = useQuery({
+    queryKey: ["unified-alerts"],
+    queryFn: () => alertsApi.getUnifiedAlerts(),
+    refetchInterval: 30000,
+  });
+
+  const tradeAlerts = useMemo(() => unifiedAlerts?.trades || [], [unifiedAlerts]);
+  const tradeAlertsMap = useMemo(() => new Map(tradeAlerts.map((a) => [a.trade_id, a])), [tradeAlerts]);
+
   const parseApiError = (err: unknown): string => {
     if (err instanceof ApiError) {
       return err.message || t("trades.request_failed");
@@ -652,6 +662,56 @@ export function TradesPage() {
         </table>
       </section>
 
+      {/* Trade Price Alerts Banner */}
+      {tradeAlerts.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-4 dark:border-amber-300 dark:bg-amber-50/60 shadow-sm animate-in fade-in">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-amber-500/20 p-2 text-amber-400 dark:text-amber-800 shrink-0">
+                <AlertCircleIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-amber-200 dark:text-amber-900">
+                  {t("trades.alerts_banner_title", "Alert Prezzi di Uscita Raggiunti")}
+                </h3>
+                <p className="text-xs text-amber-300/80 dark:text-amber-800/80 mt-0.5">
+                  {t("trades.alerts_banner_desc", {
+                    count: tradeAlerts.length,
+                    defaultValue: `${tradeAlerts.length} trade aperti hanno raggiunto i livelli di Take Profit o Stop Loss impostati.`,
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {tradeAlerts.map((alert) => (
+                <button
+                  key={`banner-alert-${alert.trade_id}`}
+                  type="button"
+                  onClick={() => {
+                    setTradeSearch(alert.symbol);
+                    setStatusFilter("open");
+                    setPage(1);
+                  }}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                    alert.alert_type === "take_profit"
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 dark:bg-emerald-100 dark:text-emerald-900"
+                      : "bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 dark:bg-rose-100 dark:text-rose-900"
+                  }`}
+                  title={`${alert.symbol} (${alert.alert_type})`}
+                >
+                  <span>{alert.symbol}</span>
+                  <span className="text-[10px] uppercase font-mono font-semibold">
+                    {alert.alert_type === "take_profit"
+                      ? t("trades.tp_hit_pill", "🎯 TP")
+                      : t("trades.sl_hit_pill", "🛑 SL")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="card overflow-x-auto">
         <div className="flex flex-col gap-2 border-b border-slate-700/80 px-4 py-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-1">
@@ -956,7 +1016,22 @@ export function TradesPage() {
                   onClick={() => navigate(`/trades/${trade.id}`)}
                   title={t("trades.view_trade") ?? "Visualizza trade"}
                 >
-                  {trade.symbol}
+                  <span className="inline-flex items-center gap-1.5">
+                    {trade.symbol}
+                    {tradeAlertsMap.get(trade.id) && (
+                      <span
+                        className={`rounded px-1.5 py-0.2 text-[9px] font-bold uppercase animate-pulse ${
+                          tradeAlertsMap.get(trade.id)?.alert_type === "take_profit"
+                            ? "bg-emerald-500/20 text-emerald-300 dark:bg-emerald-100 dark:text-emerald-800"
+                            : "bg-rose-500/20 text-rose-300 dark:bg-rose-100 dark:text-rose-800"
+                        }`}
+                      >
+                        {tradeAlertsMap.get(trade.id)?.alert_type === "take_profit"
+                          ? t("trades.tp_hit_pill", "🎯 TP")
+                          : t("trades.sl_hit_pill", "🛑 SL")}
+                      </span>
+                    )}
+                  </span>
                 </td>
                 <td className="px-3 py-2.5">
                   <span

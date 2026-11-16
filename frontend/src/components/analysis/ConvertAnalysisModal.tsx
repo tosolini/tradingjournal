@@ -150,6 +150,7 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trade-ideas"] });
       queryClient.invalidateQueries({ queryKey: ["trade-idea-alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["unified-alerts"] });
       toast.success(t("analysis.convert_modal.toasts.scouting_success", { symbol: report.symbol, defaultValue: `Idea di scouting per ${report.symbol} creata con successo!` }));
       onClose();
       navigate("/notes?tab=scouting");

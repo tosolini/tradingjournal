@@ -886,6 +886,8 @@ class TradeIdeaResponse(BaseModel):
     updated_at: datetime
     current_price: Optional[Decimal] = None
     distance_pct: Optional[Decimal] = None
+    alert_key: Optional[str] = None
+    is_acknowledged: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -1006,3 +1008,84 @@ class AnalysisReportDetail(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TradePriceAlert(BaseModel):
+    id: int
+    alert_key: str
+    trade_id: int
+    symbol: str
+    side: str
+    alert_type: str  # "take_profit" | "stop_loss"
+    threshold_price: Decimal
+    current_price: Decimal
+    delta_pct: Decimal
+    account_id: int
+    account_name: Optional[str] = None
+    market: Optional[str] = None
+    is_acknowledged: bool = False
+
+
+class BondCouponAlert(BaseModel):
+    id: str
+    alert_key: str
+    holding_id: int
+    asset_id: int
+    asset_symbol: str
+    asset_name: str
+    account_id: int
+    account_name: Optional[str] = None
+    coupon_date: date
+    gross_amount: Decimal
+    net_amount: Decimal
+    currency: str = "EUR"
+    is_acknowledged: bool = False
+
+
+class BondMaturityAlert(BaseModel):
+    id: int
+    alert_key: str
+    holding_id: int
+    asset_id: int
+    asset_symbol: str
+    asset_name: str
+    isin: Optional[str] = None
+    account_id: int
+    account_name: Optional[str] = None
+    maturity_date: date
+    days_remaining: int
+    nominal_value: Decimal
+    final_bonus_rate: Optional[Decimal] = None
+    currency: str = "EUR"
+    is_acknowledged: bool = False
+
+
+class AlertCounts(BaseModel):
+    all: int
+    trades: int
+    coupons: int
+    maturities: int
+    scouting: int
+
+
+class UnifiedAlertsResponse(BaseModel):
+    unread_count: int
+    counts: AlertCounts
+    trades: list[TradePriceAlert]
+    coupons: list[BondCouponAlert]
+    maturities: list[BondMaturityAlert]
+    scouting: list[TradeIdeaResponse]
+
+
+class AlertAcknowledgeRequest(BaseModel):
+    alert_key: str
+
+
+class AlertAcknowledgeAllRequest(BaseModel):
+    alert_keys: Optional[list[str]] = None
+
+
+class AlertAcknowledgeResponse(BaseModel):
+    success: bool
+    acknowledged_keys: list[str]
+
