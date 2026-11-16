@@ -963,20 +963,17 @@ function AlertsSettingsSection() {
   return (
     <section className="card p-4">
       <h2 className="mb-2 text-lg font-semibold">
-        {t("settings.alerts.title", "Notifiche & Alert")}
+        {t("settings.alerts.title")}
       </h2>
       <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">
-        {t(
-          "settings.alerts.description",
-          "Configura le preferenze per gli avvisi sui trade aperti e la scadenza naturale delle obbligazioni.",
-        )}
+        {t("settings.alerts.description")}
       </p>
       <div className="max-w-md space-y-2">
         <label
           htmlFor="bond-expiry-days-input"
           className="block text-sm font-medium text-slate-200 dark:text-slate-800"
         >
-          {t("settings.alerts.bond_expiry_days", "Preavviso Scadenza BTP / Obbligazioni (giorni)")}
+          {t("settings.alerts.bond_expiry_days")}
         </label>
         <div className="flex items-center gap-3">
           <input
@@ -992,10 +989,7 @@ function AlertsSettingsSection() {
             className="w-28 rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-1.5 text-sm"
           />
           <span className="text-xs text-slate-400 dark:text-slate-500">
-            {t(
-              "settings.alerts.bond_expiry_help",
-              "Numero di giorni prima della scadenza naturale per mostrare la notifica nella campanella e nella pagina portafoglio (predefinito: 30).",
-            )}
+            {t("settings.alerts.bond_expiry_help")}
           </span>
         </div>
       </div>
@@ -1007,17 +1001,17 @@ function AlertsSettingsSection() {
           className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50 cursor-pointer hover:bg-teal-400 transition"
         >
           {save.isPending
-            ? t("settings.portfolio.saving", "Salvataggio...")
-            : t("settings.alerts.save", "Salva preferenze alert")}
+            ? t("settings.portfolio.saving")
+            : t("settings.alerts.save")}
         </button>
         {state === "saved" && (
           <span className="text-sm text-teal-400">
-            {t("settings.alerts.saved", "Preferenze alert salvate con successo.")}
+            {t("settings.alerts.saved")}
           </span>
         )}
         {state === "error" && (
           <span className="text-sm text-rose-400">
-            {t("settings.alerts.error", "Errore durante il salvataggio.")}
+            {t("settings.alerts.error")}
           </span>
         )}
       </div>

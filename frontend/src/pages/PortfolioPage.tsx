@@ -1151,7 +1151,6 @@ export function PortfolioPage() {
                     {t("portfolio.alerts_coupon_banner", {
                       symbol: coupon.asset_symbol,
                       amount: `${coupon.net_amount} ${coupon.currency}`,
-                      defaultValue: `Oggi stacco cedola per ${coupon.asset_symbol}: ${coupon.net_amount} ${coupon.currency} stimate in accredito.`,
                     })}
                   </span>
                   <p className="text-xs text-amber-300/80 dark:text-amber-800">
@@ -1164,7 +1163,7 @@ export function PortfolioPage() {
                 onClick={() => setActiveTab("bonds")}
                 className="rounded-lg bg-amber-500/20 border border-amber-500/30 px-3 py-1 text-xs font-bold text-amber-300 hover:bg-amber-500/30 dark:bg-amber-100 dark:text-amber-900 cursor-pointer transition shrink-0"
               >
-                {t("layout.alerts.action_view_calendar", "Calendario Cedole")}
+                {t("layout.alerts.action_view_calendar")}
               </button>
             </div>
           ))}
@@ -1182,11 +1181,10 @@ export function PortfolioPage() {
                       symbol: mat.asset_symbol,
                       days: mat.days_remaining,
                       date: new Date(mat.maturity_date).toLocaleDateString(),
-                      defaultValue: `Attenzione: ${mat.asset_symbol} giungerà a scadenza naturale tra ${mat.days_remaining} giorni (il ${new Date(mat.maturity_date).toLocaleDateString()}).`,
                     })}
                   </span>
                   <p className="text-xs text-indigo-300/80 dark:text-indigo-800">
-                    {mat.asset_name} • {t("layout.alerts.nominal", "Nominale")}: {mat.nominal_value} {mat.currency}
+                    {mat.asset_name} • {t("layout.alerts.nominal")}: {mat.nominal_value} {mat.currency}
                   </p>
                 </div>
               </div>
@@ -1195,7 +1193,7 @@ export function PortfolioPage() {
                 onClick={() => setActiveTab("bonds")}
                 className="rounded-lg bg-indigo-500/20 border border-indigo-500/30 px-3 py-1 text-xs font-bold text-indigo-300 hover:bg-indigo-500/30 dark:bg-indigo-100 dark:text-indigo-900 cursor-pointer transition shrink-0"
               >
-                {t("layout.alerts.action_view_portfolio", "Dettagli BTP")}
+                {t("layout.alerts.action_view_portfolio")}
               </button>
             </div>
           ))}

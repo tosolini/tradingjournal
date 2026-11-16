@@ -672,12 +672,11 @@ export function TradesPage() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-amber-200 dark:text-amber-900">
-                  {t("trades.alerts_banner_title", "Alert Prezzi di Uscita Raggiunti")}
+                  {t("trades.alerts_banner_title")}
                 </h3>
                 <p className="text-xs text-amber-300/80 dark:text-amber-800/80 mt-0.5">
                   {t("trades.alerts_banner_desc", {
                     count: tradeAlerts.length,
-                    defaultValue: `${tradeAlerts.length} trade aperti hanno raggiunto i livelli di Take Profit o Stop Loss impostati.`,
                   })}
                 </p>
               </div>
@@ -702,8 +701,8 @@ export function TradesPage() {
                   <span>{alert.symbol}</span>
                   <span className="text-[10px] uppercase font-mono font-semibold">
                     {alert.alert_type === "take_profit"
-                      ? t("trades.tp_hit_pill", "🎯 TP")
-                      : t("trades.sl_hit_pill", "🛑 SL")}
+                      ? t("trades.tp_hit_pill")
+                      : t("trades.sl_hit_pill")}
                   </span>
                 </button>
               ))}
@@ -1027,8 +1026,8 @@ export function TradesPage() {
                         }`}
                       >
                         {tradeAlertsMap.get(trade.id)?.alert_type === "take_profit"
-                          ? t("trades.tp_hit_pill", "🎯 TP")
-                          : t("trades.sl_hit_pill", "🛑 SL")}
+                          ? t("trades.tp_hit_pill")
+                          : t("trades.sl_hit_pill")}
                       </span>
                     )}
                   </span>
