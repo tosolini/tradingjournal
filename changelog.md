@@ -4,7 +4,7 @@
 
 - Unified Notifications & Alert Center
   - Live Take Profit & Stop Loss alerts for open trades (evaluating Long and Short positions against real-time market prices) with high-visibility badges in the topbar bell menu and an alert banner atop `TradesPage`.
-  - Today's coupon distribution alerts for active bond and ETF holdings with estimated net cash flow amounts and direct navigation to the Bond Calendar.
+  - Today's coupon distribution alerts for active bond and ETF holdings with estimated net cash flow amounts and direct navigation to the Portfolio / Bond Calendar.
   - Natural maturity alerts for BTPs and bonds maturing within a customizable threshold window (default: 30 days) displaying nominal values and remaining countdown.
   - Multi-category tabbed filtering (`Tutti`, `Trade`, `Cedole`, `Scadenze`, `Scouting`) with unified badge counting.
 - Persistent Multi-Device Alert Acknowledgment

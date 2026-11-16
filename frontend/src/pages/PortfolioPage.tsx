@@ -1180,7 +1180,7 @@ export function PortfolioPage() {
                     {t("portfolio.alerts_maturity_banner", {
                       symbol: mat.asset_symbol,
                       days: mat.days_remaining,
-                      date: new Date(mat.maturity_date).toLocaleDateString(),
+                      date: new Date(mat.maturity_date).toLocaleDateString(locale),
                     })}
                   </span>
                   <p className="text-xs text-indigo-300/80 dark:text-indigo-800">
