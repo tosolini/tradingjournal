@@ -27,6 +27,11 @@
   - Zod validation messages localized through schema factories.
   - Backend: added missing `localized_error` catalog entries, converted holding-exit service messages and warnings to translatable codes, localized Euronext sync/lookup errors, and aligned LLM connectivity tests and mock reports with the request language.
   - New automated `npm run i18n:check` guardrail in CI verifying key parity, placeholders, and absence of hardcoded literals.
+- Dependency Upgrades & Security Updates
+  - Upgraded backend core frameworks: `fastapi` to 0.162.5, `psycopg` to 3.3.9.
+  - Upgraded frontend state management, charts, and forms: `@tanstack/react-query` to 5.107.1, `react-hook-form` to 7.92.0, `@hookform/resolvers` to 7.0.6, `lightweight-charts` to 5.3.0.
+  - Upgraded internationalization stack: `i18next` to 27.1.1, `react-i18next` to 18.0.1.
+  - Upgraded tooling and styling engines: `vite` to 8.3.8, `@vitejs/plugin-react` to 6.3.0, `tailwindcss` to 4.3.0, `@tailwindcss/postcss` to 4.3.5.
 - Version bump to 0.3.1 (Backend 0.3.1 / Frontend 0.3.1)
 
 ## [0.3.0] - 2026-11-15
