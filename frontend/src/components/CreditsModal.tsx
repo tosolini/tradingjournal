@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import packageJson from "../../package.json";
 import bullVectLogo from "../assets/bull_vect.svg";
 import tosoliniLogoLight from "../assets/tosolini-logo-light.png";
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function CreditsModal({ open, onClose }: Props) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const currentYear = new Date().getFullYear();
   const appVersion = packageJson.version;
@@ -40,34 +42,34 @@ export function CreditsModal({ open, onClose }: Props) {
 
   const links = [
     {
-      title: "Sito Personale",
+      title: t("layout.credits_modal.links.personal_site.title"),
       url: "https://www.tosolini.info",
       display: "www.tosolini.info",
-      desc: "Blog, articoli, portfolio e approfondimenti tecnologici",
+      desc: t("layout.credits_modal.links.personal_site.desc"),
       icon: GlobeIcon,
       color: "text-teal-400 dark:text-teal-600",
     },
     {
-      title: "Profilo GitHub",
+      title: t("layout.credits_modal.links.github.title"),
       url: "https://github.com/tosolini",
       display: "github.com/tosolini",
-      desc: "Repository open source, progetti e codice sorgente",
+      desc: t("layout.credits_modal.links.github.desc"),
       icon: GithubIcon,
       color: "text-slate-300 dark:text-slate-800",
     },
     {
-      title: "Profilo LinkedIn",
+      title: t("layout.credits_modal.links.linkedin.title"),
       url: "https://www.linkedin.com/in/waltertosolini/",
       display: "linkedin.com/in/waltertosolini",
-      desc: "Esperienze professionali, contatti e networking",
+      desc: t("layout.credits_modal.links.linkedin.desc"),
       icon: LinkedinIcon,
       color: "text-sky-400 dark:text-sky-600",
     },
     {
-      title: "Segnala un Bug o Richiesta",
+      title: t("layout.credits_modal.links.bug_report.title"),
       url: "https://github.com/tosolini/tradingjournal/issues",
       display: "github.com/tosolini/tradingjournal/issues",
-      desc: "Issue tracker e roadmap di sviluppo per TradingJournal",
+      desc: t("layout.credits_modal.links.bug_report.desc"),
       icon: HelpCircleIcon,
       color: "text-amber-400 dark:text-amber-600",
     },
@@ -89,7 +91,7 @@ export function CreditsModal({ open, onClose }: Props) {
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-100 dark:hover:text-slate-900 transition cursor-pointer"
-          aria-label="Chiudi"
+          aria-label={t("common.close")}
         >
           <XIcon className="h-5 w-5" />
         </button>
@@ -107,7 +109,8 @@ export function CreditsModal({ open, onClose }: Props) {
               </span>
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              Sviluppato da <strong className="font-semibold text-slate-300 dark:text-slate-700">Walter Tosolini</strong>
+              {t("layout.credits_modal.developed_by")}{" "}
+              <strong className="font-semibold text-slate-300 dark:text-slate-700">Walter Tosolini</strong>
             </p>
           </div>
         </div>
@@ -119,7 +122,7 @@ export function CreditsModal({ open, onClose }: Props) {
             target="_blank"
             rel="noreferrer"
             className="group flex flex-col items-center gap-2 transition hover:opacity-100"
-            title="Visita www.tosolini.info"
+            title={t("layout.credits_modal.visit_site")}
           >
             <img
               src={logoUrl}
@@ -172,7 +175,7 @@ export function CreditsModal({ open, onClose }: Props) {
             onClick={onClose}
             className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition cursor-pointer dark:bg-slate-100 dark:text-slate-800 dark:hover:bg-slate-200"
           >
-            Chiudi
+            {t("common.close")}
           </button>
         </div>
       </div>

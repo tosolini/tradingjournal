@@ -294,7 +294,7 @@ export function TradesPage() {
     onSuccess: () => {
       setDeleteError(null);
       qc.invalidateQueries({ queryKey: ["trades"] });
-      toast.success(t("trades.deleted_success", "Trade eliminato con successo"));
+      toast.success(t("trades.deleted_success"));
     },
   });
 
@@ -318,7 +318,7 @@ export function TradesPage() {
       qc.invalidateQueries({ queryKey: ["trades"] });
       qc.invalidateQueries({ queryKey: ["recent-executions"] });
       qc.invalidateQueries({ queryKey: ["kpis"] });
-      toast.success(t("trades.closed_success", "Trade chiuso con successo"));
+      toast.success(t("trades.closed_success"));
     },
   });
 
@@ -519,12 +519,12 @@ export function TradesPage() {
       if (typeof aValue === "number" && typeof bValue === "number") {
         comparison = aValue - bValue;
       } else {
-        comparison = String(aValue).localeCompare(String(bValue), "it");
+        comparison = String(aValue).localeCompare(String(bValue), locale);
       }
       return sortConfig.direction === "asc" ? comparison : -comparison;
     });
     return result;
-  }, [filteredTrades, sortConfig]);
+  }, [filteredTrades, sortConfig, locale]);
 
   const totalPages = Math.max(1, Math.ceil(sortedTrades.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -659,11 +659,11 @@ export function TradesPage() {
             {/* Quick date range presets */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1">
               {[
-                { key: "all", label: "Tutti" },
-                { key: "today", label: "Oggi" },
-                { key: "7d", label: "7 giorni" },
-                { key: "month", label: "Questo mese" },
-                { key: "ytd", label: "YTD" },
+                { key: "all", label: t("trades.range_all") },
+                { key: "today", label: t("trades.range_today") },
+                { key: "7d", label: t("trades.range_7d") },
+                { key: "month", label: t("trades.range_month") },
+                { key: "ytd", label: t("trades.range_ytd") },
               ].map((preset) => (
                 <button
                   key={preset.key}
@@ -715,9 +715,9 @@ export function TradesPage() {
               }}
               className="rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-950 dark:bg-white px-3 py-1.5 text-sm"
             >
-              <option value="all">Esito: Tutti</option>
-              <option value="win">Solo Win (+)</option>
-              <option value="loss">Solo Loss (-)</option>
+              <option value="all">{t("trades.outcome_all")}</option>
+              <option value="win">{t("trades.outcome_win")}</option>
+              <option value="loss">{t("trades.outcome_loss")}</option>
             </select>
             <div className="relative" ref={columnsMenuRef}>
               <button
@@ -947,14 +947,14 @@ export function TradesPage() {
                 <td
                   className="cursor-pointer px-3 py-2.5 hover:text-teal-300 dark:text-teal-900 tabular-nums text-xs"
                   onClick={() => navigate(`/trades/${trade.id}`)}
-                  title={t("trades.view_trade") ?? "Visualizza trade"}
+                  title={t("trades.view_trade")}
                 >
                   {new Date(trade.created_at).toLocaleDateString()}
                 </td>
                 <td
                   className="cursor-pointer px-3 py-2.5 font-bold text-teal-300 dark:text-teal-800 hover:underline text-sm"
                   onClick={() => navigate(`/trades/${trade.id}`)}
-                  title={t("trades.view_trade") ?? "Visualizza trade"}
+                  title={t("trades.view_trade")}
                 >
                   {trade.symbol}
                 </td>

@@ -25,4 +25,12 @@ void i18n
     },
   });
 
+function syncHtmlLang() {
+  if (typeof document === "undefined") return;
+  document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language ?? "en";
+}
+
+i18n.on("languageChanged", syncHtmlLang);
+syncHtmlLang();
+
 export default i18n;

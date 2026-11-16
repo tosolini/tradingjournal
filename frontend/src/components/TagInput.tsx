@@ -1,4 +1,5 @@
 import { KeyboardEvent, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type TagInputProps = {
   label: string;
@@ -21,6 +22,7 @@ export function TagInput({
   formatTagLabel,
   onChange,
 }: TagInputProps) {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState("");
 
   const availableSuggestions = useMemo(() => {
@@ -71,12 +73,12 @@ export function TagInput({
               type="button"
               onClick={() => removeTag(tag)}
               className="rounded-full border border-teal-500/40 bg-teal-500/15 px-2 py-1 text-xs text-teal-200 dark:text-teal-900"
-              title="Rimuovi tag"
+              title={t("tags.remove_tag")}
             >
               {(formatTagLabel?.(tag) ?? tag)} ×
             </button>
           ))}
-          {value.length === 0 ? <span className="text-xs text-slate-500">Nessun tag</span> : null}
+          {value.length === 0 ? <span className="text-xs text-slate-500">{t("tags.no_tags")}</span> : null}
         </div>
         <input
           value={inputValue}

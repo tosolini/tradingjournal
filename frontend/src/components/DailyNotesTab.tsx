@@ -25,33 +25,27 @@ import {
 const DISCIPLINE_PRESET_TAGS = [
   {
     key: "tag_plan_followed",
-    fallback: "Piano Rispettato",
     aliases: ["Piano Rispettato", "Plan Followed"],
   },
   {
     key: "tag_stop_loss_respected",
-    fallback: "Stop Loss Rispettato",
     aliases: ["Stop Loss Rispettato", "Stop Loss Respected"],
   },
   {
     key: "tag_target_reached",
-    fallback: "Target Raggiunto",
     aliases: ["Target Raggiunto", "Target Reached"],
   },
-  { key: "tag_fomo", fallback: "FOMO", aliases: ["FOMO"] },
+  { key: "tag_fomo", aliases: ["FOMO"] },
   {
     key: "tag_overtrading",
-    fallback: "Overtrading",
     aliases: ["Overtrading"],
   },
   {
     key: "tag_revenge_trading",
-    fallback: "Revenge Trading",
     aliases: ["Revenge Trading"],
   },
   {
     key: "tag_early_exit",
-    fallback: "Uscita Anticipata",
     aliases: ["Uscita Anticipata", "Early Exit"],
   },
 ] as const;
@@ -185,7 +179,7 @@ export function DailyNotesTab() {
       if (!preset) {
         return tag;
       }
-      return t(`notes.${preset.key}`, preset.fallback);
+      return t(`notes.${preset.key}`);
     },
     [t],
   );
@@ -411,13 +405,10 @@ export function DailyNotesTab() {
         <div>
           <h2 className="text-xl font-bold text-slate-100 dark:text-slate-900 flex items-center gap-2">
             <span>📓</span>
-            <span>{t("notes.title", "Diario Giornaliero & Psicologia")}</span>
+            <span>{t("notes.title")}</span>
           </h2>
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-            {t(
-              "notes.subtitle",
-              "Registra le condizioni generali di mercato, il tuo stato emotivo (mood) e la checklist di disciplina pre/post trading.",
-            )}
+            {t("notes.subtitle")}
           </p>
         </div>
 
@@ -444,7 +435,7 @@ export function DailyNotesTab() {
             className="flex items-center gap-1.5 rounded-lg bg-teal-500 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-md transition hover:bg-teal-400 active:scale-95 cursor-pointer"
           >
             <PlusIcon className="h-4 w-4 stroke-[2.5]" />
-            <span>{t("notes.new_note", "+ Nuova Nota")}</span>
+            <span>{t("notes.new_note")}</span>
           </button>
         </div>
       </div>
@@ -458,7 +449,7 @@ export function DailyNotesTab() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("notes.search_placeholder", "Cerca nel diario per parola chiave o simbolo...")}
+              placeholder={t("notes.search_placeholder")}
               className="w-full rounded-lg border border-slate-700/80 bg-slate-950 pl-9 pr-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 dark:border-slate-300 dark:bg-white dark:text-slate-900"
             />
           </div>
@@ -471,7 +462,7 @@ export function DailyNotesTab() {
               }}
               className="rounded-lg border border-slate-700 px-2.5 py-2 text-xs text-slate-400 hover:text-white dark:border-slate-300 dark:text-slate-600"
             >
-              {t("notes.reset_filters", "Azzera")}
+              {t("notes.reset_filters")}
             </button>
           )}
         </div>
@@ -510,7 +501,7 @@ export function DailyNotesTab() {
       {/* ── Notes Feed ────────────────────────────────────────── */}
       {isLoading ? (
         <div className="py-16 text-center text-xs text-slate-500">
-          {t("common.loading", "Caricamento in corso...")}
+          {t("common.loading")}
         </div>
       ) : filteredNotes.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-800 p-12 text-center dark:border-slate-300">
@@ -518,10 +509,10 @@ export function DailyNotesTab() {
             <CalendarIcon className="h-6 w-6" />
           </div>
           <h3 className="text-sm font-semibold text-slate-200 dark:text-slate-800">
-            {t("notes.no_notes_title", "Nessuna nota trovata")}
+            {t("notes.no_notes_title")}
           </h3>
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-            {t("notes.no_notes_desc", "Inizia a scrivere la tua prima riflessione di mercato o checklist emotiva.")}
+            {t("notes.no_notes_desc")}
           </p>
         </div>
       ) : (
@@ -581,7 +572,7 @@ export function DailyNotesTab() {
                       type="button"
                       onClick={() => onEdit(note)}
                       className="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white dark:hover:bg-slate-100"
-                      title={t("common.edit", "Modifica")}
+                      title={t("common.edit")}
                     >
                       <EditIcon className="h-3.5 w-3.5" />
                     </button>
@@ -589,7 +580,7 @@ export function DailyNotesTab() {
                       type="button"
                       onClick={() => setDeletePendingNoteId(note.id)}
                       className="rounded p-1.5 text-slate-500 hover:bg-red-500/10 hover:text-red-400"
-                      title={t("common.delete", "Elimina")}
+                      title={t("common.delete")}
                     >
                       <TrashIcon className="h-3.5 w-3.5" />
                     </button>
@@ -641,8 +632,8 @@ export function DailyNotesTab() {
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 dark:border-slate-200">
               <h3 className="text-base font-bold text-slate-100 dark:text-slate-900">
                 {editingNoteId
-                  ? t("notes.edit_note_title", "Modifica Nota Giornaliera")
-                  : t("notes.create_note_title", "Nuova Nota Giornaliera")}
+                  ? t("notes.edit_note_title")
+                  : t("notes.create_note_title")}
               </h3>
               <button
                 type="button"
@@ -658,7 +649,7 @@ export function DailyNotesTab() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                    {t("notes.date_label", "Data *")}
+                    {t("notes.date_label")}
                   </label>
                   <input
                     type="date"
@@ -669,7 +660,7 @@ export function DailyNotesTab() {
                 </div>
                 <div className="relative">
                   <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                    {t("notes.symbol_label", "Simbolo / Ticker (Opzionale)")}
+                    {t("notes.symbol_label")}
                   </label>
                   <input
                     type="text"
@@ -706,7 +697,7 @@ export function DailyNotesTab() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                    {t("notes.mood_label", "Mood / Stato Emotivo")}
+                    {t("notes.mood_label")}
                   </label>
                   <select
                     {...register("mood")}
@@ -721,15 +712,15 @@ export function DailyNotesTab() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                    {t("notes.volatility_label", "Volatilità di Mercato")}
+                    {t("notes.volatility_label")}
                   </label>
                   <select
                     {...register("market_volatility")}
                     className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-2 text-xs text-slate-100 dark:border-slate-300 dark:bg-white dark:text-slate-900"
                   >
-                    <option value="low">Bassa</option>
-                    <option value="medium">Media</option>
-                    <option value="high">Alta</option>
+                    <option value="low">{t("notes.volatility_low")}</option>
+                    <option value="medium">{t("notes.volatility_medium")}</option>
+                    <option value="high">{t("notes.volatility_high")}</option>
                   </select>
                 </div>
               </div>
@@ -737,7 +728,7 @@ export function DailyNotesTab() {
               {/* Summary */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                  {t("notes.summary_label", "Sintesi Giornaliera")}
+                  {t("notes.summary_label")}
                 </label>
                 <input
                   type="text"
@@ -750,7 +741,7 @@ export function DailyNotesTab() {
               {/* Rich Text / Notes WYSIWYG */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 dark:text-slate-700 mb-1">
-                  {t("notes.content_label", "Contenuto & Riflessioni")}
+                  {t("notes.content_label")}
                 </label>
                 <Controller
                   control={control}
@@ -759,10 +750,7 @@ export function DailyNotesTab() {
                     <RichTextEditor
                       value={field.value || ""}
                       onChange={field.onChange}
-                      placeholder={t(
-                        "notes.rich_editor_placeholder",
-                        "Scrivi i dettagli della tua nota, riflessioni psicologiche, lezioni apprese...",
-                      )}
+                      placeholder={t("notes.rich_editor_placeholder")}
                       minHeight="150px"
                     />
                   )}
@@ -772,8 +760,8 @@ export function DailyNotesTab() {
               {/* Discipline Tags */}
               <div>
                 <TagInput
-                  label={t("notes.discipline_tags_label", "Tag Disciplina & Condizioni")}
-                  placeholder="Aggiungi tag disciplina..."
+                  label={t("notes.discipline_tags_label")}
+                  placeholder={t("notes.tag_input_placeholder")}
                   value={marketConditionTags}
                   suggestions={DISCIPLINE_PRESET_TAGS.map((p) => p.key)}
                   formatTagLabel={formatMarketConditionTag}
@@ -788,7 +776,7 @@ export function DailyNotesTab() {
                   onClick={() => setIsNoteModalOpen(false)}
                   className="rounded-lg border border-slate-700 px-3.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 dark:border-slate-300 dark:text-slate-700"
                 >
-                  {t("common.cancel", "Annulla")}
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
@@ -796,10 +784,10 @@ export function DailyNotesTab() {
                   className="rounded-lg bg-teal-500 px-4 py-2 text-xs font-bold text-slate-950 shadow-md transition hover:bg-teal-400 disabled:opacity-50"
                 >
                   {upsert.isPending
-                    ? t("common.saving", "Salvataggio...")
+                    ? t("common.saving")
                     : editingNoteId
-                      ? t("common.save_changes", "Salva Modifiche")
-                      : t("notes.create_submit", "Salva Nota")}
+                      ? t("common.save_changes")
+                      : t("notes.create_submit")}
                 </button>
               </div>
             </form>
@@ -810,8 +798,8 @@ export function DailyNotesTab() {
       {/* ── Confirm Delete Modal ──────────────────────────────── */}
       {deletePendingNoteId && (
         <ConfirmModal
-          message={t("notes.confirm_delete", "Sei sicuro di voler eliminare questa nota giornaliera?")}
-          confirmLabel={t("common.delete", "Elimina")}
+          message={t("notes.confirm_delete")}
+          confirmLabel={t("common.delete")}
           onConfirm={() => remove.mutate(deletePendingNoteId)}
           onCancel={() => setDeletePendingNoteId(null)}
           isPending={remove.isPending}

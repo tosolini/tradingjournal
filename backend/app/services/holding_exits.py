@@ -7,6 +7,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.i18n import translate_locale
 from app.models import Account, Asset, BondDetail, CashLedgerEntry, Holding, HoldingExit
 from app.schemas import (
     HoldingExitCreate,
@@ -92,41 +93,43 @@ def _coupon_flows(
     return coupons, bonus
 
 
-def calculate_holding_exit(holding: Holding, payload: HoldingExitCreate) -> dict:
+def calculate_holding_exit(
+    holding: Holding, payload: HoldingExitCreate, locale: str = "en"
+) -> dict:
     """Compute an exit preview without persisting anything."""
     if holding.quantity <= Decimal("0"):
-        raise ValueError("La tranche è già chiusa")
+        raise ValueError("errors.exit_tranche_closed")
 
     exit_type = (payload.exit_type or "market_sale").strip().lower()
     if exit_type not in EXIT_TYPES:
-        raise ValueError("Tipo di uscita non valido")
+        raise ValueError("errors.exit_type_invalid")
 
     is_bond = is_bond_instrument(holding.asset.instrument_type)
     bond_detail = holding.asset.bond_detail if is_bond else None
     today = date.today()
 
     if exit_type in {"maturity", "early_redemption"} and not is_bond:
-        raise ValueError("Questo tipo di uscita è disponibile solo per le obbligazioni")
+        raise ValueError("errors.exit_bonds_only")
 
     if exit_type == "maturity":
         if not bond_detail:
-            raise ValueError("La scadenza naturale è disponibile solo per le obbligazioni")
+            raise ValueError("errors.exit_maturity_bonds_only")
         exit_date = bond_detail.maturity_date
         if exit_date > today:
-            raise ValueError("Il rimborso a scadenza non è ancora avvenuto")
+            raise ValueError("errors.exit_maturity_not_reached")
     else:
         exit_date = payload.exit_date or today
         if exit_date > today:
-            raise ValueError("La data di uscita non può essere nel futuro")
+            raise ValueError("errors.exit_date_future")
         if exit_date < holding.entry_date:
-            raise ValueError("La data di uscita non può precedere la data di ingresso")
+            raise ValueError("errors.exit_date_before_entry")
 
     quantity_before = holding.quantity
     quantity = quantity_before if exit_type == "maturity" else (
         payload.quantity if payload.quantity is not None else quantity_before
     )
     if quantity <= Decimal("0") or quantity > quantity_before:
-        raise ValueError("Quantità non valida")
+        raise ValueError("errors.exit_quantity_invalid")
     quantity_after = quantity_before - quantity
 
     if payload.clean_price is not None:
@@ -136,7 +139,7 @@ def calculate_holding_exit(holding: Holding, payload: HoldingExitCreate) -> dict
     else:
         clean_price = _default_price(holding)
     if clean_price <= Decimal("0"):
-        raise ValueError("Prezzo di uscita non valido")
+        raise ValueError("errors.exit_price_invalid")
 
     if payload.accrued_interest_out is not None:
         accrued_out = payload.accrued_interest_out
@@ -147,13 +150,13 @@ def calculate_holding_exit(holding: Holding, payload: HoldingExitCreate) -> dict
     else:
         accrued_out = Decimal("0")
     if accrued_out < Decimal("0"):
-        raise ValueError("Rateo di uscita non valido")
+        raise ValueError("errors.exit_accrued_invalid")
 
     fee_in = holding.fee_in or Decimal("0")
     fee_in_allocated = _q2(fee_in * quantity / quantity_before) if quantity_before else Decimal("0")
     fees = payload.fees or Decimal("0")
     if fees < Decimal("0"):
-        raise ValueError("Commissioni non valide")
+        raise ValueError("errors.exit_fees_invalid")
 
     computed_coupons, computed_bonus = _coupon_flows(holding, quantity, exit_date)
     coupons_received = (
@@ -167,7 +170,7 @@ def calculate_holding_exit(holding: Holding, payload: HoldingExitCreate) -> dict
         else (computed_bonus if exit_type == "maturity" else Decimal("0"))
     )
     if coupons_received < Decimal("0") or bonus_received < Decimal("0"):
-        raise ValueError("Cedole/premio non validi")
+        raise ValueError("errors.exit_coupons_invalid")
 
     if is_bond:
         principal = quantity * clean_price / Decimal("100")
@@ -206,7 +209,7 @@ def calculate_holding_exit(holding: Holding, payload: HoldingExitCreate) -> dict
 
     taxes = payload.taxes if payload.taxes is not None else tax_estimate
     if taxes < Decimal("0"):
-        raise ValueError("Imposte non valide")
+        raise ValueError("errors.exit_taxes_invalid")
     withheld_taxes = taxes if tax_mode == "immediate" else interest_tax
     net_proceeds = gross_proceeds - fees - withheld_taxes
 
@@ -217,19 +220,19 @@ def calculate_holding_exit(holding: Holding, payload: HoldingExitCreate) -> dict
         and bond_detail
         and bond_detail.final_bonus_rate > Decimal("0")
     ):
-        warnings.append(
-            "Vendita anticipata: il premio fedeltà CUM non viene riconosciuto sulla quantità venduta."
-        )
+        warnings.append(translate_locale(locale, "warnings.exit_bonus_forfeited"))
     if quantity_after > Decimal("0"):
         warnings.append(
-            f"Vendita parziale: restano {_q6(quantity_after)} di quantità nella tranche."
+            translate_locale(
+                locale,
+                "warnings.exit_partial_remaining",
+                quantity=_q6(quantity_after),
+            )
         )
     else:
-        warnings.append("La tranche verrà chiusa.")
+        warnings.append(translate_locale(locale, "warnings.exit_tranche_closed"))
     if tax_mode == "year_end" and capital_gain_tax > Decimal("0"):
-        warnings.append(
-            "Tassa sul capital gain differita a fine anno secondo la configurazione del broker."
-        )
+        warnings.append(translate_locale(locale, "warnings.exit_capital_gain_deferred"))
 
     coupon_net = coupons_received - (coupons_received * bond_tax_rate / Decimal("100"))
     bonus_net = bonus_received - (bonus_received * bond_tax_rate / Decimal("100"))
@@ -334,12 +337,16 @@ def _preview_response(calc: dict) -> HoldingExitPreviewResponse:
 
 
 def preview_holding_exit(
-    db: Session, user_id: int, holding_id: int, payload: HoldingExitCreate
+    db: Session,
+    user_id: int,
+    holding_id: int,
+    payload: HoldingExitCreate,
+    locale: str = "en",
 ) -> HoldingExitPreviewResponse | None:
     holding = _load_holding(db, user_id, holding_id)
     if not holding:
         return None
-    return _preview_response(calculate_holding_exit(holding, payload))
+    return _preview_response(calculate_holding_exit(holding, payload, locale=locale))
 
 
 def _model_fields(calc: dict) -> dict:
@@ -413,13 +420,17 @@ def _persist_exit(
 
 
 def create_holding_exit(
-    db: Session, user_id: int, holding_id: int, payload: HoldingExitCreate
+    db: Session,
+    user_id: int,
+    holding_id: int,
+    payload: HoldingExitCreate,
+    locale: str = "en",
 ) -> HoldingExit | None:
     holding = _load_holding(db, user_id, holding_id)
     if not holding:
         return None
 
-    calc = calculate_holding_exit(holding, payload)
+    calc = calculate_holding_exit(holding, payload, locale=locale)
     exit_event = _persist_exit(db, holding, payload, calc)
     db.commit()
     db.refresh(exit_event)
@@ -479,14 +490,18 @@ def _bulk_payloads(
 
 
 def preview_holding_group_exit(
-    db: Session, user_id: int, holding_id: int, payload: HoldingExitCreate
+    db: Session,
+    user_id: int,
+    holding_id: int,
+    payload: HoldingExitCreate,
+    locale: str = "en",
 ) -> HoldingExitPreviewResponse | None:
     holdings = _load_group_active(db, user_id, holding_id)
     if not holdings:
         return None
 
     calcs = [
-        calculate_holding_exit(holding, item_payload)
+        calculate_holding_exit(holding, item_payload, locale=locale)
         for holding, item_payload in _bulk_payloads(holdings, payload)
     ]
     if not calcs:
@@ -529,7 +544,11 @@ def preview_holding_group_exit(
 
 
 def create_holding_group_exits(
-    db: Session, user_id: int, holding_id: int, payload: HoldingExitCreate
+    db: Session,
+    user_id: int,
+    holding_id: int,
+    payload: HoldingExitCreate,
+    locale: str = "en",
 ) -> list[HoldingExit] | None:
     holdings = _load_group_active(db, user_id, holding_id)
     if not holdings:
@@ -538,7 +557,7 @@ def create_holding_group_exits(
     created: list[HoldingExit] = []
     try:
         for holding, item_payload in _bulk_payloads(holdings, payload):
-            calc = calculate_holding_exit(holding, item_payload)
+            calc = calculate_holding_exit(holding, item_payload, locale=locale)
             created.append(_persist_exit(db, holding, item_payload, calc))
         db.commit()
     except Exception:

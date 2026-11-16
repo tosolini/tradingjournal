@@ -82,7 +82,7 @@ function Panel({
   className = "",
   delay = 0,
 }: {
-  title?: string;
+  title?: React.ReactNode;
   aside?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
@@ -609,6 +609,29 @@ function PeriodicPnlBars({
   const [period, setPeriod] = useState<"month" | "week">("month");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  // Compute monthly series if not supplied by backend
+  const computedMonthly = useMemo<MonthlyPnlPoint[]>(() => {
+    if (monthly && monthly.length > 0) return monthly;
+    if (!daily || daily.length === 0) return [];
+
+    const monthMap = new Map<string, { realized: number; count: number }>();
+    for (const p of daily) {
+      const monthKey = p.date.slice(0, 7);
+      const curr = monthMap.get(monthKey) || { realized: 0, count: 0 };
+      curr.realized += asNumber(p.day_pnl);
+      curr.count += 1;
+      monthMap.set(monthKey, curr);
+    }
+
+    return Array.from(monthMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([month, val]) => ({
+        month,
+        realized: String(val.realized),
+        count: val.count,
+      }));
+  }, [monthly, daily]);
+
   // Compute weekly series if not supplied by backend
   const computedWeekly = useMemo<WeeklyPnlPoint[]>(() => {
     if (weekly && weekly.length > 0) return weekly;
@@ -639,7 +662,8 @@ function PeriodicPnlBars({
       }));
   }, [weekly, daily]);
 
-  const items = period === "month" ? monthly.slice(-12) : computedWeekly.slice(-12);
+  const isRealized = period === "month" ? (monthly && monthly.length > 0) : (weekly && weekly.length > 0);
+  const items = period === "month" ? computedMonthly.slice(-12) : computedWeekly.slice(-12);
   const maxAbs = Math.max(1, ...items.map((m) => Math.abs(asNumber(m.realized))));
   const total = items.reduce((s, m) => s + asNumber(m.realized), 0);
   const W = 280;
@@ -660,15 +684,25 @@ function PeriodicPnlBars({
   };
 
   const itemFullTitle = (item: MonthlyPnlPoint | WeeklyPnlPoint) => {
+    const labelType = isRealized ? "" : ` (${t("dashboard.all_assets_short")})`;
     if ("month" in item) {
-      return `${monthLabel(item.month, locale)}: ${formatSignedMoney(item.realized)} (${item.count})`;
+      return `${monthLabel(item.month, locale)}${labelType}: ${formatSignedMoney(item.realized)} (${item.count})`;
     }
-    return `${t("calendar.week_summary", { week: item.week.split("-W")[1] || item.week })}: ${formatSignedMoney(item.realized)} (${item.count})`;
+    return `${t("calendar.week_summary", { week: item.week.split("-W")[1] || item.week })}${labelType}: ${formatSignedMoney(item.realized)} (${item.count})`;
   };
 
   return (
     <Panel
-      title={period === "month" ? t("dashboard.monthly_pnl") : t("dashboard.weekly_pnl")}
+      title={
+        <span className="flex items-center gap-1.5">
+          <span>{period === "month" ? t("dashboard.monthly_pnl") : t("dashboard.weekly_pnl")}</span>
+          {!isRealized && items.length > 0 && (
+            <span className="rounded bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-normal text-teal-400 dark:text-teal-700">
+              {t("dashboard.all_assets_short")}
+            </span>
+          )}
+        </span>
+      }
       aside={
         <div className="flex items-center gap-2.5">
           {hoveredItem ? (
@@ -700,7 +734,7 @@ function PeriodicPnlBars({
                   : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
               }`}
             >
-              {t("dashboard.period_monthly", "Mese")}
+              {t("dashboard.period_monthly")}
             </button>
             <button
               type="button"
@@ -714,7 +748,7 @@ function PeriodicPnlBars({
                   : "text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-800"
               }`}
             >
-              {t("dashboard.period_weekly", "Settimana")}
+              {t("dashboard.period_weekly")}
             </button>
           </div>
         </div>
@@ -796,17 +830,17 @@ function AllocationPanel({ allocation, classes }: { allocation: DashboardAllocat
       case "stock":
       case "shares":
       case "equity":
-        return t("dashboard.class_stock", "Azioni");
+        return t("dashboard.class_stock");
       case "bond":
       case "government_bond":
       case "titolo_di_stato":
-        return t("dashboard.class_bond", "Obbligazioni");
+        return t("dashboard.class_bond");
       case "etf":
-        return t("dashboard.class_etf", "ETF");
+        return t("dashboard.class_etf");
       case "fund":
-        return t("dashboard.class_fund", "Fondi");
+        return t("dashboard.class_fund");
       case "crypto":
-        return t("dashboard.class_crypto", "Crypto");
+        return t("dashboard.class_crypto");
       default:
         return norm.toUpperCase();
     }
@@ -833,7 +867,7 @@ function AllocationPanel({ allocation, classes }: { allocation: DashboardAllocat
                       <Link
                         to={detailUrl}
                         className="font-semibold text-teal-300 hover:text-teal-200 dark:text-teal-800 dark:hover:text-teal-700 hover:underline transition-colors"
-                        title={t("portfolio.view_detail", "Vedi dettaglio completo")}
+                        title={t("portfolio.view_detail")}
                       >
                         {a.symbol}
                       </Link>
@@ -921,17 +955,17 @@ function AllocationPiePanel({
       case "stock":
       case "shares":
       case "equity":
-        return t("dashboard.class_stock", "Azioni");
+        return t("dashboard.class_stock");
       case "bond":
       case "government_bond":
       case "titolo_di_stato":
-        return t("dashboard.class_bond", "Obbligazioni");
+        return t("dashboard.class_bond");
       case "etf":
-        return t("dashboard.class_etf", "ETF");
+        return t("dashboard.class_etf");
       case "fund":
-        return t("dashboard.class_fund", "Fondi");
+        return t("dashboard.class_fund");
       case "crypto":
-        return t("dashboard.class_crypto", "Crypto");
+        return t("dashboard.class_crypto");
       default:
         return norm.toUpperCase();
     }
@@ -964,7 +998,7 @@ function AllocationPiePanel({
     if (remaining > 0.01) {
       assetSlices.push({
         key: "__other__",
-        label: t("dashboard.other_assets", "Altri"),
+        label: t("dashboard.other_assets"),
         value: remaining,
         weight: totalValue > 0 ? (remaining / totalValue) * 100 : 0,
         color: "#64748b",
@@ -979,7 +1013,7 @@ function AllocationPiePanel({
   let offset = 0;
 
   return (
-    <Panel title={t("dashboard.capital_composition", "Composizione del capitale")}>
+    <Panel title={t("dashboard.capital_composition")}>
       <div className="p-4">
         <div className="mb-3 flex justify-end gap-1 text-[10px]">
           <button
@@ -991,7 +1025,7 @@ function AllocationPiePanel({
                 : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
             }`}
           >
-            {t("dashboard.pie_by_class", "Classi")}
+            {t("dashboard.pie_by_class")}
           </button>
           <button
             type="button"
@@ -1002,7 +1036,7 @@ function AllocationPiePanel({
                 : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
             }`}
           >
-            {t("dashboard.pie_by_asset", "Asset")}
+            {t("dashboard.pie_by_asset")}
           </button>
         </div>
 
@@ -1016,7 +1050,7 @@ function AllocationPiePanel({
               <svg
                 viewBox="0 0 140 140"
                 className="h-40 w-40 -rotate-90"
-                aria-label={t("dashboard.capital_composition", "Composizione del capitale")}
+                aria-label={t("dashboard.capital_composition")}
               >
                 <circle
                   cx="70"
@@ -1052,7 +1086,7 @@ function AllocationPiePanel({
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                  {t("dashboard.total", "Totale")}
+                  {t("dashboard.total")}
                 </span>
                 <span className="text-sm font-bold text-slate-100 dark:text-slate-900">
                   {formatMoney(total, currency, locale)}
@@ -1084,10 +1118,7 @@ function AllocationPiePanel({
               ))}
             </div>
             <p className="mt-1 text-center text-[10px] text-slate-400 dark:text-slate-500">
-              {t(
-                "dashboard.composition_hint",
-                "Include portafoglio e trade aperti",
-              )}
+              {t("dashboard.composition_hint")}
             </p>
           </div>
         )}
@@ -1203,7 +1234,7 @@ function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
 
   return (
     <Panel
-      title={t("dashboard.advanced_edge_title", "Statistiche Avanzate & Expectancy")}
+      title={t("dashboard.advanced_edge_title")}
       className="xl:col-span-2"
     >
       <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-800 dark:divide-slate-200 p-2">
@@ -1211,7 +1242,7 @@ function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
         <div className="p-4 space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {t("dashboard.expectancy", "Expectancy")}
+              {t("dashboard.expectancy")}
             </span>
             <span
               className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
@@ -1229,7 +1260,7 @@ function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
             {formatSignedMoney(expectancy, currency, locale)}
           </div>
           <p className="text-[11px] text-slate-400 dark:text-slate-500">
-            {t("dashboard.expectancy_sub", "Rendimento atteso per trade")}
+            {t("dashboard.expectancy_sub")}
           </p>
         </div>
 
@@ -1237,7 +1268,7 @@ function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
         <div className="p-4 space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {t("dashboard.payoff_ratio", "Payoff Ratio")}
+              {t("dashboard.payoff_ratio")}
             </span>
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
               W/L
@@ -1247,7 +1278,7 @@ function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
             {total > 0 && avgLoss > 0 ? `${payoffRatio.toFixed(2)} : 1` : total > 0 ? `${avgWin.toFixed(2)} : 0` : "—"}
           </div>
           <p className="text-[11px] text-slate-400 dark:text-slate-500">
-            {t("dashboard.payoff_sub", "Rapporto media vincita / media perdita")}
+            {t("dashboard.payoff_sub")}
           </p>
         </div>
 
@@ -1255,7 +1286,7 @@ function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
         <div className="p-4 space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {t("dashboard.max_drawdown", "Max Drawdown")}
+              {t("dashboard.max_drawdown")}
             </span>
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
               Peak
@@ -1265,7 +1296,7 @@ function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
             {history.length > 0 ? `${maxDrawdownPct.toFixed(2)}%` : "0.00%"}
           </div>
           <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
-            {peak > 0 ? `Picco: ${formatMoney(peak, currency, locale)}` : t("dashboard.max_drawdown_sub", "Flessione massima dal picco")}
+            {peak > 0 ? `Picco: ${formatMoney(peak, currency, locale)}` : t("dashboard.max_drawdown_sub")}
           </p>
         </div>
 
@@ -1276,14 +1307,14 @@ function TradingEdgePanel({ kpis }: { kpis: DashboardKpis }) {
               Profit Factor
             </span>
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-              {pf >= 1 ? "Profittevole" : "In perdita"}
+              {pf >= 1 ? t("dashboard.profitable") : t("dashboard.in_loss")}
             </span>
           </div>
           <div className={`text-xl font-bold tabular-nums ${pf >= 1.5 ? "text-teal-300 dark:text-teal-700" : pf >= 1 ? "text-slate-100 dark:text-slate-800" : "text-red-400 dark:text-red-600"}`}>
             {total > 0 ? pfText : "—"}
           </div>
           <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
-            {kelly > 0 ? `Kelly sizing: ${kelly.toFixed(1)}%` : "Profitti lordi / perdite"}
+            {kelly > 0 ? t("dashboard.kelly_sizing", { pct: kelly.toFixed(1) }) : t("dashboard.gross_profit_loss")}
           </p>
         </div>
       </div>
@@ -1305,10 +1336,10 @@ function BestWorstTradesPanel({
   const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
 
   return (
-    <Panel title={t("dashboard.top_trades", "Miglior e Peggior Trade")} className="xl:col-span-1">
+    <Panel title={t("dashboard.top_trades")} className="xl:col-span-1">
       {!bestTrade && !worstTrade ? (
         <div className="flex h-44 items-center justify-center p-6 text-center text-xs text-slate-400 dark:text-slate-500">
-          {t("dashboard.no_best_worst", "Nessun trade chiuso disponibile per il confronto.")}
+          {t("dashboard.no_best_worst")}
         </div>
       ) : (
         <div className="p-3.5 space-y-2.5">
@@ -1318,7 +1349,7 @@ function BestWorstTradesPanel({
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-teal-400 dark:text-teal-700">
                   <span>🏆</span>
-                  <span>{t("dashboard.best_trade", "Miglior Trade")}</span>
+                  <span>{t("dashboard.best_trade")}</span>
                 </span>
                 <span className="rounded-md border border-teal-500/40 bg-teal-500/10 px-2 py-0.5 text-xs font-bold text-teal-300 dark:text-teal-800">
                   {formatPct(bestTrade.return_pct)}
@@ -1329,7 +1360,7 @@ function BestWorstTradesPanel({
                   <Link
                     to={`/assets?search=${encodeURIComponent(bestTrade.symbol)}`}
                     className="text-base font-extrabold text-teal-300 hover:text-teal-200 dark:text-teal-800 dark:hover:text-teal-700 hover:underline transition-colors"
-                    title={t("assets.view_asset", "Visualizza asset")}
+                    title={t("assets.view_asset")}
                   >
                     {bestTrade.symbol}
                   </Link>
@@ -1337,7 +1368,7 @@ function BestWorstTradesPanel({
                     <Link
                       to={`/trades/${bestTrade.id}`}
                       className="rounded bg-teal-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300 hover:bg-teal-500/30 dark:bg-teal-100 dark:text-teal-800 hover:underline"
-                      title={t("trades.view_detail", "Visualizza trade")}
+                      title={t("trades.view_detail")}
                     >
                       #{bestTrade.id}
                     </Link>
@@ -1362,7 +1393,7 @@ function BestWorstTradesPanel({
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-red-400 dark:text-red-600">
                   <span>⚠️</span>
-                  <span>{t("dashboard.worst_trade", "Peggior Trade")}</span>
+                  <span>{t("dashboard.worst_trade")}</span>
                 </span>
                 <span className="rounded-md border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-xs font-bold text-red-400 dark:text-red-700">
                   {formatPct(worstTrade.return_pct)}
@@ -1373,7 +1404,7 @@ function BestWorstTradesPanel({
                   <Link
                     to={`/assets?search=${encodeURIComponent(worstTrade.symbol)}`}
                     className="text-base font-extrabold text-red-300 hover:text-red-200 dark:text-red-800 dark:hover:text-red-700 hover:underline transition-colors"
-                    title={t("assets.view_asset", "Visualizza asset")}
+                    title={t("assets.view_asset")}
                   >
                     {worstTrade.symbol}
                   </Link>
@@ -1381,7 +1412,7 @@ function BestWorstTradesPanel({
                     <Link
                       to={`/trades/${worstTrade.id}`}
                       className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-300 hover:bg-red-500/30 dark:bg-red-100 dark:text-red-800 hover:underline"
-                      title={t("trades.view_detail", "Visualizza trade")}
+                      title={t("trades.view_detail")}
                     >
                       #{worstTrade.id}
                     </Link>
@@ -1473,14 +1504,14 @@ export function DashboardPage() {
       tone: pnlTone(asNumber(data?.realized_pnl)),
       caption:
         asNumber(data?.holding_realized_pnl) !== 0
-          ? `${t("dashboard.caption_realized")} · ${t("dashboard.cards.portfolio_exits", "Uscite portafoglio")}: ${formatSignedMoney(data?.holding_realized_pnl, currency, locale)}`
+          ? `${t("dashboard.caption_realized")} · ${t("dashboard.cards.portfolio_exits")}: ${formatSignedMoney(data?.holding_realized_pnl, currency, locale)}`
           : t("dashboard.caption_realized"),
     },
     {
-      label: t("dashboard.cards.weekly_pnl", "PnL Questa Settimana"),
+      label: t("dashboard.cards.weekly_pnl"),
       value: formatSignedMoney(currentWeekPnl, currency, locale),
       tone: pnlTone(currentWeekPnl),
-      caption: t("dashboard.cards.current_week", "Questa settimana"),
+      caption: t("dashboard.cards.current_week"),
     },
     {
       label: t("dashboard.cards.unrealized_pnl"),
@@ -1541,7 +1572,7 @@ export function DashboardPage() {
           {isFetching && !isLoading && (
             <span className="flex items-center gap-1.5 text-teal-400 dark:text-teal-600">
               <span className="inline-block h-2 w-2 rounded-full bg-teal-400 animate-ping" />
-              <span>{t("dashboard.syncing", "Sincronizzazione...")}</span>
+              <span>{t("dashboard.syncing")}</span>
             </span>
           )}
           {lastSnapshotDate && (

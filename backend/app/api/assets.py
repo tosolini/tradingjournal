@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.deps import get_current_user
+from app.i18n import localized_error
 from app.models import Asset, BondDetail, Holding, User
 from app.schemas import AssetCreate, AssetResponse, AssetUpdate
 
@@ -146,6 +147,7 @@ def delete_asset(
 @router.post("/{asset_id}/sync-euronext/", response_model=AssetResponse, include_in_schema=False)
 def sync_asset_euronext(
     asset_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -161,7 +163,13 @@ def sync_asset_euronext(
     try:
         apply_euronext_bond_data(asset)
     except EuronextSyncError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        detail = e.args[1] if len(e.args) > 1 else ""
+        raise localized_error(
+            status_code=400,
+            code=e.code,
+            request=request,
+            detail=detail,
+        ) from e
 
     db.commit()
     db.refresh(asset)
