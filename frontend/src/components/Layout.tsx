@@ -196,7 +196,7 @@ export function Layout({ children }: PropsWithChildren) {
     <>
       <div className="min-h-screen bg-slate-950 text-slate-100 dark:bg-slate-50 dark:text-slate-900">
         {/* ── Mobile Top Sticky Bar ────────────────────────────── */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/95 px-4 backdrop-blur md:hidden dark:border-slate-200 dark:bg-white/95">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950 px-4 md:hidden dark:border-slate-200 dark:bg-white">
           <div className="flex items-center gap-2.5">
             <button
               type="button"
@@ -445,7 +445,7 @@ export function Layout({ children }: PropsWithChildren) {
 
           {/* Desktop Content Area with Top Header */}
           <div className="flex flex-col min-h-screen min-w-0">
-            <header className="hidden md:flex h-14 items-center justify-between border-b border-slate-800/60 bg-slate-950/40 px-6 backdrop-blur dark:border-slate-200/50 dark:bg-white/40">
+            <header className="relative z-40 hidden md:flex h-14 items-center justify-between border-b border-slate-800/80 bg-slate-950 px-6 dark:border-slate-200 dark:bg-white">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-200 dark:text-slate-800 min-w-44">
                 <span className="text-slate-500 dark:text-slate-400 font-normal">TradingJournal</span>
                 <span className="text-slate-600 dark:text-slate-300">/</span>

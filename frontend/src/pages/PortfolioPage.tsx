@@ -11,6 +11,7 @@ import {
   HoldingDetail,
   HoldingExit,
   PortfolioSummary,
+  alertsApi,
   createHolding,
   deleteHolding,
   fetchAccounts,
@@ -1055,6 +1056,14 @@ export function PortfolioPage() {
     queryFn: () => fetchPortfolioExits(),
     enabled: activeTab === "exits",
   });
+
+  const { data: unifiedAlerts } = useQuery({
+    queryKey: ["unified-alerts"],
+    queryFn: () => alertsApi.getUnifiedAlerts(),
+    refetchInterval: 30000,
+  });
+  const couponAlerts = unifiedAlerts?.coupons || [];
+  const maturityAlerts = unifiedAlerts?.maturities || [];
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteHolding(id),
     onSuccess: () => {
@@ -1126,6 +1135,72 @@ export function PortfolioPage() {
           {t("portfolio.add_holding")}
         </button>
       </div>
+
+      {/* Coupon & Maturity Alerts Banner */}
+      {(couponAlerts.length > 0 || maturityAlerts.length > 0) && (
+        <div className="space-y-2">
+          {couponAlerts.map((coupon) => (
+            <div
+              key={`port-coupon-${coupon.id}`}
+              className="flex items-center justify-between rounded-xl border border-amber-500/40 bg-amber-950/20 px-4 py-3 dark:border-amber-300 dark:bg-amber-50/70 shadow-xs animate-in fade-in"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">💰</span>
+                <div>
+                  <span className="text-sm font-bold text-amber-200 dark:text-amber-900">
+                    {t("portfolio.alerts_coupon_banner", {
+                      symbol: coupon.asset_symbol,
+                      amount: `${coupon.net_amount} ${coupon.currency}`,
+                      defaultValue: `Oggi stacco cedola per ${coupon.asset_symbol}: ${coupon.net_amount} ${coupon.currency} stimate in accredito.`,
+                    })}
+                  </span>
+                  <p className="text-xs text-amber-300/80 dark:text-amber-800">
+                    {coupon.asset_name} {coupon.account_name ? `(${coupon.account_name})` : ""}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("bonds")}
+                className="rounded-lg bg-amber-500/20 border border-amber-500/30 px-3 py-1 text-xs font-bold text-amber-300 hover:bg-amber-500/30 dark:bg-amber-100 dark:text-amber-900 cursor-pointer transition shrink-0"
+              >
+                {t("layout.alerts.action_view_calendar", "Calendario Cedole")}
+              </button>
+            </div>
+          ))}
+
+          {maturityAlerts.map((mat) => (
+            <div
+              key={`port-mat-${mat.id}`}
+              className="flex items-center justify-between rounded-xl border border-indigo-500/40 bg-indigo-950/20 px-4 py-3 dark:border-indigo-300 dark:bg-indigo-50/70 shadow-xs animate-in fade-in"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">⏳</span>
+                <div>
+                  <span className="text-sm font-bold text-indigo-200 dark:text-indigo-900">
+                    {t("portfolio.alerts_maturity_banner", {
+                      symbol: mat.asset_symbol,
+                      days: mat.days_remaining,
+                      date: new Date(mat.maturity_date).toLocaleDateString(),
+                      defaultValue: `Attenzione: ${mat.asset_symbol} giungerà a scadenza naturale tra ${mat.days_remaining} giorni (il ${new Date(mat.maturity_date).toLocaleDateString()}).`,
+                    })}
+                  </span>
+                  <p className="text-xs text-indigo-300/80 dark:text-indigo-800">
+                    {mat.asset_name} • {t("layout.alerts.nominal", "Nominale")}: {mat.nominal_value} {mat.currency}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("bonds")}
+                className="rounded-lg bg-indigo-500/20 border border-indigo-500/30 px-3 py-1 text-xs font-bold text-indigo-300 hover:bg-indigo-500/30 dark:bg-indigo-100 dark:text-indigo-900 cursor-pointer transition shrink-0"
+              >
+                {t("layout.alerts.action_view_portfolio", "Dettagli BTP")}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex border-b border-slate-700 dark:border-slate-300 gap-6">
         <button
