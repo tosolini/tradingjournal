@@ -441,34 +441,36 @@ def get_holding_price_history(
             points_dict[s.snapshot_date.isoformat()] = s.close_price
 
     # 3. Fetch historical market prices (Euronext for bonds, yfinance for equities/ETFs)
-    sym_upper = (h.asset.symbol or "").strip().upper()
-    is_mot = bool(h.asset.exchange and "mot" in h.asset.exchange.lower())
-    is_italian_isin = bool(sym_upper.startswith("IT") and len(sym_upper) == 12 and sym_upper[2:].isalnum())
-    if is_bond or is_mot or is_italian_isin:
-        try:
-            from app.services.euronext import fetch_euronext_chart_prices
-            chart_prices = fetch_euronext_chart_prices(sym_upper)
-            for d_str, price in chart_prices.items():
-                if (snapshots[-1].snapshot_date + timedelta(days=1) if snapshots else start_history_date).isoformat() <= d_str <= today.isoformat() and price > Decimal("0"):
-                    points_dict[d_str] = price
-        except Exception as e:
-            logger.warning("Error fetching Euronext chart prices for %s: %s", h.asset.symbol, e)
-    else:
-        try:
-            from app.services.price_provider import _normalize_yfinance_symbol
-            import yfinance as yf
-            yf_symbol = _normalize_yfinance_symbol(h.asset.symbol, h.asset.exchange)
-            ticker = yf.Ticker(yf_symbol)
-            hist = ticker.history(start=(snapshots[-1].snapshot_date + timedelta(days=1) if snapshots else start_history_date).isoformat(), end=(today + timedelta(days=1)).isoformat())
-            if not hist.empty:
-                for idx, row in hist.iterrows():
-                    d_str = idx.strftime("%Y-%m-%d")
-                    if (snapshots[-1].snapshot_date + timedelta(days=1) if snapshots else start_history_date).isoformat() <= d_str <= today.isoformat():
-                        val = row.get("Close")
-                        if val is not None and not (isinstance(val, float) and val != val):
-                            points_dict[d_str] = Decimal(str(round(float(val), 4)))
-        except Exception as e:
-            logger.warning("Error fetching yfinance history for %s: %s", h.asset.symbol, e)
+    fetch_start_date = (snapshots[-1].snapshot_date + timedelta(days=1)) if snapshots else start_history_date
+    if fetch_start_date <= today:
+        sym_upper = (h.asset.symbol or "").strip().upper()
+        is_mot = bool(h.asset.exchange and "mot" in h.asset.exchange.lower())
+        is_italian_isin = bool(sym_upper.startswith("IT") and len(sym_upper) == 12 and sym_upper[2:].isalnum())
+        if is_bond or is_mot or is_italian_isin:
+            try:
+                from app.services.euronext import fetch_euronext_chart_prices
+                chart_prices = fetch_euronext_chart_prices(sym_upper)
+                for d_str, price in chart_prices.items():
+                    if fetch_start_date.isoformat() <= d_str <= today.isoformat() and price > Decimal("0"):
+                        points_dict[d_str] = price
+            except Exception as e:
+                logger.warning("Error fetching Euronext chart prices for %s: %s", h.asset.symbol, e)
+        else:
+            try:
+                from app.services.price_provider import _normalize_yfinance_symbol
+                import yfinance as yf
+                yf_symbol = _normalize_yfinance_symbol(h.asset.symbol, h.asset.exchange)
+                ticker = yf.Ticker(yf_symbol)
+                hist = ticker.history(start=fetch_start_date.isoformat(), end=(today + timedelta(days=1)).isoformat())
+                if not hist.empty:
+                    for idx, row in hist.iterrows():
+                        d_str = idx.strftime("%Y-%m-%d")
+                        if fetch_start_date.isoformat() <= d_str <= today.isoformat():
+                            val = row.get("Close")
+                            if val is not None and not (isinstance(val, float) and val != val):
+                                points_dict[d_str] = Decimal(str(round(float(val), 4)))
+            except Exception as e:
+                logger.warning("Error fetching yfinance history for %s: %s", h.asset.symbol, e)
 
     # 4. Today's live price point
     points_dict[today.isoformat()] = current_price

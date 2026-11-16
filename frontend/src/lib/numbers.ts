@@ -9,8 +9,8 @@ import i18n from "./i18n";
  * Returns BCP 47 language tag ("it-IT" or "en-US") from i18n language string.
  */
 export function getNumberLocale(lang?: string): string {
-  if (!lang) return getActiveLocale();
-  return lang.startsWith("en") ? "en-US" : "it-IT";
+  const code = lang ?? i18n?.resolvedLanguage ?? i18n?.language;
+  return code?.startsWith("en") ? "en-US" : "it-IT";
 }
 
 /**
@@ -19,7 +19,7 @@ export function getNumberLocale(lang?: string): string {
  * still follow the language selected by the user.
  */
 export function getActiveLocale(): string {
-  return getNumberLocale(i18n.resolvedLanguage ?? i18n.language);
+  return getNumberLocale();
 }
 
 /**
