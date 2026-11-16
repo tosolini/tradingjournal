@@ -113,7 +113,6 @@ def sync_exchange_tickers(
             status_code=400,
             code="errors.exchange_not_euronext",
             request=request,
-            default=f"Il mercato '{exchange.name}' non è un mercato azionario Euronext supportato.",
         )
 
     try:
@@ -125,7 +124,7 @@ def sync_exchange_tickers(
             status_code=502,
             code="errors.euronext_sync_failed",
             request=request,
-            default=f"Errore durante la sincronizzazione con Euronext: {exc}",
+            detail=str(exc),
         )
 
 

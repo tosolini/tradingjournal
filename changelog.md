@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+- Full internationalization (i18n) sweep across frontend and backend
+  - Migrated all remaining hardcoded Italian UI copy to `react-i18next` keys (Holding detail, Brokers, Accounts, Calendar, Trades, right-side editor toolbar, analysis history/purge, notes, scouting, dashboard widgets).
+  - Removed Italian default values from `t()` calls: the locale catalogs are now the single source of truth, so a missing key can no longer leak Italian into the English UI.
+  - Added the missing `common.*`, `assets.*`, `portfolio.*`, `trades.*`, `notes.*`, `dashboard.*`, `analysis.*` and `trade_detail.*` keys; fixed i18next pluralization (`_one`/`_other`) for counted strings.
+  - Replaced the manual `isItalian ? ... : ...` branches in the Calendar page with regular translation keys.
+  - Number and date formatting now follows the active UI language by default (`getActiveLocale()`), and `<html lang>` is kept in sync on language change.
+  - zod validation messages are now localized through schema factories.
+  - Backend: added the 8 missing `localized_error` catalog entries, converted the holding-exit service messages and warnings to translatable codes, localized Euronext sync/lookup errors, and made the LLM connectivity test and mock reports follow the request language.
+  - New `npm run i18n:check` guardrail (key parity, missing/unused keys, hardcoded Italian strings) wired into CI together with the frontend build.
+
 ## [0.3.0] - 2026-11-15
 
 - Multi-Agent Asset Analysis & Coaching Engine

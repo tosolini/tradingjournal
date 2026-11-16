@@ -11,14 +11,14 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({ score, size = 110 }) => 
   const validScore = score !== null && score !== undefined ? Math.max(1, Math.min(10, score)) : null;
 
   const getColor = (s: number) => {
-    if (s >= 7.5) return { stroke: "#10b981", text: "text-emerald-500", label: t("analysis.gauge.high", "Elevato"), bg: "bg-emerald-500/10 text-emerald-400" };
-    if (s >= 5.5) return { stroke: "#f59e0b", text: "text-amber-500", label: t("analysis.gauge.moderate", "Moderato"), bg: "bg-amber-500/10 text-amber-400" };
-    return { stroke: "#ef4444", text: "text-rose-500", label: t("analysis.gauge.cautious", "Prudenziale"), bg: "bg-rose-500/10 text-rose-400" };
+    if (s >= 7.5) return { stroke: "#10b981", text: "text-emerald-500", label: t("analysis.gauge.high"), bg: "bg-emerald-500/10 text-emerald-400" };
+    if (s >= 5.5) return { stroke: "#f59e0b", text: "text-amber-500", label: t("analysis.gauge.moderate"), bg: "bg-amber-500/10 text-amber-400" };
+    return { stroke: "#ef4444", text: "text-rose-500", label: t("analysis.gauge.cautious"), bg: "bg-rose-500/10 text-rose-400" };
   };
 
   const colorConfig = validScore
     ? getColor(validScore)
-    : { stroke: "#64748b", text: "text-slate-400", label: t("analysis.gauge.na", "N/D"), bg: "bg-slate-800 text-slate-400" };
+    : { stroke: "#64748b", text: "text-slate-400", label: t("analysis.gauge.na"), bg: "bg-slate-800 text-slate-400" };
 
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;

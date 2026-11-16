@@ -9,7 +9,6 @@
       "analysis": "AI Analysis",
       "assets": "Assets",
       "trades": "Trades",
-      "stats": "Stats",
       "notes": "Notes",
       "settings": "Settings",
       "brokers": "Brokers",
@@ -23,20 +22,54 @@
       "new_note": "New Note"
     },
     "alerts": {
-      "title": "Notifications & Scouting Alerts",
-      "header": "Scouting Alerts",
-      "ready": "ready",
-      "empty": "No active alerts. Setups under observation will appear here when they reach trigger price.",
+      "title": "Notifications & Trading/Portfolio Alerts",
+      "header": "Notification & Alert Center",
+      "ready": "active",
+      "empty": "No active alerts at this moment.",
       "create_trade": "⚡ Trade",
-      "view_all_scouting": "View all Scouting Ideas ➔"
+      "view_all_scouting": "View all Scouting Ideas ➔",
+      "view_all_trades": "View all Trades ➔",
+      "view_all_bonds": "View Portfolio ➔",
+      "tab_all": "All",
+      "tab_trades": "Trades",
+      "tab_coupons": "Coupons",
+      "tab_maturities": "Maturities",
+      "tab_scouting": "Scouting",
+      "take_profit": "Take Profit Reached",
+      "stop_loss": "Stop Loss Reached",
+      "tp_short": "TP",
+      "sl_short": "SL",
+      "coupon_today": "Coupon Today",
+      "maturity_warning": "Bond Maturity",
+      "scouting_triggered": "Scouting Setup",
+      "current_price": "Current price",
+      "target_price": "Target",
+      "stop_price": "Stop",
+      "trigger_price": "Trigger",
+      "detected_price": "Detected",
+      "net_estimate": "Estimated net",
+      "gross_estimate": "Gross",
+      "nominal": "Nominal",
+      "days_left": "{{count}} days left",
+      "days_left_one": "1 day left",
+      "action_view_trade": "Trade Details",
+      "action_view_portfolio": "Bond Details",
+      "action_view_calendar": "Coupon Calendar",
+      "empty_trades": "No open trades have hit Take Profit or Stop Loss.",
+      "empty_coupons": "No coupons or distributions scheduled for today.",
+      "empty_maturities": "No bonds or BTPs maturing in the near term.",
+      "empty_scouting": "No scouting ideas triggered at this price level.",
+      "bonus": "Loyalty bonus",
+      "acknowledge": "Mark as read",
+      "acknowledge_tooltip": "Mark as read",
+      "acknowledge_all": "Mark all as read",
+      "acknowledge_all_tooltip": "Mark all active alerts as read",
+      "empty_header": "0 active",
+      "show_acknowledged": "Show already read",
+      "hide_acknowledged": "Hide already read"
     },
     "search_placeholder": "Search symbols, pages or press ⌘K...",
     "search_short": "Search (⌘K)",
-    "account_pill": "Account",
-    "all_accounts": "All accounts",
-    "version": "Version",
-    "tosolini_site_aria": "Walter Tosolini Website",
-    "copyright": "All rights reserved.",
     "command_palette": {
       "placeholder": "Search commands, pages or symbols (e.g. AAPL, ENEL)...",
       "no_results": "No commands or tickers found for \"{{query}}\"",
@@ -52,7 +85,6 @@
       "sub_assets": "Master registry for ETFs, bonds, and funds",
       "sub_accounts": "Manage trading accounts and cash ledger",
       "sub_brokers": "Configure brokers, commissions, and exchanges",
-      "sub_tickers": "Ticker database and import",
       "sub_settings": "User profile, administration, and backups",
       "sub_help": "User guide and in-app documentation",
       "act_new_trade_sub": "Open quick entry or guided wizard to log a trade",
@@ -60,10 +92,48 @@
       "act_light_theme": "Switch to Light Theme",
       "act_dark_theme": "Switch to Dark Theme",
       "act_toggle_theme_sub": "Toggle application color scheme",
-      "act_switch_lang": "Passa all'Italiano",
       "act_toggle_lang_sub": "Change application language",
       "act_credits": "Credits & Developer (Walter Tosolini)",
-      "act_credits_sub": "Author info, www.tosolini.info, GitHub and LinkedIn links"
+      "act_credits_sub": "Author info, www.tosolini.info, GitHub and LinkedIn links",
+      "act_switch_to_en": "Switch to English",
+      "act_switch_to_it": "Switch to Italian"
+    },
+    "credits_modal": {
+      "open_button_title": "Information and Credits",
+      "developed_by": "Developed by",
+      "visit_site": "Visit www.tosolini.info",
+      "links": {
+        "personal_site": {
+          "title": "Personal Website",
+          "desc": "Blog, articles, portfolio, and technology insights"
+        },
+        "github": {
+          "title": "GitHub Profile",
+          "desc": "Open-source repositories, projects, and source code"
+        },
+        "linkedin": {
+          "title": "LinkedIn Profile",
+          "desc": "Professional experience, contacts, and networking"
+        },
+        "bug_report": {
+          "title": "Report a Bug or Request",
+          "desc": "Issue tracker and development roadmap for TradingJournal"
+        }
+      }
+    },
+    "controls": {
+      "open_navigation_menu": "Open navigation menu",
+      "close_navigation_menu": "Close navigation menu",
+      "search_commands_title": "Search or commands (⌘K)",
+      "search_commands_aria": "Search or commands",
+      "change_language": "Change language",
+      "switch_to_light": "Switch to light theme",
+      "switch_to_dark": "Switch to dark theme",
+      "light": "Light",
+      "dark": "Dark",
+      "bug_report": "Bug Report",
+      "accounts_management": "Accounts management",
+      "user_profile": "User profile ({{username}})"
     }
   },
   "login": {
@@ -186,6 +256,15 @@
       "saved": "Saved",
       "error": "Error"
     },
+    "alerts": {
+      "title": "Notifications & Alerts",
+      "description": "Configure preferences for open trade alerts and natural bond maturity notices.",
+      "bond_expiry_days": "Bond / BTP Maturity Notice Window (days)",
+      "bond_expiry_help": "Number of days before natural maturity to trigger alerts in the notification bell and portfolio page (default: 30).",
+      "save": "Save alert preferences",
+      "saved": "Alert preferences saved successfully.",
+      "error": "Failed to save alert preferences."
+    },
     "llm": {
       "title": "AI Engine & Coaching (LLM)",
       "description": "Configure the AI provider and credentials for technical, fundamental, cyclical analysis and trade coaching.",
@@ -231,7 +310,10 @@
       "reset_success": "Personal configuration removed. Server defaults are now active.",
       "test_success": "Connection successful!",
       "test_latency": "Latency:",
-      "test_failed": "Connection test failed"
+      "test_failed": "Connection test failed",
+      "selected": "● Selected",
+      "select": "○ Select",
+      "docker_note": "Note: inside Docker containers use host.docker.internal instead of localhost."
     }
   },
   "tickers": {
@@ -250,8 +332,6 @@
     "syncing": "Downloading…",
     "sync_success": "Euronext sync complete: {{imported}} new, {{updated}} updated, {{skipped}} skipped. Total: {{total}}.",
     "sync_error": "Error downloading from Euronext.",
-    "db_count": "{{total}} tickers in database",
-    "db_empty": "No tickers imported yet.",
     "clear_confirm": "Are you sure you want to delete all tickers? This cannot be undone.",
     "clear_success": "Ticker database cleared.",
     "search_placeholder": "Search by symbol or name...",
@@ -268,7 +348,6 @@
     "new_title": "New Broker",
     "list_title": "Broker List",
     "preset": "Broker preset / plan",
-    "preset_hint": "Select a ready-to-use Fineco or Directa plan or customize freely",
     "fee_mode_label": "Fee mode",
     "fee_mode_fixed": "Fixed fee",
     "fee_mode_percent": "Percentage fee (%)",
@@ -287,8 +366,6 @@
     "fee_tier_4": "Tier 4 (≥ 2,500 € comm. / 2.95 €)",
     "capital_gain_rate_gov": "Government bond tax rate (%)",
     "capital_gain_standard": "Standard tax rate (%)",
-    "tax_gov_badge": "Government bond (12.5%)",
-    "tax_std_badge": "Standard (26%)",
     "create": "Add broker",
     "saving": "Saving...",
     "loading": "Loading brokers...",
@@ -333,7 +410,91 @@
     "exchange_seed_directa_success": "Markets imported successfully.",
     "exchange_sync_tickers": "Download tickers from Euronext",
     "exchange_sync_tickers_success": "Sync completed: {{imported}} new, {{updated}} updated, {{skipped}} skipped. Total: {{total}}.",
-    "exchange_sync_tickers_error": "Error downloading tickers from Euronext."
+    "exchange_sync_tickers_error": "Error downloading tickers from Euronext.",
+    "presets": {
+      "custom": {
+        "label": "Custom",
+        "description": "Free manual configuration"
+      },
+      "fineco_trading": {
+        "label": "Fineco (Trading Account)",
+        "description": "0.19% (min 2.95 € / max 19 €) on stocks, ETFs and bonds. No monthly fee."
+      },
+      "fineco_trading_under30": {
+        "label": "Fineco (Under 30 Trading Account)",
+        "description": "Flat 2.95 € on Italy/Europe, 3.95 $ on US. No monthly fee."
+      },
+      "fineco_one": {
+        "label": "Fineco (One Account - tiers)",
+        "description": "Monthly commission tiers (19€ / 9.95€ / 6.95€ / 2.95€). No monthly fee."
+      },
+      "fineco_classic": {
+        "label": "Fineco (Classic Account - tiers)",
+        "description": "Monthly commission tiers (19€ / 9.95€ / 6.95€ / 2.95€). Monthly fee 3.95 €."
+      },
+      "fineco_max": {
+        "label": "Fineco (Max Account - tiers)",
+        "description": "Monthly commission tiers (19€ / 9.95€ / 6.95€ / 2.95€). Monthly fee 29.95 €."
+      },
+      "directa_semplice": {
+        "label": "Directa (Simple Profile)",
+        "description": "Flat 5.00 € per execution. No monthly fee."
+      },
+      "directa_variabile": {
+        "label": "Directa (Variable Profile)",
+        "description": "0.19% (min 1.50 € / max 18.00 €). No monthly fee."
+      }
+    },
+    "name_placeholder": "e.g. Fineco - Trading Account",
+    "fee_percent_label": "Percentage (%)",
+    "fee_base_label": "Fee / Base",
+    "fee_value_placeholder": "Fee value",
+    "currency": "Currency",
+    "monthly_fee_suffix": "(€/month)",
+    "monthly_fee_placeholder": "e.g. 0, 3.95, 29.95",
+    "tax_regime": "Tax Regime",
+    "tax_regime_immediate": "Immediate capital gain (administered)",
+    "tax_regime_year_end": "Capital gain at year end",
+    "rate_placeholder": "e.g. 26",
+    "rate_gov_placeholder": "e.g. 12.50",
+    "tiered_hint_title": "Fineco tiers for Italy/Europe and US orders:",
+    "tiered_tier_1": "Tier 1 (< 99 € comm.)",
+    "tiered_tier_2": "Tier 2 (100 - 1,499 €)",
+    "tiered_tier_3": "Tier 3 (1,500 - 2,499 €)",
+    "tiered_tier_4": "Tier 4 (≥ 2,500 €)",
+    "col_fee_structure": "Fee Structure",
+    "col_monthly_fee": "Monthly Fee",
+    "col_tax": "Tax (Std / Gov)",
+    "col_actions": "Actions",
+    "fee_mode_fixed_short": "Fixed",
+    "fee_mode_percent_short": "Percentage",
+    "fee_mode_percent_min_max_short": "% with Min/Max",
+    "fee_mode_under_30_short": "Under 30",
+    "fee_mode_tiered_volume_short": "Volume tiers",
+    "fee_value_short_placeholder": "Value",
+    "usd_placeholder": "US $",
+    "tier_auto_short": "Auto",
+    "tier_n_short": "Tier {{n}}",
+    "capital_gain_mode_immediate_short": "immediate",
+    "capital_gain_mode_year_end_short": "year end",
+    "tax_std_short_title": "Standard rate",
+    "tax_gov_short_title": "Government bond rate",
+    "remove_exchange": "Remove {{name}}",
+    "market_placeholder": "— market —",
+    "add_market": "+ market",
+    "fee_desc_fixed": "Fixed {{value}} {{currency}}",
+    "fee_desc_percent": "{{value}}%",
+    "fee_desc_percent_min_max": "{{value}}% (min {{min}} / max {{max}} {{currency}})",
+    "fee_desc_under_30": "Under 30: {{eur}} € / {{usd}} $ US",
+    "fee_desc_tiered_fixed": "Monthly tiers (fixed tier {{tier}})",
+    "fee_desc_tiered_auto": "Monthly tiers (auto volume)",
+    "validation_name": "Enter a valid broker name",
+    "validation_fee_value": "Enter a valid fee value",
+    "validation_currency": "Enter a valid currency",
+    "validation_currency_long": "Currency is too long",
+    "validation_monthly_fee": "Invalid monthly fee",
+    "validation_rate": "Enter a valid rate",
+    "validation_exchange_name": "Enter a valid name"
   },
   "accounts": {
     "page_title": "Accounts and Portfolios",
@@ -381,14 +542,35 @@
     "ledger_bond_bonus": "Loyalty bonus",
     "ledger_bond_redemption": "Bond redemption",
     "ledger_dividend": "Dividend",
-    "ledger_asset_sale": "Asset sale"
+    "ledger_asset_sale": "Asset sale",
+    "error_invalid_name": "Enter a valid account name",
+    "col_name": "Name",
+    "col_broker": "Broker",
+    "col_currency": "Base Currency",
+    "col_cash": "Cash Balance",
+    "col_actions": "Actions",
+    "name_placeholder": "Portfolio name",
+    "currency_placeholder": "Currency (EUR)",
+    "cash_placeholder": "Initial cash",
+    "save_changes_title": "Save changes",
+    "cancel_edit_title": "Cancel editing",
+    "edit_title": "Edit account",
+    "delete_title": "Delete account"
   },
   "common": {
     "cancel": "Cancel",
     "close": "Close",
     "save": "Save",
     "saving": "Saving...",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "confirm": "Confirm operation",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save_changes": "Save changes",
+    "error_occurred": "Something went wrong",
+    "processing": "Processing...",
+    "reports_one": "{{count}} report",
+    "reports_other": "{{count}} reports"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -416,7 +598,8 @@
       "tax_hint": "26% standard · 12.5% gov bonds",
       "nominal_loss": "Nominal",
       "weighted_offset": "Gov 48.08%",
-      "portfolio_exits": "Portfolio exits"
+      "portfolio_exits": "Portfolio exits",
+      "current_week": "This week"
     },
     "wins_short": "wins",
     "losses_short": "losses",
@@ -481,17 +664,20 @@
     "payoff_sub": "Average win / average loss ratio",
     "max_drawdown": "Max Drawdown",
     "max_drawdown_sub": "Maximum drop from equity peak",
-    "kelly_criterion": "Kelly Criterion (Edge)",
     "best_trade": "Best Trade",
     "worst_trade": "Worst Trade",
     "no_best_worst": "No closed trades available for comparison.",
-    "hover_trade_count": "{{count}} trades",
     "capital_composition": "Capital composition",
     "total": "Total",
     "other_assets": "Other",
     "pie_by_class": "Classes",
     "pie_by_asset": "Assets",
-    "composition_hint": "Includes portfolio and open trades"
+    "composition_hint": "Includes portfolio and open trades",
+    "all_assets_short": "Portfolio",
+    "profitable": "Profitable",
+    "in_loss": "In loss",
+    "kelly_sizing": "Kelly sizing: {{pct}}%",
+    "gross_profit_loss": "Gross profits / losses"
   },
   "calendar": {
     "title": "Calendar",
@@ -509,18 +695,39 @@
     "next_month": "Next month",
     "loading": "Loading calendar...",
     "unavailable": "Calendar not available.",
-    "open_notes": "Open notes",
+    "open_notes": "Open in Notes",
     "latest_executions": "Latest executions",
     "notes": "Notes",
     "note_fallback": "Note",
-    "more_notes": "notes",
     "markets_empty": "No markets configured. Import markets from Broker → Markets.",
     "markets_tz_label": "Timezone",
     "markets_now": "Current time",
     "markets_open": "Open",
     "markets_upcoming": "Upcoming",
     "markets_closed": "Closed",
-    "markets_holiday": "Closed today (weekend/holiday)"
+    "markets_holiday": "Closed today (weekend/holiday)",
+    "subtitle": "Track your daily PnL, trade executions, and journal notes.",
+    "kpi_month_pnl": "Month Net PnL",
+    "kpi_green_red_days": "Green / Red Days",
+    "kpi_daily_win_rate": "Daily Win Rate",
+    "kpi_executions": "Total Executions",
+    "week_short": "Wk. {{week}}",
+    "stocks_upper": "STOCKS",
+    "day_summary": "Daily Summary",
+    "day_pnl": "Day PnL",
+    "stocks": "Stocks",
+    "stock": "Stock",
+    "no_executions": "No executions recorded on this date",
+    "no_notes": "No notes recorded for this date",
+    "details": "Details",
+    "add_note": "Add Note",
+    "weekday_mon": "Mon",
+    "weekday_tue": "Tue",
+    "weekday_wed": "Wed",
+    "weekday_thu": "Thu",
+    "weekday_fri": "Fri",
+    "weekday_sat": "Sat",
+    "weekday_sun": "Sun"
   },
   "trade_images": {
     "title": "Trade Images #{{id}}",
@@ -635,10 +842,10 @@
       "market_price": "Market Price",
       "market_value": "Market Value",
       "unrealized_pnl": "Unrealized PnL",
-      "current_return_pct": "Current Return %"
+      "current_return_pct": "Current Return %",
+      "instrument_type": "Instrument"
     },
     "current_market": "Current Market",
-    "market_data_note": "Prices refresh every 5 minutes via Yahoo Finance.",
     "columns": {
       "date": "Date",
       "action": "Action",
@@ -652,11 +859,11 @@
     "tab_executions": "Executions",
     "tab_images": "Images",
     "tab_close_closed": "This trade is already closed.",
-    "chart_title": "TradingView",
-    "chart_info": "Chart is updated only after markets close.",
     "chart_symbol_hint": "You can search for a different symbol directly in the chart.",
     "ai_coaching": "AI Coaching",
-    "ai_coaching_title": "AI Analysis & Coaching with Multi-Agent Debate"
+    "ai_coaching_title": "AI Analysis & Coaching with Multi-Agent Debate",
+    "gov_bond_tag": "Government Bond",
+    "open_date_picker": "Open date picker"
   },
   "trades": {
     "title": "Trades",
@@ -687,6 +894,12 @@
       "stop_loss": "Stop Loss"
     },
     "visible_columns": "Visible columns",
+    "alerts_banner_title": "Exit Target Price Alerts",
+    "alerts_banner_desc": "{{count}} open trades reached their configured Take Profit or Stop Loss levels.",
+    "alerts_banner_tp": "{{count}} Take Profit",
+    "alerts_banner_sl": "{{count}} Stop Loss",
+    "tp_hit_pill": "🎯 TP",
+    "sl_hit_pill": "🛑 SL",
     "show_hide": "Show/Hide",
     "quick_close_title": "Quick close trade #{{id}} ({{symbol}})",
     "exit_price": "Exit price",
@@ -715,7 +928,6 @@
       "cancel": "Cancel",
       "save": "Save Trade",
       "saving": "Saving...",
-      "estimated_fee_note": "Estimated value: final value is calculated by the backend.",
       "labels": {
         "account": "Account",
         "symbol": "Symbol",
@@ -748,16 +960,13 @@
         "sl_pct": "SL %:"
       },
       "errors": {
-        "fix_fields": "Fix highlighted fields before saving.",
         "create_failed": "Trade creation failed."
       },
       "validation": {
         "account_required": "Select a valid account.",
         "symbol_required": "Enter symbol.",
         "quantity_positive": "Quantity must be greater than 0.",
-        "entry_price_positive": "Entry price must be greater than 0.",
-        "take_profit_positive": "Take Profit must be greater than 0.",
-        "stop_loss_positive": "Stop Loss must be greater than 0."
+        "entry_price_positive": "Entry price must be greater than 0."
       },
       "tooltips": {
         "account": "Select the account where trade and execution will be recorded.",
@@ -797,7 +1006,18 @@
         "notional": "Notional",
         "value_required": "Enter a value greater than 0."
       }
-    }
+    },
+    "view_trade": "View trade",
+    "closed_success": "Trade closed successfully",
+    "deleted_success": "Trade deleted successfully",
+    "range_all": "All",
+    "range_today": "Today",
+    "range_7d": "7 days",
+    "range_month": "This month",
+    "range_ytd": "YTD",
+    "outcome_all": "Outcome: All",
+    "outcome_win": "Wins only (+)",
+    "outcome_loss": "Losses only (-)"
   },
   "notes": {
     "title": "Journal & Scouting",
@@ -860,13 +1080,14 @@
     "no_details": "No details",
     "no_notes_yet": "No notes yet.",
     "no_notes_match": "No notes match current filters.",
-    "tag_input_placeholder": "Add tag and press enter",
+    "tag_input_placeholder": "Add discipline tag...",
     "rich_editor_placeholder": "Write your note details...",
     "rename_tag_prompt": "New tag name",
     "delete_tag_confirm": "Delete tag \"{{tag}}\" from all notes?",
     "rename_tag_confirm": "Rename",
     "symbol": "Ticker Symbol",
-    "symbol_placeholder": "Search ticker..."
+    "symbol_placeholder": "Search ticker...",
+    "confirm_delete": "Are you sure you want to delete this daily note?"
   },
   "scouting": {
     "title": "Trading Ideas & Scouting",
@@ -917,9 +1138,7 @@
     "distance_label": "Distance to trigger:",
     "converted_label": "Converted to Trade",
     "closed_label": "Idea archived",
-    "expires_in_days": "Closing in {{count}} days",
     "expires_today": "Expiring today",
-    "stale_in_days": "Stale in {{count}} days",
     "stale_soon": "Stale soon",
     "confirm_delete": "Are you sure you want to delete scouting idea for {{symbol}}?",
     "actions": {
@@ -944,11 +1163,20 @@
       "stale_days": "Mark as Stale after (days)",
       "expire_days": "Auto-close after (days)",
       "submit": "Create Scouting Idea"
-    }
+    },
+    "expires_in_days_one": "Closing in {{count}} day",
+    "expires_in_days_other": "Closing in {{count}} days",
+    "stale_in_days_one": "Stale in {{count}} day",
+    "stale_in_days_other": "Stale in {{count}} days",
+    "default_days": "Default: {{count}} days",
+    "market_auto_placeholder": "Auto from market",
+    "thesis_placeholder": "e.g. Price below EMA 60 on the daily chart, wait for a pullback to 20.03 with support retest before opening a short position."
   },
   "portfolio": {
     "title": "Portfolio",
     "subtitle": "Track your asset holdings and performance over time.",
+    "alerts_coupon_banner": "Coupon distribution today for {{symbol}}: estimated {{amount}}.",
+    "alerts_maturity_banner": "Notice: {{symbol}} reaches natural maturity in {{days}} days (on {{date}}).",
     "kpi_total_value": "Total Value",
     "kpi_total_cost": "Total Cost",
     "kpi_total_return": "Total Return",
@@ -992,7 +1220,6 @@
     "col_return": "Return",
     "col_return_pct": "Return %",
     "tab_all": "All Holdings",
-    "tranches_count": "{{count}} lots",
     "add_tranche": "Add tranche",
     "tranche_number": "Lot #{{number}}",
     "cum_partial": "Partial CUM",
@@ -1004,10 +1231,8 @@
     "tab_bonds": "Bonds & Income",
     "nominal_value": "Nominal Value (€)",
     "bond_clean_price": "Purchase Price (% base 100)",
-    "accrued_interest_in": "Accrued on Purchase (% base 100)",
     "accrued_interest_in_hint": "Accrued interest paid to seller if bought on secondary market",
     "accrued_warning": "Warning: enter accrued interest as a percentage (e.g. 0.50 for 0.50%), not in Euros. An accrued interest > 15% is unusual.",
-    "estimated_cost_basis": "Estimated Cost Basis:",
     "rateo_mode_pct": "% Base 100",
     "rateo_mode_eur": "Amount in €",
     "rateo_mode_total": "Total Paid (€)",
@@ -1104,7 +1329,13 @@
     "exit_tranches": "lots",
     "bulk_exit_hint": "An exit will be recorded for each active lot using the selected date and price.",
     "ai_analysis": "AI Analysis",
-    "ai_analysis_title": "Open Multi-Agent Analysis & Coaching for this asset"
+    "ai_analysis_title": "Open Multi-Agent Analysis & Coaching for this asset",
+    "holding_created": "Position recorded successfully",
+    "weighted_avg": "Weighted average",
+    "tranches_count_one": "{{count}} lot",
+    "tranches_count_other": "{{count}} lots",
+    "delete_error": "Error deleting the position: {{message}}",
+    "exit_error": "Error recording the exit: {{message}}"
   },
   "assets": {
     "title": "Asset Registry",
@@ -1165,14 +1396,21 @@
     "to_year": "To Year",
     "rate_pct": "Rate %",
     "euronext_import_prefix": "Auto-import from",
-    "euronext_import": "Auto-import from Euronext / MOT",
     "euronext_import_placeholder": "Paste Euronext URL or ISIN (e.g. IT0005611741)",
     "euronext_import_btn": "Import Live Data",
     "euronext_import_success": "Bond details successfully imported from Euronext!",
     "euronext_import_loading": "Fetching live data...",
     "euronext_apply_btn": "Fill from Euronext",
     "sync_euronext": "Sync with Euronext",
-    "sync_euronext_success": "Bond details successfully updated from Euronext"
+    "sync_euronext_success": "Bond details successfully updated from Euronext",
+    "created_success": "Asset created",
+    "updated_success": "Asset updated",
+    "deleted_success": "Asset deleted successfully",
+    "maturity_date_required": "Maturity date is required",
+    "euronext_open_title": "Open Euronext MOT",
+    "market_placeholder": "e.g. XETRA, Borsa Italiana",
+    "euronext_import_success_price": "{{message}} Live price: {{price}}%",
+    "euronext_import_error": "Euronext import error: {{message}}"
   },
   "help": {
     "nav": {
@@ -1221,7 +1459,6 @@
     "password_required": "Enter your current and a new password.",
     "profile_message": "Set your timezone so dates and market times display correctly.",
     "broker_message": "Add your first broker. You can add more later from Brokers.",
-    "broker_exists": "You already have {{count}} broker(s). You can add another one or continue.",
     "broker_name": "Broker name",
     "broker_name_required": "Enter a broker name or skip this step.",
     "account_message": "Create your first trading account. You can add more later from Accounts.",
@@ -1229,7 +1466,9 @@
     "account_name_required": "Enter an account name or skip this step.",
     "no_broker": "No broker",
     "done_message": "Your account is ready. You can review everything later in Settings.",
-    "go_dashboard": "Go to dashboard"
+    "go_dashboard": "Go to dashboard",
+    "broker_exists_one": "You already have {{count}} broker. You can add another one or continue.",
+    "broker_exists_other": "You already have {{count}} brokers. You can add another one or continue."
   },
   "analysis": {
     "page_title": "Multi-Agent Asset & Equity Coaching",
@@ -1285,8 +1524,6 @@
       "title": "Analysis History",
       "empty": "No past analyses found.",
       "in_progress": "In progress...",
-      "archive_title": "AI Analysis Archive & History",
-      "archive_subtitle": "View past analyses in full width, monitor data freshness, and free up storage by purging obsolete reports.",
       "stat_total": "Total Analyses",
       "stat_avg_score": "Average Score",
       "stat_fresh": "Fresh (< 30d)",
@@ -1302,7 +1539,6 @@
       "filter_time_older": "Older than 30 days",
       "purge_btn": "History Purge & Cleanup",
       "col_symbol": "Symbol / Asset",
-      "col_source": "Source",
       "col_model": "AI Model",
       "col_score": "AI Score",
       "col_date": "Date Generated",
@@ -1315,7 +1551,6 @@
       "stale_notice": "This report was generated over 30 days ago. Market prices, technical indicators, and Hurst cycles may have changed significantly.",
       "reanalyze_now": "Re-run with Today's Data",
       "back_to_list": "Back to History List",
-      "viewing_report_banner": "Viewing archived report for",
       "no_results_filtered": "No analyses match the selected filters.",
       "purge_modal_title": "Analysis History Purge & Cleanup",
       "purge_modal_desc": "Over time, accumulated analyses consume database storage and lose financial relevance as market conditions change. Choose a cleanup option:",
@@ -1327,11 +1562,14 @@
       "purge_opt_all_sub": "Warning: permanently erases all saved analysis reports.",
       "purge_confirm_action": "Proceed with cleanup",
       "purge_cancel": "Cancel",
-      "purge_toast_success": "{{count}} reports purged from history.",
       "delete_confirm_msg": "Are you sure you want to permanently delete this report from history?",
       "pagination_page": "Page {{current}} of {{total}}",
       "prev_page": "Previous",
-      "next_page": "Next"
+      "next_page": "Next",
+      "no_results_hint": "Try changing the search terms or the status/time filters.",
+      "delete_success": "Report deleted successfully.",
+      "purge_toast_success_one": "{{count}} report purged from history.",
+      "purge_toast_success_other": "{{count}} reports purged from history."
     },
     "display": {
       "loading": "Loading report...",
@@ -1405,10 +1643,11 @@
         "regime_desc": "Long-term memory state identified via R/S analysis.",
         "cycles_title": "Detected Cycles (FFT)",
         "cycle_label": "Cycle {{index}}:",
-        "days": "{{count}} days",
         "cycles_empty": "No spectral harmonic isolated",
         "report_title": "Full Cyclical & Spectral Report",
-        "report_empty": "No cyclical report available."
+        "report_empty": "No cyclical report available.",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days"
       },
       "technical": {
         "title": "Technical Analysis & Indicators",
@@ -1416,7 +1655,6 @@
       },
       "fundamental": {
         "consensus_title": "Wall St. Consensus",
-        "analysts_count": "{{count}} analysts surveyed",
         "target_mean_title": "Average Target Price",
         "target_range": "Min: {{min}} | Max: {{max}}",
         "multiples_title": "Multiples (P/E & PEG)",
@@ -1424,14 +1662,15 @@
         "operating_margins_title": "Operating Margins",
         "gross_margin": "Gross Margin: {{value}}%",
         "report_title": "Fundamental & Bond Analysis",
-        "report_empty": "No fundamental report available."
+        "report_empty": "No fundamental report available.",
+        "analysts_count_one": "{{count}} analyst surveyed",
+        "analysts_count_other": "{{count}} analysts surveyed"
       }
     },
     "convert_modal": {
       "title_step1": "Turn Analysis into Action",
       "title_scouting": "Create Scouting Idea",
       "title_note": "Add to Daily Note",
-      "subtitle": "{{symbol}} ({{market}}) · Coach Score: {{score}}/10",
       "close": "Close",
       "step1_prompt": "Select where you want to transfer data and theses generated by artificial intelligence:",
       "scouting_card_title": "Scouting Idea",
@@ -1484,6 +1723,189 @@
         "synthesis": "Synthesis:",
         "key_points": "Key Points:"
       }
-    }
+    },
+    "existing_hint": "Recent market",
+    "mock_banner_title": "Mock simulation mode active:",
+    "mock_banner_text": "Reports are generated offline with simulated data without connecting to a real LLM."
+  },
+  "holding_detail": {
+    "chart": {
+      "title": "Market Price vs Nominal Price Spread",
+      "subtitle": "Visual comparison between the current quote, the cost price and the nominal redemption value at 100.",
+      "market": "Market:",
+      "nominal": "Nominal:",
+      "cost": "Cost:",
+      "spread_nominal": "Nominal spread:",
+      "show_projection": "Show maturity projection",
+      "hide_projection": "Hide Pull-to-Par trajectory",
+      "projection_hint": "Extended view: the dashed line shows the theoretical convergence to 100 at maturity (Pull-to-Par).",
+      "history_hint": "Actual history: shows the real price trend from entry to today with relative spreads.",
+      "redemption": "Redemption: 100.00%",
+      "series_nominal": "Nominal (100)",
+      "series_cost": "Cost Price",
+      "series_market": "Market Price",
+      "series_projection": "Pull-to-Par Convergence"
+    },
+    "loading": "Loading position...",
+    "not_found_title": "Position not found",
+    "not_found_hint": "The requested holding does not exist or you do not have permission to view it.",
+    "back_to_portfolio": "← Back to Portfolio",
+    "aggregated_hint": "Editing, exits and deletions are managed from the tranche table",
+    "badge_cum_all": "CUM / Loyalty Bonus on all tranches",
+    "badge_cum_some": "CUM on some tranches only",
+    "badge_cum": "CUM / Loyalty Bonus",
+    "label_account": "Account:",
+    "label_exchange": "Exchange:",
+    "label_currency": "Currency:",
+    "market_value": "Market Value",
+    "kpi_nominal_qty": "Nominal Value Held",
+    "kpi_quantity": "Quantity Held",
+    "cost_value": "Cost Value:",
+    "kpi_cost_price": "Cost Price (% of 100)",
+    "kpi_avg_cost": "Average Purchase Price",
+    "accrued_at_purchase": "Accrued interest at purchase:",
+    "kpi_dirty_price_now": "Current Clean Price",
+    "kpi_market_live": "Live Market Price",
+    "kpi_dirty_price": "Dirty Price:",
+    "kpi_ytm_net": "Effective Yield (Net YTM)",
+    "kpi_unrealized": "Unrealized P&L",
+    "ytm_gross_short": "Gross YTM:",
+    "return_short": "Return:",
+    "timeline": {
+      "title": "Lifecycle & Holding Timeline",
+      "subtitle": "Time tracking: from purchase date to maturity or planned exit date.",
+      "bought_on": "When I bought it",
+      "elapsed": "Elapsed:",
+      "elapsed_days": "{{count}} days",
+      "elapsed_suffix": "held",
+      "today": "Today / Current Status",
+      "active_position": "Position",
+      "active": "Active",
+      "in_portfolio": "in portfolio",
+      "end": "When it is expected to end",
+      "remaining": "{{count}} days",
+      "remaining_years": "({{years}} years) until redemption",
+      "matured": "Position reached maturity",
+      "no_maturity": "No maturity date defined",
+      "completed_pct": "{{pct}}% of the cycle completed",
+      "purchase": "Purchase",
+      "maturity": "Maturity"
+    },
+    "nominal_yield": {
+      "title": "Guaranteed Nominal Yield",
+      "subtitle": "Contractual terms set at issuance by the issuer",
+      "type_step_up": "Step-Up",
+      "type_fixed": "Fixed",
+      "coupon_rate": "Annual Nominal Coupon Rate:",
+      "frequency": "Coupon Frequency:",
+      "freq_quarterly": "Quarterly (4/year)",
+      "freq_semiannual": "Semi-annual (2/year)",
+      "freq_annual": "Annual (1/year)",
+      "freq_zero": "Zero-Coupon",
+      "tax_rate": "Applied Tax Rate:",
+      "final_bonus": "Final Loyalty Bonus (CUM):",
+      "step_up_plan": "Step-Up Coupon Schedule:",
+      "step_up_years": "Years {{from}}–{{to}}:"
+    },
+    "market_yield": {
+      "title": "Current Market Yield",
+      "subtitle": "Calculated today based on market price and remaining days",
+      "price": "Price:",
+      "ytm_net": "Yield to Maturity (Net YTM):",
+      "ytm_gross": "Gross Yield (Gross YTM):",
+      "current_yield": "Current Yield:",
+      "accrued": "Accrued Interest to Date (% of 100):",
+      "dirty_price": "Dirty Price (Clean Price + Accrued):"
+    },
+    "spread": {
+      "title": "Yield Differential Analysis (Market Spread)",
+      "below_par": "The security currently trades below par ({{price}}% < 100.00%). Redemption at 100 at maturity grants an additional capital gain of +{{gain}}%, raising the net yield to maturity ({{ytm}}) above the nominal coupon.",
+      "above_par": "The security currently trades above par ({{price}}% > 100.00%). Redemption at 100 at maturity implies a capital reduction of {{loss}}%, bringing the effective yield to maturity ({{ytm}}) below the nominal coupon.",
+      "at_par": "The security trades exactly at par (100.00%). The effective yield matches the nominal coupon.",
+      "spread_label": "Net Yield Spread"
+    },
+    "coupons": {
+      "title": "Future Coupons & Cash Flows",
+      "subtitle_aggregated": "Schedule of future cash flows consolidated for all {{count}} tranches ({{nominal}} € total nominal).",
+      "subtitle_single": "Schedule of future cash flows calculated for this position ({{nominal}} € total nominal).",
+      "count": "{{count}} future flows",
+      "col_date": "Payment Date",
+      "col_flow_type": "Flow Type",
+      "col_rate": "Rate %",
+      "col_gross": "Gross Amount",
+      "col_tax": "Withholding Tax",
+      "col_net": "Net Credited",
+      "empty": "No future coupon flows expected for this position.",
+      "tag_next": "NEXT",
+      "flow_redemption": "Capital Redemption (100%)",
+      "flow_bonus": "Loyalty Bonus (CUM)",
+      "flow_coupon": "Periodic Coupon",
+      "foot_total_net": "Total Future Net Coupons",
+      "foot_coupon_count": "{{count}} future coupon payments",
+      "foot_redemption": "Capital Redeemed at Maturity",
+      "foot_nominal_note": "100% of nominal value",
+      "foot_total": "Total Expected Cash Flow",
+      "foot_total_note": "Total net amount up to maturity"
+    },
+    "tranches": {
+      "title": "Position Tranches",
+      "subtitle": "Breakdown of the {{count}} tranches making up this position. The totals above are their sum.",
+      "col_entry_date": "Entry Date",
+      "col_nominal": "Nominal",
+      "col_quantity": "Quantity",
+      "col_cost_price": "Cost Price",
+      "col_accrued_in": "Purchase Accrued",
+      "col_market_value": "Market Value",
+      "col_return": "Return",
+      "col_cum": "CUM",
+      "col_actions": "Actions",
+      "cum_yes": "YES"
+    },
+    "delete_error": "Delete failed: {{message}}",
+    "undo_exit_error": "Exit cancellation failed: {{message}}",
+    "delete_confirm": "Are you sure you want to delete the {{symbol}} tranche?",
+    "undo_exit_confirm": "Undo the exit dated {{date}} for {{symbol}}? The quantity will be restored."
+  },
+  "editor": {
+    "bold": "Bold",
+    "bold_title": "Bold (Ctrl+B)",
+    "italic": "Italic",
+    "italic_title": "Italic (Ctrl+I)",
+    "underline": "Underline",
+    "underline_title": "Underline (Ctrl+U)",
+    "strikethrough": "Strikethrough",
+    "heading3": "Heading H3",
+    "heading4": "Subheading H4",
+    "paragraph": "Normal paragraph",
+    "bullet_list": "Bulleted list",
+    "numbered_list": "Numbered list",
+    "blockquote": "Quote",
+    "code_block": "Code Block",
+    "insert_link": "Insert Link",
+    "remove_formatting": "Remove formatting",
+    "undo": "Undo",
+    "undo_title": "Undo (Ctrl+Z)",
+    "redo": "Redo",
+    "redo_title": "Redo (Ctrl+Y)",
+    "prompt_url": "Enter URL:",
+    "placeholder": "Write here..."
+  },
+  "tags": {
+    "remove_tag": "Remove tag",
+    "no_tags": "No tags"
+  },
+  "image_editor": {
+    "title": "Image Annotation Editor",
+    "export_png": "Export PNG",
+    "save_annotated": "Save annotated",
+    "saving": "Saving...",
+    "save_success": "Annotation saved successfully.",
+    "save_error": "Failed to save the annotation.",
+    "png_error": "Unable to generate the annotated PNG",
+    "tool_arrow": "Arrow",
+    "tool_rectangle": "Rectangle",
+    "tool_circle": "Circle",
+    "tool_text": "Text",
+    "tool_highlight": "Highlight"
   }
 }

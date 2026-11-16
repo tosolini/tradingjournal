@@ -127,12 +127,12 @@ export function HoldingExitModal({
         : createHoldingExit(holding!.id, payload),
     onSuccess: () => {
       toast.success(
-        t("portfolio.exit_success", "Uscita registrata con successo"),
+        t("portfolio.exit_success"),
       );
       onDone();
     },
     onError: (err: Error) => {
-      toast.error(`Errore registrazione uscita: ${err.message}`);
+      toast.error(t("portfolio.exit_error", { message: err.message }));
     },
   });
 
@@ -170,21 +170,18 @@ export function HoldingExitModal({
           <div>
             <h2 className="text-lg font-semibold text-teal-200 dark:text-teal-900">
               {bulk
-                ? t("portfolio.sell_all_position", "Vendi tutta la posizione")
-                : t("portfolio.register_exit", "Registra uscita")}
+                ? t("portfolio.sell_all_position")
+                : t("portfolio.register_exit")}
             </h2>
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-600">
               {holding.asset_symbol} ·{" "}
               {bulk
-                ? `${holdingTranches.filter((item) => asNumber(item.quantity) > 0).length} ${t("portfolio.exit_tranches", "tranche")}`
+                ? `${holdingTranches.filter((item) => asNumber(item.quantity) > 0).length} ${t("portfolio.exit_tranches")}`
                 : holding.entry_date}
             </p>
             {bulk && (
               <p className="mt-1 text-xs text-amber-300 dark:text-amber-800">
-                {t(
-                  "portfolio.bulk_exit_hint",
-                  "Verrà registrata un'uscita per ogni tranche attiva con data e prezzo indicati.",
-                )}
+                {t("portfolio.bulk_exit_hint")}
               </p>
             )}
           </div>
@@ -192,36 +189,36 @@ export function HoldingExitModal({
             onClick={onClose}
             className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 dark:border-slate-300 dark:text-slate-700 dark:hover:bg-slate-100"
           >
-            {t("common.close", "Chiudi")}
+            {t("common.close")}
           </button>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-xs text-slate-400 dark:text-slate-600">
-            {t("portfolio.exit_type", "Tipo uscita")}
+            {t("portfolio.exit_type")}
             <select
               value={exitType}
               onChange={(e) => handleTypeChange(e.target.value as HoldingExitType)}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 p-2 text-sm text-slate-200 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900"
             >
               <option value="market_sale">
-                {t("portfolio.exit_market_sale", "Vendita a mercato")}
+                {t("portfolio.exit_market_sale")}
               </option>
               {canMature && (
                 <option value="maturity">
-                  {t("portfolio.exit_maturity", "Rimborso a scadenza")}
+                  {t("portfolio.exit_maturity")}
                 </option>
               )}
               {isBond && (
                 <option value="early_redemption">
-                  {t("portfolio.exit_early_redemption", "Rimborso anticipato emittente")}
+                  {t("portfolio.exit_early_redemption")}
                 </option>
               )}
             </select>
           </label>
 
           <label className="block text-xs text-slate-400 dark:text-slate-600">
-            {t("portfolio.exit_date", "Data uscita")}
+            {t("portfolio.exit_date")}
             <input
               type="date"
               value={exitDate}
@@ -233,8 +230,8 @@ export function HoldingExitModal({
 
           <label className="block text-xs text-slate-400 dark:text-slate-600">
             {isBond
-              ? t("portfolio.exit_quantity_nominal", "Nominale da uscire (€)")
-              : t("portfolio.exit_quantity", "Quantità da uscire")}
+              ? t("portfolio.exit_quantity_nominal")
+              : t("portfolio.exit_quantity")}
             <input
               type="text"
               value={quantity}
@@ -243,15 +240,15 @@ export function HoldingExitModal({
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 p-2 font-mono text-sm text-slate-200 disabled:opacity-60 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900"
             />
             <span className="mt-1 block text-[11px] text-slate-500">
-              {t("portfolio.exit_available", "Disponibile")}:{" "}
+              {t("portfolio.exit_available")}:{" "}
               {Number(holding.quantity).toLocaleString(locale)}
             </span>
           </label>
 
           <label className="block text-xs text-slate-400 dark:text-slate-600">
             {isBond
-              ? t("portfolio.exit_clean_price", "Prezzo secco di uscita (% base 100)")
-              : t("portfolio.exit_price", "Prezzo di uscita")}
+              ? t("portfolio.exit_clean_price")
+              : t("portfolio.exit_price")}
             <input
               type="text"
               value={cleanPrice}
@@ -263,35 +260,35 @@ export function HoldingExitModal({
           {isBond && (
             <>
               <label className="block text-xs text-slate-400 dark:text-slate-600">
-                {t("portfolio.exit_accrued", "Rateo di uscita (% base 100)")}
+                {t("portfolio.exit_accrued")}
                 <input
                   type="text"
                   value={accruedOut}
                   onChange={(e) => setAccruedOut(e.target.value)}
-                  placeholder={t("portfolio.auto_value", "Automatico")}
+                  placeholder={t("portfolio.auto_value")}
                   className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 p-2 font-mono text-sm text-slate-200 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900"
                 />
               </label>
               <label className="block text-xs text-slate-400 dark:text-slate-600">
-                {t("portfolio.exit_coupons", "Cedole incassate (lordo)")}
+                {t("portfolio.exit_coupons")}
                 <input
                   type="text"
                   value={couponsReceived}
                   disabled={bulk}
                   onChange={(e) => setCouponsReceived(e.target.value)}
-                  placeholder={t("portfolio.auto_value", "Automatico")}
+                  placeholder={t("portfolio.auto_value")}
                   className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 p-2 font-mono text-sm text-slate-200 disabled:opacity-60 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900"
                 />
               </label>
               {isMaturity && (
                 <label className="block text-xs text-slate-400 dark:text-slate-600">
-                  {t("portfolio.exit_bonus", "Premio CUM (lordo)")}
+                  {t("portfolio.exit_bonus")}
                   <input
                     type="text"
                     value={bonusReceived}
                     disabled={bulk}
                     onChange={(e) => setBonusReceived(e.target.value)}
-                    placeholder={t("portfolio.auto_value", "Automatico")}
+                    placeholder={t("portfolio.auto_value")}
                     className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 p-2 font-mono text-sm text-slate-200 disabled:opacity-60 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900"
                   />
                 </label>
@@ -300,7 +297,7 @@ export function HoldingExitModal({
           )}
 
           <label className="block text-xs text-slate-400 dark:text-slate-600">
-            {t("portfolio.exit_fees", "Commissioni di uscita")}
+            {t("portfolio.exit_fees")}
             <input
               type="text"
               value={fees}
@@ -310,19 +307,19 @@ export function HoldingExitModal({
           </label>
 
           <label className="block text-xs text-slate-400 dark:text-slate-600">
-            {t("portfolio.exit_taxes", "Imposte stimate")}
+            {t("portfolio.exit_taxes")}
             <input
               type="text"
               value={taxes}
               disabled={bulk}
               onChange={(e) => setTaxes(e.target.value)}
-              placeholder={t("portfolio.auto_value", "Automatico")}
+              placeholder={t("portfolio.auto_value")}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 p-2 font-mono text-sm text-slate-200 disabled:opacity-60 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900"
             />
           </label>
 
           <label className="block text-xs text-slate-400 dark:text-slate-600 sm:col-span-2">
-            {t("portfolio.exit_notes", "Note")}
+            {t("portfolio.exit_notes")}
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -342,11 +339,11 @@ export function HoldingExitModal({
           <div className="mt-5 rounded-xl border border-slate-700/60 bg-slate-800/40 p-4 dark:border-slate-200 dark:bg-slate-50">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-100 dark:text-slate-900">
-                {t("portfolio.exit_preview", "Anteprima uscita")}
+                {t("portfolio.exit_preview")}
               </h3>
               {previewLoading && (
                 <span className="text-xs text-slate-400">
-                  {t("common.loading", "Calcolo...")}
+                  {t("common.loading")}
                 </span>
               )}
             </div>
@@ -354,7 +351,7 @@ export function HoldingExitModal({
             <div className="grid gap-3 text-xs sm:grid-cols-2">
               <div className="flex justify-between gap-2">
                 <span className="text-slate-400 dark:text-slate-600">
-                  {t("portfolio.exit_cost_basis", "Costo fiscale venduto")}
+                  {t("portfolio.exit_cost_basis")}
                 </span>
                 <span className="font-mono text-slate-200 dark:text-slate-900">
                   {formatMoney(preview.cost_basis, currency, locale)}
@@ -362,7 +359,7 @@ export function HoldingExitModal({
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-slate-400 dark:text-slate-600">
-                  {t("portfolio.exit_capital_gain", "Plus/minus capitale")}
+                  {t("portfolio.exit_capital_gain")}
                 </span>
                 <span className="font-mono text-slate-200 dark:text-slate-900">
                   {formatMoney(preview.realized_capital_gain, currency, locale)}
@@ -370,7 +367,7 @@ export function HoldingExitModal({
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-slate-400 dark:text-slate-600">
-                  {t("portfolio.exit_interest_income", "Interessi/cedole")}
+                  {t("portfolio.exit_interest_income")}
                 </span>
                 <span className="font-mono text-slate-200 dark:text-slate-900">
                   {formatMoney(preview.realized_interest_income, currency, locale)}
@@ -378,7 +375,7 @@ export function HoldingExitModal({
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-slate-400 dark:text-slate-600">
-                  {t("portfolio.exit_gross", "Incasso lordo")}
+                  {t("portfolio.exit_gross")}
                 </span>
                 <span className="font-mono text-slate-200 dark:text-slate-900">
                   {formatMoney(preview.gross_proceeds, currency, locale)}
@@ -386,7 +383,7 @@ export function HoldingExitModal({
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-slate-400 dark:text-slate-600">
-                  {t("portfolio.exit_taxes", "Imposte stimate")}
+                  {t("portfolio.exit_taxes")}
                 </span>
                 <span className="font-mono text-slate-200 dark:text-slate-900">
                   {formatMoney(preview.taxes, currency, locale)}
@@ -394,7 +391,7 @@ export function HoldingExitModal({
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-slate-400 dark:text-slate-600">
-                  {t("portfolio.exit_net", "Incasso netto")}
+                  {t("portfolio.exit_net")}
                 </span>
                 <span className="font-mono font-semibold text-teal-300 dark:text-teal-800">
                   {formatMoney(preview.net_proceeds, currency, locale)}
@@ -402,7 +399,7 @@ export function HoldingExitModal({
               </div>
               <div className="flex justify-between gap-2 sm:col-span-2">
                 <span className="text-slate-400 dark:text-slate-600">
-                  {t("portfolio.exit_realized_pnl", "P&L realizzato")}
+                  {t("portfolio.exit_realized_pnl")}
                 </span>
                 <span
                   className={`font-mono font-bold ${
@@ -417,13 +414,13 @@ export function HoldingExitModal({
             </div>
 
             <div className="mt-3 border-t border-slate-700/60 pt-3 text-xs text-slate-400 dark:border-slate-200 dark:text-slate-600">
-              {t("portfolio.exit_remaining", "Quantità residua")}:{" "}
+              {t("portfolio.exit_remaining")}:{" "}
               <span className="font-mono text-slate-200 dark:text-slate-900">
                 {formatNumber(remaining, { minDecimals: 0, maxDecimals: 6, locale })}
               </span>
               {preview.accrued_interest_out && asNumber(preview.accrued_interest_out) > 0 && (
                 <span className="ml-3">
-                  {t("portfolio.exit_accrued_short", "Rateo")}:{" "}
+                  {t("portfolio.exit_accrued_short")}:{" "}
                   <span className="font-mono text-slate-200 dark:text-slate-900">
                     {formatNumber(preview.accrued_interest_out, {
                       minDecimals: 2,
@@ -451,7 +448,7 @@ export function HoldingExitModal({
             onClick={onClose}
             className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 dark:border-slate-300 dark:text-slate-700 dark:hover:bg-slate-100"
           >
-            {t("portfolio.cancel", "Annulla")}
+            {t("portfolio.cancel")}
           </button>
           <button
             onClick={() => mutation.mutate()}
@@ -459,8 +456,8 @@ export function HoldingExitModal({
             className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-50"
           >
             {mutation.isPending
-              ? t("portfolio.saving", "Salvataggio...")
-              : t("portfolio.exit_confirm", "Conferma uscita")}
+              ? t("portfolio.saving")
+              : t("portfolio.exit_confirm")}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { sanitizeRichText } from "../lib/sanitize";
 
 interface RichTextEditorProps {
@@ -11,9 +12,10 @@ interface RichTextEditorProps {
 export function RichTextEditor({
   value,
   onChange,
-  placeholder = "Scrivi qui...",
+  placeholder,
   minHeight = "160px",
 }: RichTextEditorProps) {
+  const { t } = useTranslation();
   const editorRef = useRef<HTMLDivElement>(null);
   const [isEmpty, setIsEmpty] = useState(!value);
 
@@ -67,7 +69,7 @@ export function RichTextEditor({
   };
 
   const handleInsertLink = () => {
-    const url = window.prompt("Inserisci URL:", "https://");
+    const url = window.prompt(t("editor.prompt_url"), "https://");
     if (url && url.trim()) {
       execute("createLink", url.trim());
     }
@@ -85,8 +87,8 @@ export function RichTextEditor({
             execute("bold");
           }}
           className="rounded p-1.5 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Grassetto (Ctrl+B)"
-          aria-label="Grassetto"
+          title={t("editor.bold_title")}
+          aria-label={t("editor.bold")}
         >
           <span className="font-extrabold font-serif text-sm">B</span>
         </button>
@@ -99,8 +101,8 @@ export function RichTextEditor({
             execute("italic");
           }}
           className="rounded p-1.5 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Corsivo (Ctrl+I)"
-          aria-label="Corsivo"
+          title={t("editor.italic_title")}
+          aria-label={t("editor.italic")}
         >
           <span className="italic font-serif text-sm">I</span>
         </button>
@@ -113,8 +115,8 @@ export function RichTextEditor({
             execute("underline");
           }}
           className="rounded p-1.5 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Sottolineato (Ctrl+U)"
-          aria-label="Sottolineato"
+          title={t("editor.underline_title")}
+          aria-label={t("editor.underline")}
         >
           <span className="underline font-serif text-sm">U</span>
         </button>
@@ -127,8 +129,8 @@ export function RichTextEditor({
             execute("strikeThrough");
           }}
           className="rounded p-1.5 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Barrato"
-          aria-label="Barrato"
+          title={t("editor.strikethrough")}
+          aria-label={t("editor.strikethrough")}
         >
           <span className="line-through font-serif text-sm">S</span>
         </button>
@@ -143,7 +145,7 @@ export function RichTextEditor({
             execute("formatBlock", "<h3>");
           }}
           className="rounded px-2 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Titolo H3"
+          title={t("editor.heading3")}
         >
           H3
         </button>
@@ -154,7 +156,7 @@ export function RichTextEditor({
             execute("formatBlock", "<h4>");
           }}
           className="rounded px-2 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Sottotitolo H4"
+          title={t("editor.heading4")}
         >
           H4
         </button>
@@ -165,7 +167,7 @@ export function RichTextEditor({
             execute("formatBlock", "<p>");
           }}
           className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-600 dark:hover:bg-slate-200 cursor-pointer"
-          title="Paragrafo normale"
+          title={t("editor.paragraph")}
         >
           ¶
         </button>
@@ -180,8 +182,8 @@ export function RichTextEditor({
             execute("insertUnorderedList");
           }}
           className="rounded p-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Elenco puntato"
-          aria-label="Elenco puntato"
+          title={t("editor.bullet_list")}
+          aria-label={t("editor.bullet_list")}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
             <line x1="8" y1="6" x2="21" y2="6" />
@@ -201,8 +203,8 @@ export function RichTextEditor({
             execute("insertOrderedList");
           }}
           className="rounded p-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Elenco numerato"
-          aria-label="Elenco numerato"
+          title={t("editor.numbered_list")}
+          aria-label={t("editor.numbered_list")}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
             <line x1="10" y1="6" x2="21" y2="6" />
@@ -222,8 +224,8 @@ export function RichTextEditor({
             execute("formatBlock", "<blockquote>");
           }}
           className="rounded p-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Citazione"
-          aria-label="Citazione"
+          title={t("editor.blockquote")}
+          aria-label={t("editor.blockquote")}
         >
           <span className="font-serif font-bold text-sm">“</span>
         </button>
@@ -236,8 +238,8 @@ export function RichTextEditor({
             execute("formatBlock", "<pre>");
           }}
           className="rounded p-1.5 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Blocco Codice"
-          aria-label="Blocco Codice"
+          title={t("editor.code_block")}
+          aria-label={t("editor.code_block")}
         >
           &lt;/&gt;
         </button>
@@ -252,8 +254,8 @@ export function RichTextEditor({
             handleInsertLink();
           }}
           className="rounded p-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white dark:text-slate-700 dark:hover:bg-slate-200 cursor-pointer"
-          title="Inserisci Link"
-          aria-label="Inserisci Link"
+          title={t("editor.insert_link")}
+          aria-label={t("editor.insert_link")}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -270,8 +272,8 @@ export function RichTextEditor({
             execute("unlink");
           }}
           className="rounded p-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-200 cursor-pointer"
-          title="Rimuovi formattazione"
-          aria-label="Rimuovi formattazione"
+          title={t("editor.remove_formatting")}
+          aria-label={t("editor.remove_formatting")}
         >
           <span className="text-xs">Tx</span>
         </button>
@@ -285,8 +287,8 @@ export function RichTextEditor({
             execute("undo");
           }}
           className="rounded p-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-200 cursor-pointer"
-          title="Annulla (Ctrl+Z)"
-          aria-label="Annulla"
+          title={t("editor.undo_title")}
+          aria-label={t("editor.undo")}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
             <path d="M3 7v6h6" />
@@ -301,8 +303,8 @@ export function RichTextEditor({
             execute("redo");
           }}
           className="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white dark:text-slate-500 dark:hover:bg-slate-200 cursor-pointer"
-          title="Ripristina (Ctrl+Y)"
-          aria-label="Ripristina"
+          title={t("editor.redo_title")}
+          aria-label={t("editor.redo")}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
             <path d="M21 7v6h-6" />
@@ -315,7 +317,7 @@ export function RichTextEditor({
       <div className="relative p-3">
         {isEmpty && (
           <div className="pointer-events-none absolute left-3 top-3 text-xs text-slate-500 dark:text-slate-400 italic">
-            {placeholder}
+            {placeholder ?? t("editor.placeholder")}
           </div>
         )}
 

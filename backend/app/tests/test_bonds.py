@@ -550,6 +550,7 @@ def test_euronext_lookup_endpoint(monkeypatch):
 
     res = lookup_bond(
         payload=BondLookupRequest(query="https://live.euronext.com/en/product/bonds/IT0005611741-MOTX"),
+        request=None,
         _current_user=fake_user,
     )
     assert res.symbol == "IT0005611741"
@@ -655,6 +656,136 @@ def test_single_holding_detail_and_history(db):
     # 4. Test /api/bonds/calendar filter by holding_id
     filtered_cal = get_bond_calendar(holding_id=holding.id, db=db, current_user=user)
     assert len(filtered_cal) == len(cal)
+
+
+def test_holding_price_history_with_euronext_chart(db, monkeypatch):
+    """Verify that holding_price_history incorporates historical chart points from Euronext."""
+    from app.api.portfolio import holding_price_history
+    from app.models import Account, Asset, Holding, User
+
+    user = User(email="chart_user@example.com", username="chart_user", hashed_password="pw", is_active=True)
+    db.add(user)
+    db.flush()
+
+    account = Account(user_id=user.id, name="Chart Account")
+    db.add(account)
+    db.flush()
+
+    asset = Asset(
+        user_id=user.id,
+        symbol="IT0005611741",
+        name="BTP 2054",
+        instrument_type="bond",
+        exchange="MOT",
+    )
+    db.add(asset)
+    db.flush()
+
+    holding = Holding(
+        user_id=user.id,
+        account_id=account.id,
+        asset_id=asset.id,
+        quantity=Decimal("10000"),
+        avg_cost=Decimal("93.87"),
+        entry_date=date(2026, 8, 19),
+    )
+    db.add(holding)
+    db.commit()
+
+    monkeypatch.setattr(
+        "app.services.portfolio._resolve_current_price",
+        lambda _h: Decimal("90.73"),
+    )
+    monkeypatch.setattr(
+        "app.services.euronext.fetch_euronext_chart_prices",
+        lambda query: {
+            "2026-08-19": Decimal("92.95"),
+            "2026-09-15": Decimal("90.50"),
+            "2026-10-15": Decimal("88.20"),
+            "2026-11-10": Decimal("91.70"),
+        },
+    )
+
+    history = holding_price_history(holding_id=holding.id, db=db, current_user=user)
+    assert history.current_price == Decimal("90.73")
+    historical_points = [p for p in history.points if not p.is_projection]
+    assert len(historical_points) >= 5
+    dates = [p.date for p in historical_points]
+    assert "2026-08-19" in dates
+    assert "2026-09-15" in dates
+    assert "2026-10-15" in dates
+    assert "2026-11-10" in dates
+    prices = {p.date: p.market_price for p in historical_points}
+    assert prices["2026-09-15"] == Decimal("90.50")
+    assert prices["2026-10-15"] == Decimal("88.20")
+
+
+def test_holding_price_history_respects_existing_snapshots_as_start_bound(db, monkeypatch):
+    """Verify that holding_price_history bounds remote price fetch to after the latest snapshot."""
+    from app.api.portfolio import holding_price_history
+    from app.models import Account, Asset, Holding, PositionDailySnapshot, User
+
+    user = User(email="snapshot_user@example.com", username="snapshot_user", hashed_password="pw", is_active=True)
+    db.add(user)
+    db.flush()
+
+    account = Account(user_id=user.id, name="Snapshot Account")
+    db.add(account)
+    db.flush()
+
+    asset = Asset(
+        user_id=user.id,
+        symbol="IT0005611741",
+        name="BTP 2054",
+        instrument_type="bond",
+        exchange="MOT",
+    )
+    db.add(asset)
+    db.flush()
+
+    holding = Holding(
+        user_id=user.id,
+        account_id=account.id,
+        asset_id=asset.id,
+        quantity=Decimal("10000"),
+        avg_cost=Decimal("93.87"),
+        entry_date=date(2026, 8, 1),
+    )
+    db.add(holding)
+    db.flush()
+
+    # Pre-existing snapshot on 2026-09-01
+    snapshot = PositionDailySnapshot(
+        account_id=account.id,
+        symbol=asset.symbol,
+        snapshot_date=date(2026, 9, 1),
+        position_qty=Decimal("10000"),
+        close_price=Decimal("92.00"),
+    )
+    db.add(snapshot)
+    db.commit()
+
+    monkeypatch.setattr(
+        "app.services.portfolio._resolve_current_price",
+        lambda _h: Decimal("90.73"),
+    )
+    # Mock chart prices returning data before and after snapshot date
+    monkeypatch.setattr(
+        "app.services.euronext.fetch_euronext_chart_prices",
+        lambda query: {
+            "2026-08-15": Decimal("91.00"),  # before snapshot, should be ignored
+            "2026-09-01": Decimal("99.00"),  # on snapshot date, snapshot should win
+            "2026-09-15": Decimal("93.50"),  # after snapshot, should be included
+        },
+    )
+
+    history = holding_price_history(holding_id=holding.id, db=db, current_user=user)
+    historical_points = [p for p in history.points if not p.is_projection]
+    prices = {p.date: p.market_price for p in historical_points}
+
+    assert "2026-08-15" not in prices
+    assert prices["2026-09-01"] == Decimal("92.00")  # Snapshot price preserved
+    assert prices["2026-09-15"] == Decimal("93.50")
 
 
 def test_euronext_bond_rate_normalization_and_step_up(monkeypatch):
@@ -792,7 +923,7 @@ def test_sync_asset_and_holding_euronext(db, monkeypatch):
     monkeypatch.setattr("app.services.euronext.fetch_euronext_bond_details", lambda q: mock_data)
 
     # 1. Test sync_asset_euronext
-    res_asset = sync_asset_euronext(asset_id=asset.id, db=db, current_user=user)
+    res_asset = sync_asset_euronext(asset_id=asset.id, request=None, db=db, current_user=user)
     assert res_asset.bond_detail.annual_coupon_rate == Decimal("3.3500")
     assert res_asset.bond_detail.step_up_schedule[1]["to_year"] == 6
 
@@ -824,7 +955,7 @@ def test_sync_euronext_rejects_non_bond_asset(db):
     db.commit()
 
     with pytest.raises(HTTPException) as exc:
-        sync_asset_euronext(asset_id=asset.id, db=db, current_user=user)
+        sync_asset_euronext(asset_id=asset.id, request=None, db=db, current_user=user)
 
     assert exc.value.status_code == 400
 

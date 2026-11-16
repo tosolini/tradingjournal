@@ -20,6 +20,9 @@ type UserPreferencesPayload = {
     portfolio?: {
       auto_record_maturity?: boolean;
     };
+    alerts?: {
+      bond_expiry_days?: number;
+    };
     [key: string]: unknown;
   };
 };
@@ -872,13 +875,10 @@ function PortfolioSettingsSection() {
   return (
     <section className="card p-4">
       <h2 className="mb-2 text-lg font-semibold">
-        {t("settings.portfolio.title", "Portafoglio")}
+        {t("settings.portfolio.title")}
       </h2>
       <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">
-        {t(
-          "settings.portfolio.description",
-          "Automatizza la registrazione dei rimborsi obbligazionari a scadenza.",
-        )}
+        {t("settings.portfolio.description")}
       </p>
       <label className="flex items-center gap-2 text-sm text-slate-300 dark:text-slate-900">
         <input
@@ -891,10 +891,7 @@ function PortfolioSettingsSection() {
           className="rounded border-slate-700 text-teal-500 focus:ring-teal-400"
         />
         <span>
-          {t(
-            "settings.portfolio.auto_maturity",
-            "Registra automaticamente i rimborsi a scadenza",
-          )}
+          {t("settings.portfolio.auto_maturity")}
         </span>
       </label>
       <div className="mt-4 flex items-center gap-3">
@@ -905,17 +902,122 @@ function PortfolioSettingsSection() {
           className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
         >
           {save.isPending
-            ? t("settings.portfolio.saving", "Salvataggio...")
-            : t("settings.portfolio.save", "Salva")}
+            ? t("settings.portfolio.saving")
+            : t("settings.portfolio.save")}
         </button>
         {state === "saved" && (
           <span className="text-sm text-teal-400">
-            {t("settings.portfolio.saved", "Salvato")}
+            {t("settings.portfolio.saved")}
           </span>
         )}
         {state === "error" && (
           <span className="text-sm text-rose-400">
-            {t("settings.portfolio.error", "Errore")}
+            {t("settings.portfolio.error")}
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function AlertsSettingsSection() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [bondExpiryDays, setBondExpiryDays] = useState(30);
+  const [state, setState] = useState<"idle" | "saved" | "error">("idle");
+
+  const { data: prefData } = useQuery({
+    queryKey: ["user-preferences"],
+    queryFn: () => api<UserPreferencesPayload>("/api/auth/preferences"),
+  });
+
+  useEffect(() => {
+    const alertsObj = prefData?.preferences?.alerts as { bond_expiry_days?: number } | undefined;
+    const days = alertsObj?.bond_expiry_days;
+    if (typeof days === "number" && days > 0) {
+      setBondExpiryDays(days);
+    }
+  }, [prefData]);
+
+  const save = useMutation({
+    mutationFn: (days: number) =>
+      api("/api/auth/preferences", {
+        method: "PATCH",
+        body: JSON.stringify({
+          preferences: {
+            alerts: {
+              bond_expiry_days: days,
+            },
+          },
+        }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user-preferences"] });
+      qc.invalidateQueries({ queryKey: ["unified-alerts"] });
+      setState("saved");
+      setTimeout(() => setState("idle"), 3000);
+    },
+    onError: () => setState("error"),
+  });
+
+  return (
+    <section className="card p-4">
+      <h2 className="mb-2 text-lg font-semibold">
+        {t("settings.alerts.title", "Notifiche & Alert")}
+      </h2>
+      <p className="mb-4 text-sm text-slate-400 dark:text-slate-900">
+        {t(
+          "settings.alerts.description",
+          "Configura le preferenze per gli avvisi sui trade aperti e la scadenza naturale delle obbligazioni.",
+        )}
+      </p>
+      <div className="max-w-md space-y-2">
+        <label
+          htmlFor="bond-expiry-days-input"
+          className="block text-sm font-medium text-slate-200 dark:text-slate-800"
+        >
+          {t("settings.alerts.bond_expiry_days", "Preavviso Scadenza BTP / Obbligazioni (giorni)")}
+        </label>
+        <div className="flex items-center gap-3">
+          <input
+            id="bond-expiry-days-input"
+            type="number"
+            min="1"
+            max="365"
+            value={bondExpiryDays}
+            onChange={(e) => {
+              setBondExpiryDays(Math.max(1, parseInt(e.target.value) || 1));
+              setState("idle");
+            }}
+            className="w-28 rounded-lg border border-slate-700 dark:border-slate-300 bg-slate-900 dark:bg-white px-3 py-1.5 text-sm"
+          />
+          <span className="text-xs text-slate-400 dark:text-slate-500">
+            {t(
+              "settings.alerts.bond_expiry_help",
+              "Numero di giorni prima della scadenza naturale per mostrare la notifica nella campanella e nella pagina portafoglio (predefinito: 30).",
+            )}
+          </span>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => save.mutate(bondExpiryDays)}
+          disabled={save.isPending}
+          className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50 cursor-pointer hover:bg-teal-400 transition"
+        >
+          {save.isPending
+            ? t("settings.portfolio.saving", "Salvataggio...")
+            : t("settings.alerts.save", "Salva preferenze alert")}
+        </button>
+        {state === "saved" && (
+          <span className="text-sm text-teal-400">
+            {t("settings.alerts.saved", "Preferenze alert salvate con successo.")}
+          </span>
+        )}
+        {state === "error" && (
+          <span className="text-sm text-rose-400">
+            {t("settings.alerts.error", "Errore durante il salvataggio.")}
           </span>
         )}
       </div>
@@ -985,6 +1087,7 @@ export function SettingsPage() {
 
       <DashboardSettingsSection />
       <PortfolioSettingsSection />
+      <AlertsSettingsSection />
 
       <LlmSettingsWizard />
 

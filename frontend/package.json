@@ -6,32 +6,34 @@
     "scripts": {
         "dev": "vite --host 0.0.0.0 --port 5173",
         "build": "tsc -b && vite build",
-        "preview": "vite preview --host 0.0.0.0 --port 5173"
+        "preview": "vite preview --host 0.0.0.0 --port 5173",
+        "i18n:check": "node scripts/check-i18n.mjs",
+        "i18n:check:strict": "node scripts/check-i18n.mjs --strict"
     },
     "dependencies": {
-        "@tanstack/react-query": "^5.105.0",
+        "@tanstack/react-query": "^5.107.1",
         "@hookform/resolvers": "^7.0.3",
         "@uiw/react-markdown-preview": "^5.2.1",
         "dompurify": "^3.4.17",
         "i18next": "^27.1.1",
         "i18next-browser-languagedetector": "^8.3.0",
-        "lightweight-charts": "^5.2.1",
+        "lightweight-charts": "^5.3.0",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
-        "react-hook-form": "^7.90.0",
+        "react-hook-form": "^7.92.0",
         "react-i18next": "^18.0.1",
         "react-router-dom": "^7.18.5",
         "zod": "^4.6.7"
     },
     "devDependencies": {
-        "@tailwindcss/postcss": "^4.3.4",
+        "@tailwindcss/postcss": "^4.3.5",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
-        "@vitejs/plugin-react": "^6.2.1",
+        "@vitejs/plugin-react": "^6.3.0",
         "autoprefixer": "^10.6.2",
         "postcss": "^8.5.32",
         "tailwindcss": "^4.3.0",
         "typescript": "^7.0.2",
-        "vite": "^8.3.6"
+        "vite": "^8.3.8"
     }
 }

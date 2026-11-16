@@ -47,7 +47,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
   const [activeTab, setActiveTab] = useState<"coach" | "debate" | "lead" | "technical" | "fundamental" | "cyclical">("coach");
   const [isConvertModalOpen, setIsConvertModalOpen] = useState<boolean>(false);
 
-  const dateLocale = (i18n.resolvedLanguage || i18n.language || "it").startsWith("it") ? "it-IT" : "en-US";
+  const dateLocale = (i18n.resolvedLanguage || i18n.language || "en").startsWith("it") ? "it-IT" : "en-US";
 
   // Extract cyclical metrics if present in data snapshot
   const cyclicalSnapshot = (report.data_snapshot?.cyclical as Record<string, unknown>) || {};
@@ -94,14 +94,16 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             <p className="text-sm text-slate-400">
               {report.completed_at
                 ? t("analysis.viewer.completed_at", {
-                    date: new Date(report.completed_at).toLocaleString(dateLocale, { dateStyle: "medium", timeStyle: "short" }),
-                    defaultValue: `Analisi completata il ${new Date(report.completed_at).toLocaleString(dateLocale, { dateStyle: "medium", timeStyle: "short" })}`,
+                    date: new Date(report.completed_at).toLocaleString(dateLocale, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }),
                   })
-                : t("analysis.viewer.in_progress", "In corso...")}
+                : t("analysis.viewer.in_progress")}
             </p>
             {report.llm_model_used && (
               <p className="text-xs text-slate-500 font-mono">
-                {t("analysis.viewer.model", { model: report.llm_model_used, defaultValue: `Modello: ${report.llm_model_used}` })}
+                {t("analysis.viewer.model", { model: report.llm_model_used })}
               </p>
             )}
 
@@ -110,11 +112,11 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                 type="button"
                 onClick={() => setIsConvertModalOpen(true)}
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-950/40 transition-all cursor-pointer group"
-                title={t("analysis.viewer.convert_tooltip", "Converti questa analisi in un'Idea di Scouting o in una Nota di Diario")}
+                title={t("analysis.viewer.convert_tooltip")}
               >
                 <span className="group-hover:scale-110 transition-transform">⚡</span>
-                <span>{t("analysis.viewer.turn_into_action", "Trasforma in Azione")}</span>
-                <span className="text-[10px] opacity-75 font-normal">{t("analysis.viewer.action_sub", "(Scouting / Nota)")}</span>
+                <span>{t("analysis.viewer.turn_into_action")}</span>
+                <span className="text-[10px] opacity-75 font-normal">{t("analysis.viewer.action_sub")}</span>
               </button>
             </div>
           </div>
@@ -122,13 +124,13 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
           <div className="flex items-center gap-8 self-center md:self-auto">
             {hurstVal !== null && (
               <div className="text-center px-4 py-2 rounded-lg bg-slate-800/60 border border-slate-700/50">
-                <span className="text-xs uppercase font-medium text-slate-400 block">{t("analysis.viewer.hurst_exponent", "Hurst Exponent")}</span>
+                <span className="text-xs uppercase font-medium text-slate-400 block">{t("analysis.viewer.hurst_exponent")}</span>
                 <span className="text-lg font-bold text-sky-400">{hurstVal.toFixed(2)}</span>
                 <span className="text-[11px] block text-slate-400 capitalize">{regimeVal?.replace("_", " ")}</span>
               </div>
             )}
             <div className="flex flex-col items-center">
-              <span className="text-xs uppercase font-medium text-slate-400 mb-1">{t("analysis.viewer.coach_score", "Coach Score")}</span>
+              <span className="text-xs uppercase font-medium text-slate-400 mb-1">{t("analysis.viewer.coach_score")}</span>
               <ScoreGauge score={report.overall_score} size={84} />
             </div>
           </div>
@@ -143,7 +145,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             activeTab === "coach" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
-          <span>{t("analysis.viewer.tabs.coach", "🏋️ Coaching & Action")}</span>
+          <span>{t("analysis.viewer.tabs.coach")}</span>
         </button>
         <button
           onClick={() => setActiveTab("debate")}
@@ -151,7 +153,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             activeTab === "debate" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
-          <span>{t("analysis.viewer.tabs.debate", "⚔️ Dibattito Bull vs Bear")}</span>
+          <span>{t("analysis.viewer.tabs.debate")}</span>
         </button>
         <button
           onClick={() => setActiveTab("lead")}
@@ -159,7 +161,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             activeTab === "lead" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
-          <span>{t("analysis.viewer.tabs.lead", "🎓 Sintesi Lead")}</span>
+          <span>{t("analysis.viewer.tabs.lead")}</span>
         </button>
         <button
           onClick={() => setActiveTab("cyclical")}
@@ -167,7 +169,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             activeTab === "cyclical" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
-          <span>{t("analysis.viewer.tabs.cyclical", "🔄 Analisi Ciclica")}</span>
+          <span>{t("analysis.viewer.tabs.cyclical")}</span>
         </button>
         <button
           onClick={() => setActiveTab("technical")}
@@ -175,7 +177,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             activeTab === "technical" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
-          <span>{t("analysis.viewer.tabs.technical", "📈 Analisi Tecnica")}</span>
+          <span>{t("analysis.viewer.tabs.technical")}</span>
         </button>
         <button
           onClick={() => setActiveTab("fundamental")}
@@ -183,7 +185,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             activeTab === "fundamental" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
-          <span>{t("analysis.viewer.tabs.fundamental", "📋 Fondamentali / Bond")}</span>
+          <span>{t("analysis.viewer.tabs.fundamental")}</span>
         </button>
       </div>
 
@@ -195,10 +197,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3 border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-bold text-white">{t("analysis.viewer.coach.market_position", "🎯 Posizione a Mercato")}</span>
+                  <span className="text-base font-bold text-white">{t("analysis.viewer.coach.market_position")}</span>
                   {tradeCtx.trade_id && (
                     <span className="text-xs font-mono text-slate-400">
-                      {t("analysis.viewer.coach.trade_id", { id: tradeCtx.trade_id, defaultValue: `Trade #${tradeCtx.trade_id}` })}
+                      {t("analysis.viewer.coach.trade_id", { id: tradeCtx.trade_id })}
                     </span>
                   )}
                   <span
@@ -213,7 +215,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                 </div>
                 {tradeCtx.unrealized_pnl !== undefined && tradeCtx.unrealized_pnl !== null && (
                   <div className="text-sm">
-                    <span className="text-slate-400 mr-1.5">{t("analysis.viewer.coach.unrealized_pnl", "PnL Non Realizzato:")}</span>
+                    <span className="text-slate-400 mr-1.5">{t("analysis.viewer.coach.unrealized_pnl")}</span>
                     <span
                       className={`font-semibold ${
                         Number(tradeCtx.unrealized_pnl) >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -227,11 +229,11 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                 <div>
-                  <span className="text-slate-400 block mb-0.5">{t("analysis.viewer.coach.open_qty", "Quantità Aperta")}</span>
+                  <span className="text-slate-400 block mb-0.5">{t("analysis.viewer.coach.open_qty")}</span>
                   <span className="font-semibold text-white text-sm">{tradeCtx.open_position_qty ?? "—"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block mb-0.5">{t("analysis.viewer.coach.avg_entry", "Prezzo Medio Entrata")}</span>
+                  <span className="text-slate-400 block mb-0.5">{t("analysis.viewer.coach.avg_entry")}</span>
                   <span className="font-semibold text-white text-sm">
                     {tradeCtx.average_entry_price !== undefined && tradeCtx.average_entry_price !== null
                       ? Number(tradeCtx.average_entry_price).toFixed(2)
@@ -239,15 +241,15 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block mb-0.5">{t("analysis.viewer.coach.stop_loss", "Stop Loss")}</span>
+                  <span className="text-slate-400 block mb-0.5">{t("analysis.viewer.coach.stop_loss")}</span>
                   <span className="font-semibold text-rose-400 text-sm">
-                    {tradeCtx.stop_loss ? Number(tradeCtx.stop_loss).toFixed(2) : t("analysis.viewer.coach.not_set", "Non impostato")}
+                    {tradeCtx.stop_loss ? Number(tradeCtx.stop_loss).toFixed(2) : t("analysis.viewer.coach.not_set")}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block mb-0.5">{t("analysis.viewer.coach.target_price", "Target Price")}</span>
+                  <span className="text-slate-400 block mb-0.5">{t("analysis.viewer.coach.target_price")}</span>
                   <span className="font-semibold text-emerald-400 text-sm">
-                    {tradeCtx.target_price ? Number(tradeCtx.target_price).toFixed(2) : t("analysis.viewer.coach.not_set", "Non impostato")}
+                    {tradeCtx.target_price ? Number(tradeCtx.target_price).toFixed(2) : t("analysis.viewer.coach.not_set")}
                   </span>
                 </div>
               </div>
@@ -261,7 +263,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                {t("analysis.viewer.coach.suggestions_title", "Suggerimenti Operativi")}
+                {t("analysis.viewer.coach.suggestions_title")}
               </h3>
               {report.action_suggestions && report.action_suggestions.length > 0 ? (
                 <ul className="space-y-2">
@@ -273,7 +275,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-400 italic">{t("analysis.viewer.coach.suggestions_empty", "Nessun suggerimento specifico rilevato.")}</p>
+                <p className="text-sm text-slate-400 italic">{t("analysis.viewer.coach.suggestions_empty")}</p>
               )}
             </div>
 
@@ -282,7 +284,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                {t("analysis.viewer.coach.risks_title", "Avvisi di Rischio & Bias")}
+                {t("analysis.viewer.coach.risks_title")}
               </h3>
               {report.risk_warnings && report.risk_warnings.length > 0 ? (
                 <ul className="space-y-2">
@@ -294,7 +296,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-400 italic">{t("analysis.viewer.coach.risks_empty", "Nessun alert critico segnalato.")}</p>
+                <p className="text-sm text-slate-400 italic">{t("analysis.viewer.coach.risks_empty")}</p>
               )}
             </div>
           </div>
@@ -302,11 +304,11 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
           {/* Full Coaching Reflection */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span aria-hidden="true">🏋️</span> {t("analysis.viewer.coach.report_title", "Rapporto del Coach")}
+              <span aria-hidden="true">🏋️</span> {t("analysis.viewer.coach.report_title")}
             </h3>
             <ReportMarkdownViewer
               content={report.coaching_report}
-              emptyText={t("analysis.viewer.coach.report_empty", "Nessun testo di coaching disponibile.")}
+              emptyText={t("analysis.viewer.coach.report_empty")}
               stripJsonBlock
             />
           </div>
@@ -318,21 +320,21 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-emerald-950/10 border border-emerald-900/30 rounded-xl p-6">
             <h3 className="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
-              <span aria-hidden="true">🐂</span> {t("analysis.viewer.debate.bull_title", "Tesi Bull (Catalizzatori & Edge)")}
+              <span aria-hidden="true">🐂</span> {t("analysis.viewer.debate.bull_title")}
             </h3>
             <ReportMarkdownViewer
               content={report.bull_thesis}
-              emptyText={t("analysis.viewer.debate.bull_empty", "Nessun report rialzista generato.")}
+              emptyText={t("analysis.viewer.debate.bull_empty")}
             />
           </div>
 
           <div className="bg-rose-950/10 border border-rose-900/30 rounded-xl p-6">
             <h3 className="text-lg font-bold text-rose-400 mb-4 flex items-center gap-2">
-              <span aria-hidden="true">🐻</span> {t("analysis.viewer.debate.bear_title", "Tesi Bear (Avvocato del Diavolo & Rischi)")}
+              <span aria-hidden="true">🐻</span> {t("analysis.viewer.debate.bear_title")}
             </h3>
             <ReportMarkdownViewer
               content={report.bear_thesis}
-              emptyText={t("analysis.viewer.debate.bear_empty", "Nessun report ribassista generato.")}
+              emptyText={t("analysis.viewer.debate.bear_empty")}
             />
           </div>
         </div>
@@ -342,11 +344,11 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
       {activeTab === "lead" && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span aria-hidden="true">🎓</span> {t("analysis.viewer.lead.title", "Sintesi della Commissione d'Investimento")}
+            <span aria-hidden="true">🎓</span> {t("analysis.viewer.lead.title")}
           </h3>
           <ReportMarkdownViewer
             content={report.lead_synthesis}
-            emptyText={t("analysis.viewer.lead.empty", "Nessuna sintesi disponibile.")}
+            emptyText={t("analysis.viewer.lead.empty")}
           />
         </div>
       )}
@@ -357,60 +359,60 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
               <span className="text-xs uppercase font-medium text-slate-400 block mb-1">
-                {t("analysis.viewer.cyclical.hurst_title", "Hurst Exponent (H)")}
+                {t("analysis.viewer.cyclical.hurst_title")}
               </span>
               <span className="text-2xl font-extrabold text-sky-400">
                 {hurstVal !== null ? hurstVal.toFixed(3) : "—"}
               </span>
               <p className="text-xs text-slate-400 mt-2">
                 {hurstVal !== null && hurstVal > 0.55
-                  ? t("analysis.viewer.cyclical.regime_persistent", "Regime persistente: trend forte e continuità di momentum.")
+                  ? t("analysis.viewer.cyclical.regime_persistent")
                   : hurstVal !== null && hurstVal < 0.45
-                  ? t("analysis.viewer.cyclical.regime_anti_persistent", "Regime anti-persistente: oscillazione ciclica e ritorni verso la media.")
-                  : t("analysis.viewer.cyclical.regime_random", "Cammino aleatorio (rumore browniano).")}
+                  ? t("analysis.viewer.cyclical.regime_anti_persistent")
+                  : t("analysis.viewer.cyclical.regime_random")}
               </p>
             </div>
 
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
               <span className="text-xs uppercase font-medium text-slate-400 block mb-1">
-                {t("analysis.viewer.cyclical.regime_title", "Regime Frattale")}
+                {t("analysis.viewer.cyclical.regime_title")}
               </span>
               <span className="text-2xl font-extrabold text-amber-400 capitalize">
-                {regimeVal?.replace("_", " ") || t("analysis.viewer.cyclical.regime_indeterminate", "Indeterminato")}
+                {regimeVal?.replace("_", " ") || t("analysis.viewer.cyclical.regime_indeterminate")}
               </span>
               <p className="text-xs text-slate-400 mt-2">
-                {t("analysis.viewer.cyclical.regime_desc", "Stato di memoria a lungo termine identificato con analisi R/S.")}
+                {t("analysis.viewer.cyclical.regime_desc")}
               </p>
             </div>
 
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
               <span className="text-xs uppercase font-medium text-slate-400 block mb-1">
-                {t("analysis.viewer.cyclical.cycles_title", "Cicli Rilevati (FFT)")}
+                {t("analysis.viewer.cyclical.cycles_title")}
               </span>
               {dominantCycles.length > 0 ? (
                 <div className="space-y-1 mt-1">
                   {dominantCycles.map((c: any, idx: number) => (
                     <div key={idx} className="flex justify-between text-xs text-slate-300">
-                      <span>{t("analysis.viewer.cyclical.cycle_label", { index: idx + 1, defaultValue: `Ciclo ${idx + 1}:` })}</span>
+                      <span>{t("analysis.viewer.cyclical.cycle_label", { index: idx + 1 })}</span>
                       <span className="font-semibold text-white">
-                        {t("analysis.viewer.cyclical.days", { count: c.period_trading_days, defaultValue: `${c.period_trading_days} giorni` })}
+                        {t("analysis.viewer.cyclical.days", { count: c.period_trading_days })}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <span className="text-sm text-slate-500">{t("analysis.viewer.cyclical.cycles_empty", "Nessuna armonica spettrale isolata")}</span>
+                <span className="text-sm text-slate-500">{t("analysis.viewer.cyclical.cycles_empty")}</span>
               )}
             </div>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span aria-hidden="true">🔄</span> {t("analysis.viewer.cyclical.report_title", "Report Ciclico & Spettrale Completo")}
+              <span aria-hidden="true">🔄</span> {t("analysis.viewer.cyclical.report_title")}
             </h3>
             <ReportMarkdownViewer
               content={report.cyclical_report}
-              emptyText={t("analysis.viewer.cyclical.report_empty", "Nessun report ciclico disponibile.")}
+              emptyText={t("analysis.viewer.cyclical.report_empty")}
             />
           </div>
         </div>
@@ -420,11 +422,11 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
       {activeTab === "technical" && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span aria-hidden="true">📈</span> {t("analysis.viewer.technical.title", "Analisi Tecnica & Indicatori")}
+            <span aria-hidden="true">📈</span> {t("analysis.viewer.technical.title")}
           </h3>
           <ReportMarkdownViewer
             content={report.technical_report}
-            emptyText={t("analysis.viewer.technical.empty", "Nessun report tecnico disponibile.")}
+            emptyText={t("analysis.viewer.technical.empty")}
           />
         </div>
       )}
@@ -437,35 +439,35 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <span className="text-xs uppercase font-medium text-slate-400 block mb-1">
-                  {t("analysis.viewer.fundamental.consensus_title", "Consensus Wall St.")}
+                  {t("analysis.viewer.fundamental.consensus_title")}
                 </span>
                 <span className="text-lg font-bold text-amber-400 capitalize">
                   {recommendation?.replace(/_/g, " ") || "—"}
                 </span>
                 {numAnalysts !== null && (
                   <p className="text-[11px] text-slate-400 mt-1">
-                    {t("analysis.viewer.fundamental.analysts_count", { count: numAnalysts, defaultValue: `${numAnalysts} analisti censiti` })}
+                    {t("analysis.viewer.fundamental.analysts_count", { count: numAnalysts })}
                   </p>
                 )}
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <span className="text-xs uppercase font-medium text-slate-400 block mb-1">
-                  {t("analysis.viewer.fundamental.target_mean_title", "Target Price Medio")}
+                  {t("analysis.viewer.fundamental.target_mean_title")}
                 </span>
                 <span className="text-lg font-bold text-emerald-400">
                   {targetMean !== null ? targetMean.toFixed(2) : "—"}
                 </span>
                 {targetLow !== null && targetHigh !== null && (
                   <p className="text-[11px] text-slate-400 mt-1">
-                    {t("analysis.viewer.fundamental.target_range", { min: targetLow.toFixed(1), max: targetHigh.toFixed(1), defaultValue: `Min: ${targetLow.toFixed(1)} | Max: ${targetHigh.toFixed(1)}` })}
+                    {t("analysis.viewer.fundamental.target_range", { min: targetLow.toFixed(1), max: targetHigh.toFixed(1) })}
                   </p>
                 )}
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <span className="text-xs uppercase font-medium text-slate-400 block mb-1">
-                  {t("analysis.viewer.fundamental.multiples_title", "Multipli (P/E & PEG)")}
+                  {t("analysis.viewer.fundamental.multiples_title")}
                 </span>
                 <div className="flex items-baseline gap-2">
                   <span className="text-lg font-bold text-sky-400">
@@ -475,21 +477,21 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
                 </div>
                 {pegRatio !== null && (
                   <p className="text-[11px] text-slate-400 mt-1">
-                    {t("analysis.viewer.fundamental.peg_ratio", { value: pegRatio.toFixed(2), defaultValue: `PEG Ratio: ${pegRatio.toFixed(2)}` })}
+                    {t("analysis.viewer.fundamental.peg_ratio", { value: pegRatio.toFixed(2) })}
                   </p>
                 )}
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <span className="text-xs uppercase font-medium text-slate-400 block mb-1">
-                  {t("analysis.viewer.fundamental.operating_margins_title", "Margini Operativi")}
+                  {t("analysis.viewer.fundamental.operating_margins_title")}
                 </span>
                 <span className="text-lg font-bold text-indigo-400">
                   {operatingMargins !== null ? `${(operatingMargins * 100).toFixed(1)}%` : "—"}
                 </span>
                 {grossMargins !== null && (
                   <p className="text-[11px] text-slate-400 mt-1">
-                    {t("analysis.viewer.fundamental.gross_margin", { value: (grossMargins * 100).toFixed(1), defaultValue: `Margine Lordo: ${(grossMargins * 100).toFixed(1)}%` })}
+                    {t("analysis.viewer.fundamental.gross_margin", { value: (grossMargins * 100).toFixed(1) })}
                   </p>
                 )}
               </div>
@@ -498,11 +500,11 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span aria-hidden="true">📋</span> {t("analysis.viewer.fundamental.report_title", "Analisi Fondamentale & Obbligazionaria")}
+              <span aria-hidden="true">📋</span> {t("analysis.viewer.fundamental.report_title")}
             </h3>
             <ReportMarkdownViewer
               content={report.fundamental_report}
-              emptyText={t("analysis.viewer.fundamental.report_empty", "Nessun report fondamentale disponibile.")}
+              emptyText={t("analysis.viewer.fundamental.report_empty")}
             />
           </div>
         </div>

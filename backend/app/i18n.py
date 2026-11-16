@@ -107,6 +107,19 @@ def translate(key: str, request: Request | None = None, **kwargs: Any) -> str:
         return template
 
 
+def translate_locale(locale: str, key: str, **kwargs: Any) -> str:
+    """Translate a key for an explicit locale (no request object needed)."""
+    normalized = _normalize_locale(locale)
+    catalog = _get_catalog(normalized)
+    fallback_catalog = _get_catalog(DEFAULT_LOCALE)
+
+    template = catalog.get(key) or fallback_catalog.get(key) or key
+    try:
+        return template.format(**kwargs)
+    except Exception:
+        return template
+
+
 def localized_error(status_code: int, code: str, request: Request | None = None, **kwargs: Any) -> HTTPException:
     return HTTPException(
         status_code=status_code,

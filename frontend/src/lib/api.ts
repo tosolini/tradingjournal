@@ -1123,6 +1123,8 @@ export interface TradeIdea {
   updated_at: string;
   current_price?: string | null;
   distance_pct?: string | null;
+  alert_key?: string;
+  is_acknowledged?: boolean;
 }
 
 export interface TradeIdeaCounts {
@@ -1172,6 +1174,102 @@ export interface TradeIdeaAlertsResult {
   unread_count: number;
   items: TradeIdea[];
 }
+
+export interface TradePriceAlert {
+  id: number;
+  alert_key: string;
+  trade_id: number;
+  symbol: string;
+  side: "long" | "short";
+  alert_type: "take_profit" | "stop_loss";
+  threshold_price: string | number;
+  current_price: string | number;
+  delta_pct: string | number;
+  account_id: number;
+  account_name?: string | null;
+  market?: string | null;
+  is_acknowledged?: boolean;
+}
+
+export interface BondCouponAlert {
+  id: string;
+  alert_key: string;
+  holding_id: number;
+  asset_id: number;
+  asset_symbol: string;
+  asset_name: string;
+  account_id: number;
+  account_name?: string | null;
+  coupon_date: string;
+  gross_amount: string | number;
+  net_amount: string | number;
+  currency: string;
+  is_acknowledged?: boolean;
+}
+
+export interface BondMaturityAlert {
+  id: number;
+  alert_key: string;
+  holding_id: number;
+  asset_id: number;
+  asset_symbol: string;
+  asset_name: string;
+  isin?: string | null;
+  account_id: number;
+  account_name?: string | null;
+  maturity_date: string;
+  days_remaining: number;
+  nominal_value: string | number;
+  final_bonus_rate?: string | number | null;
+  currency: string;
+  is_acknowledged?: boolean;
+}
+
+export interface AlertCounts {
+  all: number;
+  trades: number;
+  coupons: number;
+  maturities: number;
+  scouting: number;
+}
+
+export interface UnifiedAlertsResult {
+  unread_count: number;
+  counts: AlertCounts;
+  trades: TradePriceAlert[];
+  coupons: BondCouponAlert[];
+  maturities: BondMaturityAlert[];
+  scouting: TradeIdea[];
+}
+
+export interface AlertAcknowledgeResponse {
+  success: boolean;
+  acknowledged_keys: string[];
+}
+
+export const alertsApi = {
+  getUnifiedAlerts: (targetDate?: string, includeAcknowledged = false): Promise<UnifiedAlertsResult> => {
+    const q = new URLSearchParams();
+    if (targetDate) q.set("target_date", targetDate);
+    if (includeAcknowledged) q.set("include_acknowledged", "true");
+    const qs = q.toString() ? `?${q.toString()}` : "";
+    return api(`/api/alerts${qs}`);
+  },
+  acknowledge: (alertKey: string): Promise<AlertAcknowledgeResponse> =>
+    api("/api/alerts/acknowledge", {
+      method: "POST",
+      body: JSON.stringify({ alert_key: alertKey }),
+    }),
+  acknowledgeAll: (alertKeys?: string[]): Promise<AlertAcknowledgeResponse> =>
+    api("/api/alerts/acknowledge-all", {
+      method: "POST",
+      body: JSON.stringify(alertKeys ? { alert_keys: alertKeys } : {}),
+    }),
+  unacknowledge: (alertKey: string): Promise<AlertAcknowledgeResponse> =>
+    api(`/api/alerts/acknowledge/${encodeURIComponent(alertKey)}`, {
+      method: "DELETE",
+    }),
+};
 
 export const tradeIdeasApi = {
   list: (params?: { status?: string; search?: string; tag?: string }): Promise<TradeIdeaListResult> => {
