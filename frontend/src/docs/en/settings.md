@@ -95,6 +95,12 @@ Manage automatic portfolio position behavior:
 
 The operation is idempotent and runs only once per tranche. The preference is disabled by default; you can still record the redemption manually from the position detail.
 
+## Notifications & Alerts
+
+Configure your notification preferences:
+
+- **Bond Maturity Advance Notice (Days)**: set how many calendar days prior to a bond's natural maturity date the system should display the notification in the topbar bell and portfolio banner (default: **30 days**).
+
 ## Session
 
 - **Logout** — ends the current session and returns to the login page

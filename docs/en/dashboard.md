@@ -21,6 +21,19 @@ The home page provides a comprehensive, advanced operational summary of your who
 
 ---
 
+### Notification & Alert Center (Bell Icon)
+
+The top navigation header provides access to the unified **Notification & Alert Center**, consolidating key market and portfolio events in one place:
+
+- **🎯 Trade Take Profit / Stop Loss**: real-time price monitoring that triggers as soon as an active open trade touches or crosses its configured target price or stop loss.
+- **💰 Coupons Today**: automated notifications on the exact ex-dividend / coupon distribution day for bonds, BTPs, and dividend ETFs, showing estimated net payout and credited account.
+- **⏳ Bond Maturity**: advance countdown notices for bonds reaching natural maturity (customizable window in Settings, default 30 days).
+- **⚡ Scouting**: watchlisted trade ideas that hit their entry trigger price.
+
+Each alert card includes an acknowledge checkmark button (**✓**) to mark it as read without altering positions. A **Mark all as read** button in the footer dismisses all active alerts simultaneously. Read status is persistently synced across all user devices via PostgreSQL.
+
+---
+
 ### Charts and Analytical Panels
 
 | Panel | Content & Features |

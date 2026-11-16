@@ -49,6 +49,12 @@ When the ticker database is populated (see [Tickers](tickers.md)), the symbol in
 
 The **Trades** section provides an advanced tabular view for exploring, filtering, and auditing your trading history.
 
+### Exit Target Price Alerts (Take Profit & Stop Loss Hit)
+
+When an active open trade touches or crosses its configured Take Profit or Stop Loss price level:
+- **Prominent Top Alert Banner**: an alert banner appears at the top of the page detailing the number of triggered positions, complete with quick-filter pills to immediately isolate the symbol in the table.
+- **Pulsing Row Badges**: the symbol column displays an animated pulsing badge (`🎯 TP` or `🛑 SL`), immediately highlighting positions requiring management (e.g. partial exit, stop trailing, or full close).
+
 ### 1. Date Presets and Fast Filtering
 
 At the top of the table, quick filter controls let you zero in on specific trades:

@@ -14,7 +14,8 @@ This project is a personal trading journal application designed to help traders 
 - **Trades management** with client-side pagination, quick date presets (`All`, `Today`, `7d`, `This Month`, `YTD`), outcome filters (`Win`, `Loss`), column visibility toggles, and instant quick-close
 - **Performance** page with portfolio value evolution, daily PnL and a color-coded monthly calendar
 - **Fixed Income & Bond Accounting Engine** with dedicated bond parameters (`bond_type`, `maturity_date`, coupon schedules, step-up, bonus CUM), accrued interest (rateo passivo), net/gross YTM solver, Euronext live bond quote imports, and coupon cash flow calendar
-- **Stock Scouting & Trade Ideas Engine** with automated price triggers, proximity percentage delta, lifecycle state machine (`watching` → `triggered` → `stale` → `closed` / `converted`), in-app topbar notification bell, and one-click conversion into executed trades
+- **Stock Scouting & Trade Ideas Engine** with automated price triggers, proximity percentage delta, lifecycle state machine (`watching` → `triggered` → `stale` → `closed` / `converted`), and one-click conversion into executed trades
+- **Unified Notifications & Alert Center** with real-time Take Profit & Stop Loss alerts for open trades (evaluating Long/Short positions against live prices), today's coupon distribution alerts, and upcoming bond maturity countdowns with multi-device persistent acknowledgment and category filtering
 - **Multi-Agent Asset Analysis & AI Coaching Engine** with institutional dialectical debate (Technical, Fundamental/Equity Research, Cyclical/Hurst-FFT, Bull vs Bear adversarial debate, Lead Synthesis, and Personal Trading Coach with 1-10 scoring, behavioral bias alerts, and 1-click action conversion into scouting ideas or daily notes)
 - **Interactive LLM Setup Wizard** in Settings with live connection testing (latency in ms), model presets, protected API keys, and multi-provider support: Google Gemini, OpenAI, Anthropic Claude, Ollama (100% private local), and Mock simulation
 - **Daily Notes & Psychology Journal** with an integrated, zero-dependency WYSIWYG editor (forced word-wrapping and line break safety), emotional mood tracker, and **trading discipline checklist** (pre/post-trade psychology)
@@ -37,8 +38,8 @@ The entire project is meant to be used on localhost or private networks. **Do no
 
 ## Current version
 
-- Backend: `0.3.0` (`backend/pyproject.toml`)
-- Frontend: `0.3.0` (`frontend/package.json`)
+- Backend: `0.3.1` (`backend/pyproject.toml`)
+- Frontend: `0.3.1` (`frontend/package.json`)
 
 More details on change log and versioning strategy in the [changelog.md](changelog.md) file.
 
