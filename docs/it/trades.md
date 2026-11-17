@@ -102,13 +102,37 @@ Su ciascuna riga della tabella sono disponibili azioni immediate:
 
 ## Dettaglio Trade
 
-Selezionando un'operazione si accede al fascicolo completo organizzato in schede:
+Selezionando un'operazione si accede al fascicolo completo con header riassuntivo a tre pilastri finanziari e schede operative dedicate:
+
+### Cockpit Finanziario a 3 Card
+L'intestazione della scheda trade è organizzata in tre card tematiche ad alta visibilità:
+1. **Posizione & Carico**:
+   - **Prezzo Medio di Carico (PMC)** in evidenza come metrica principale, affiancato dal badge per ingressi multipli (es. `2 ingressi`).
+   - Indicazione del **1° Ingresso** di riferimento per confrontare il prezzo originario con i successivi incrementi di posizione.
+   - Quantità aperta, controvalore totale investito, commissioni complessive e durata a mercato (holding time).
+2. **Mercato & PnL**:
+   - Quotazione di mercato live con **delta percentuale rispetto al PMC**.
+   - PnL latente (non realizzato) e controvalore attuale per posizioni aperte, oppure PnL netto e lordo consolidato per trade chiusi.
+3. **Target & Rischio**:
+   - Livelli di Take Profit e Stop Loss con relative variazioni percentuali.
+   - Rapporto Rischio/Rendimento (**Risk/Reward ratio**) con indicatore grafico a barra colorata.
+   - Pannello espandibile per consultare dettagli secondari (conto di trading, broker, note operative, timeframe).
+
+---
+
+### Schede Operative
 
 - **Panoramica** — scheda riassuntiva con direzione, orizzonte temporale, controvalore, livelli target/stop e metriche di rendimento.
 - **Grafico** — integrazione del grafico interattivo TradingView centrato sul ticker negoziato.
 - **Tecnico** — indicatore sintetico oscillatori/medie mobili TradingView.
 - **Chiusura** — modulo avanzato per registrare parziali o l'uscita definitiva dal mercato.
-- **Esecuzioni** — registro cronologico di tutti i parziali (fill) eseguiti, con calcolo automatico delle commissioni del broker di riferimento.
+- **Esecuzioni** — registro cronologico di tutti i parziali (fill) eseguiti:
+  - **Striscia di riepilogo**: visualizza immediatamente PMC, 1° Ingresso, Quantità totale, Controvalore complessivo e Commissioni totali.
+  - **Badge di ruolo ordini**: distingue visivamente il `★ 1° Ingresso`, gli incrementi di posizione (`Incremento #1`, `Incremento #2` con variazione percentuale di prezzo rispetto al primo ingresso) e le `Uscite`, con controvalore di riga (`Quantità × Prezzo`).
+- **🤖 Coaching AI (Condizionale)** — se è presente un'analisi di coaching generata dal motore multi-agente per il trade o per il ticker corrispondente, questa scheda si attiva automaticamente mostrando:
+  - Punteggio sintetico da 1 a 10 e verdetto del Personal Coach.
+  - Sintesi del dibattito dialettico (Bull vs Bear), catalizzatori, multipli e checklist comportamentale.
+  - Suggerimenti operativi e pulsante rapido per rilanciare un nuovo coaching aggiornato.
 - **Immagini & Grafici** — galleria di screenshot allegati con visualizzatore a tutto schermo e zoom.
 
 ### Monitoraggio Posizioni Aperte (Prezzi Real-Time)

@@ -226,6 +226,7 @@ def start_analysis_job(
 def list_analysis_history(
     symbol: Optional[str] = None,
     status: Optional[str] = None,
+    trade_id: Optional[int] = None,
     limit: int = Query(default=100, le=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -237,6 +238,8 @@ def list_analysis_history(
         .order_by(desc(AnalysisReport.created_at))
         .limit(limit)
     )
+    if trade_id is not None:
+        stmt = stmt.where(AnalysisReport.trade_id == trade_id)
     if symbol:
         stmt = stmt.where(AnalysisReport.symbol == symbol.strip().upper())
     if status:

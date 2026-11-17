@@ -956,6 +956,7 @@ class AnalysisReportSummary(BaseModel):
     id: int
     symbol: str
     market: str
+    trade_id: Optional[int] = None
     status: str
     language: str
     trigger_mode: str

@@ -1327,6 +1327,7 @@ export interface AnalysisReportSummary {
   id: number;
   symbol: string;
   market: string;
+  trade_id?: number | null;
   status: "pending" | "running" | "completed" | "failed";
   language: "it" | "en";
   trigger_mode: "manual" | "scheduled";
@@ -1402,11 +1403,12 @@ export const analysisApi = {
   getTargets: (): Promise<AnalysisTargetItem[]> => api("/api/analysis/targets"),
   run: (payload: AnalysisRunPayload): Promise<AnalysisReportSummary> =>
     api("/api/analysis/run", { method: "POST", body: JSON.stringify(payload) }),
-  getHistory: (symbol?: string, limit = 100, status?: string): Promise<AnalysisReportSummary[]> => {
+  getHistory: (symbol?: string, limit = 100, status?: string, tradeId?: number): Promise<AnalysisReportSummary[]> => {
     const q = new URLSearchParams();
     if (symbol) q.set("symbol", symbol);
     if (limit) q.set("limit", String(limit));
     if (status) q.set("status", status);
+    if (tradeId != null) q.set("trade_id", String(tradeId));
     const query = q.toString() ? `?${q.toString()}` : "";
     return api(`/api/analysis/history${query}`);
   },

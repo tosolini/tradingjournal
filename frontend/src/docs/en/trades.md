@@ -102,13 +102,37 @@ Each table row offers one-click action icons:
 
 ## Trade Detail Dossier
 
-Selecting any trade opens a comprehensive dossier organized into dedicated tabs:
+Selecting any trade opens a comprehensive dossier organized into a three-pillar financial header and dedicated operational tabs:
+
+### 3-Card Financial Cockpit
+The trade card header is structured into three high-visibility functional cards:
+1. **Position & Basis**:
+   - **Average Entry Price / Cost Basis (PMC)** prominently featured as the hero metric, accompanied by a multi-entry count badge (e.g., `2 entries`).
+   - Reference **1st Entry** price to easily benchmark subsequent scale-in tranches against the initial fill.
+   - Open quantity, total invested capital, cumulative commissions incurred, and holding duration.
+2. **Market & PnL**:
+   - Real-time market quote with **percentage delta vs Average Cost**.
+   - Unrealized PnL and current market value for open positions, or consolidated net and gross realized PnL for closed trades.
+3. **Target & Risk**:
+   - Take Profit and Stop Loss levels with percentage distances.
+   - Realized/potential **Risk/Reward ratio** with a visual color-coded bar gauge.
+   - Collapsible panel to inspect secondary metadata (trading account, broker, operational notes, timeframe).
+
+---
+
+### Operational Tabs
 
 - **Overview** — executive summary with direction, holding duration, position value, target/stop levels, and return metrics.
 - **Chart** — interactive TradingView charting container centered on the traded instrument.
 - **Technical** — TradingView technical analysis summary widget (oscillators and moving averages).
 - **Close** — advanced close form to log partial scale-outs or final market exit.
-- **Executions** — chronological ledger of all order fills, with automated broker commission calculation.
+- **Executions** — chronological ledger of all order fills:
+  - **Summary Strip**: immediately displays total PMC, 1st Entry price, Total Quantity, Cumulative Notional, and Total Commissions.
+  - **Execution Role Badges**: clearly marks `★ 1st Entry`, scale-in orders (`Increment #1`, `Increment #2` displaying price percentage delta relative to the first entry), and `Exits`, including line item notional (`Quantity × Price`).
+- **🤖 AI Coaching (Conditional)** — if a multi-agent AI coaching report exists for this trade or matching ticker, this tab appears automatically featuring:
+  - Synthetic 1-to-10 discipline score and Personal Trading Coach verdict.
+  - Institutional debate synthesis (Bull vs Bear), catalysts, valuation multiples, and behavioral bias checklist.
+  - Actionable advice and a quick button to re-run coaching with today's session data.
 - **Images & Attachments** — full-screen zoomable screenshot gallery for trade review.
 
 ### Open Positions: Real-Time Market Valuation

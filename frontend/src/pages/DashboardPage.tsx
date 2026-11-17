@@ -130,11 +130,17 @@ function EquityChartPanel({
   const locale = i18n.resolvedLanguage === "it" ? "it-IT" : "en-US";
 
   const cutoff = (months: number): string => {
-    const d = new Date();
+    const lastDateStr = activePoints.length ? activePoints[activePoints.length - 1].date : null;
+    const d = lastDateStr ? new Date(lastDateStr + "T00:00:00") : new Date();
+    const originalDay = d.getDate();
     d.setMonth(d.getMonth() - months);
+    if (d.getDate() !== originalDay) {
+      d.setDate(0);
+    }
+    const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
-    return `${d.getFullYear()}-${mm}-${dd}`;
+    return `${yyyy}-${mm}-${dd}`;
   };
   const mappedPoints = useMemo(() => {
     return data.map((p) => {
@@ -183,7 +189,12 @@ function EquityChartPanel({
         horzLines: { color: isDark ? "rgba(148,163,184,0.08)" : "rgba(100,116,139,0.14)" },
       },
       rightPriceScale: { borderVisible: false },
-      timeScale: { borderVisible: false, timeVisible: false },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: false,
+        fixLeftEdge: true,
+        fixRightEdge: true,
+      },
       crosshair: {
         vertLine: {
           color: isDark ? "rgba(45,212,191,0.4)" : "rgba(13,148,136,0.4)",
@@ -219,6 +230,13 @@ function EquityChartPanel({
       cost.setData(visible.map((p) => ({ time: p.date, value: p.cost })));
     }
 
+    chart.timeScale().fitContent();
+
+    const resizeObserver = new ResizeObserver(() => {
+      chart.timeScale().fitContent();
+    });
+    resizeObserver.observe(ref.current);
+
     chart.subscribeCrosshairMove((param) => {
       if (!param || !param.time || !param.point) {
         setHoveredPoint(null);
@@ -234,6 +252,7 @@ function EquityChartPanel({
     });
 
     return () => {
+      resizeObserver.disconnect();
       chart.remove();
     };
   }, [visible, theme, t]);
