@@ -38,7 +38,7 @@ Each alert card includes an acknowledge checkmark button (**✓**) to mark it as
 
 | Panel | Content & Features |
 |---|---|
-| **Equity curve** | Portfolio value over time (area chart) with an optional dashed cost line.<br>- **Asset class filter**: segmented button group **[ Combined \| Portfolio \| Equities ]** to view all assets combined or isolate long-term holdings (ETFs & bonds) versus stock trading positions (with instantaneous chart and metric badge updates).<br>- **Weekend & closure normalization**: open positions maintain their latest valuation over weekends and market holidays via smart forward-fill, preventing artificial dips to zero or sawtooth distortions.<br>- **Time range selector**: quick presets (**1M / 3M / 6M / 1Y / ALL**). |
+| **Equity curve** | Portfolio value over time (area chart) with an optional dashed cost line.<br>- **Asset class filter**: segmented button group **[ Combined \| Portfolio \| Equities ]** to view all assets combined or isolate long-term holdings (ETFs & bonds) versus stock trading positions (with instantaneous chart and metric badge updates).<br>- **Weekend & closure normalization**: open positions maintain their latest valuation over weekends and market holidays via smart forward-fill, preventing artificial dips to zero or sawtooth distortions.<br>- **Time range selector**: quick presets (**1M / 3M / 6M / 1Y / ALL**) synchronized with the latest available historical series date and featuring continuous auto-fitting (`fitContent`) on container resize. |
 | **Outcome donut** | Visual breakdown of wins, losses, and breakeven trades with win rate % in the center; displays Profit Factor, average win, and average loss. |
 | **Advanced Stats & Expectancy** | - **Expectancy**: mathematical expected monetary value per closed trade: $(P_w \times \text{Avg Win}) - (P_l \times \text{Avg Loss})$, featuring a dynamic **+ Edge** (green) or **- Edge** (red) indicator.<br>- **Payoff Ratio (W/L)**: ratio of average win to average loss.<br>- **Max Drawdown %**: peak-to-trough decline from the historical all-time high portfolio value.<br>- **Kelly Criterion**: estimated optimal capital allocation fraction based on statistical edge. |
 | **Best & Worst Trades** | Side-by-side comparison card showing your all-time greatest winning trade (🏆) and deepest loss (⚠️), including symbol, direction (LONG/SHORT), return %, net PnL, and close date. |
@@ -70,6 +70,8 @@ In-depth analysis of portfolio capital evolution over time, powered by automated
 ## Portfolio
 
 Track **ETF, bond, government bond and fund** investments separately from active trades, with automated mark-to-market valuations.
+
+- **Market Price vs Cost Basis Chart (Holding Detail)**: On each asset's detail page (`/portfolio/holdings/:id`), the price chart employs a dual-tone **BaselineSeries** with its base level anchored to the average purchase cost (PMC). Fills display green/teal when trading above cost and turn red when trading below, giving immediate visual feedback on performance.
 
 ![Portfolio and Fixed Income Management](/docs/images/dashboard/portfolio-holdings.webp)
 *Portfolio module with Bonds & Fixed Income tab, net YTM calculations, estimated annual coupon income, and future cash flow calendar.*

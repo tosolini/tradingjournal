@@ -57,15 +57,21 @@ When an analysis is triggered, specialized autonomous agents collaborate and deb
 
 ## 🔍 How to Use AI Analysis
 
-From the **Analisi AI** menu in the sidebar, choose between two modes:
+The **AI Analysis** interface is organized into three primary tabs, prioritizing immediate access to existing reports:
 
-### 1. Portfolio Assets & Active Trades
+### 1. 📜 Analysis Archive (Default View)
+- Instantly review all previously generated multi-agent analysis and coaching reports.
+- **Top KPI Metrics**: Total report count, average discipline score, and freshness indicator (fresh reports within 30 days vs stale analyses).
+- **Filters & Search**: Fast search by symbol, status, and timeframe.
+- **Retention & Purge**: Clean up outdated reports or test runs using the retention purge modal.
+
+### 2. 📁 Portfolio Assets & Active Trades
 - Select from existing inventory:
-  - ⚡ **Open Stock Positions (Trades)**: The AI coaches your live position (entry price, unrealized PnL, active Stop Loss, and Take Profit).
+  - ⚡ **Open Stock Positions (Trades)**: The AI coaches your live position (entry price, unrealized PnL, active Stop Loss, and Take Profit). The latest coaching report for any trade is also directly accessible in its trade detail view under the **🤖 AI Coaching** tab.
   - 📊 **Portfolio Holdings**: Monitor long-term ETFs and Bonds.
   - 💡 **Active Trade Ideas**: Validate setups before execution.
 
-### 2. Arbitrary Stock Lookup (Free Ticker with Autocomplete)
+### 3. 🔍 Arbitrary Stock Lookup (Free Ticker with Autocomplete)
 - Search any global company or ticker (e.g., `NVDA`, `PLTR`, `Ferrari`, `ENI`).
 - Integrated **real-time autocomplete** matches symbols and corporate names from the internal database.
 - Select your primary exchange (`NASDAQ`, `NYSE`, `Euronext Milan`, `XETRA`, etc.) and start the analysis.

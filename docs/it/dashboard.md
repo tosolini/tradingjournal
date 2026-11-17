@@ -38,7 +38,7 @@ Ogni notifica include una spunta (**✓**) per confermare la **presa visione (Ac
 
 | Pannello | Contenuto e Funzionalità |
 |---|---|
-| **Curva patrimoniale** | Evoluzione del valore di portafoglio nel tempo (grafico ad area) con linea dei costi tratteggiata opzionale.<br>- **Filtro asset**: selettore a pulsanti segmentati **[ Cumulato \| Portafoglio \| Azionario ]** per visualizzare tutto insieme oppure isolare solo gli investimenti (ETF e obbligazioni) o solo il trading azionario (con aggiornamento istantaneo di curve e badge metrici).<br>- **Normalizzazione chiusure**: nei fine settimana e nelle festività a mercati chiusi, le posizioni aperte mantengono l'ultima valorizzazione per forward-fill, evitando crolli a zero o seghettature.<br>- **Intervallo temporale**: selettore rapido (**1M / 3M / 6M / 1A / TUTTO**). |
+| **Curva patrimoniale** | Evoluzione del valore di portafoglio nel tempo (grafico ad area) con linea dei costi tratteggiata opzionale.<br>- **Filtro asset**: selettore a pulsanti segmentati **[ Cumulato \| Portafoglio \| Azionario ]** per visualizzare tutto insieme oppure isolare solo gli investimenti (ETF e obbligazioni) o solo il trading azionario (con aggiornamento istantaneo di curve e badge metrici).<br>- **Normalizzazione chiusure**: nei fine settimana e nelle festività a mercati chiusi, le posizioni aperte mantengono l'ultima valorizzazione per forward-fill, evitando crolli a zero o seghettature.<br>- **Intervallo temporale**: selettore rapido (**1M / 3M / 6M / 1A / TUTTO**) sincronizzato con l'ultima data disponibile della serie storica e con adattamento automatico continuo della scala temporale (`fitContent`) al ridimensionamento. |
 | **Grafico a ciambella (Outcomes)** | Distribuzione visiva tra vincite, perdite e pareggi con win rate % al centro; include Profit Factor, vincita media e perdita media. |
 | **Statistiche Avanzate & Expectancy** | - **Expectancy**: valore atteso matematico per singolo trade: $(P_w \times \text{Avg Win}) - (P_l \times \text{Avg Loss})$, con indicatore dinamico **+ Edge** (verde) o **- Edge** (rosso).<br>- **Payoff Ratio (W/L)**: rapporto tra vincita media e perdita media.<br>- **Max Drawdown %**: perdita percentuale massima subita rispetto al picco storico (All-Time High).<br>- **Criterio di Kelly**: stima della frazione ottimale di allocazione del capitale per trade. |
 | **Miglior e Peggior Trade** | Confronto visivo affiancato tra il trade più profittevole di sempre (🏆) e la peggiore perdita registrata (⚠️), con simbolo, direzione (LONG/SHORT), rendimento %, PnL netto e data di chiusura. |
@@ -70,6 +70,8 @@ Analisi approfondita dell'evoluzione del capitale nel tempo, basata sugli snapsh
 ## Portfolio
 
 Monitora le posizioni in **ETF, obbligazioni, titoli di Stato e fondi** separatamente dai trade speculativi, con valutazione mark-to-market automatica.
+
+- **Grafico Prezzo di Mercato vs PMC (Dettaglio Asset)**: nella vista di dettaglio di ogni asset (`/portfolio/holdings/:id`), il grafico adotta una **BaselineSeries** bicolore con linea di base impostata sul prezzo medio di carico (PMC). La colorazione verde (sopra PMC) e rossa (sotto PMC) permette di identificare a colpo d'occhio l'andamento del titolo rispetto al proprio costo storico.
 
 ![Gestione Portafoglio e Obbligazioni](/docs/images/dashboard/portfolio-holdings.webp)
 *Modulo Portfolio con sezione Obbligazioni & Rendite, indicatori di YTM netto, stima cedole annue e scadenziario flussi futuri.*

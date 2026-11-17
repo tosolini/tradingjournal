@@ -9,14 +9,14 @@ This project is a personal trading journal application designed to help traders 
 - **Trade entry wizard** (6 steps) or a compact quick-trade form, with a live **Risk/Reward (R:R) calculator gauge**
 - **Command Palette (`Cmd+K` / `Ctrl+K`)** for universal keyboard navigation, quick trade entry, note creation, live ticker search and theme/language switching
 - Weighted-average PnL calculations with fee- and tax-aware net values
-- **Dashboard** with hero KPIs (including **Current Week PnL**), equity curve with **asset filtering** (Combined / Portfolio / Equities), weekend/closure normalization, customizable default chart visualization, periodic PnL bar chart (**Monthly and Weekly toggle** with interactive hover tooltips), **Expectancy & Payoff (W/L) statistics**, **Best vs Worst Trade** comparison card, asset allocation and top trades
+- **Dashboard** with hero KPIs (including **Current Week PnL**), equity curve with **asset filtering** (Combined / Portfolio / Equities), weekend/closure normalization, robust month-boundary timeframe cutoff, continuous auto-fitting on resize, periodic PnL bar chart (**Monthly and Weekly toggle** with interactive hover tooltips), **Expectancy & Payoff (W/L) statistics**, **Best vs Worst Trade** comparison card, asset allocation and top trades
 - **Unified Trading Calendar** with color-coded daily PnL badges, **Weekly Summary column** (Weekly PnL, W/L days ratio, trade count), monthly KPI summary banner, day-detail drawer, and markets Gantt chart
-- **Trades management** with client-side pagination, quick date presets (`All`, `Today`, `7d`, `This Month`, `YTD`), outcome filters (`Win`, `Loss`), column visibility toggles, and instant quick-close
+- **Trades management & Detail Cockpit** with client-side pagination, date presets, and an overhauled **3-pillar financial overview** (Average Entry Price / PMC hero metric, 1st entry reference, live market quote with delta %, Take Profit / Stop Loss and visual R:R bar gauge), **execution sequence strip** with scale-in role badges (`★ 1st Entry`, `Increment #N` with price delta %, `Exit`), and integrated conditional **AI Coaching tab** directly inside trade dossiers
 - **Performance** page with portfolio value evolution, daily PnL and a color-coded monthly calendar
-- **Fixed Income & Bond Accounting Engine** with dedicated bond parameters (`bond_type`, `maturity_date`, coupon schedules, step-up, bonus CUM), accrued interest (rateo passivo), net/gross YTM solver, Euronext live bond quote imports, and coupon cash flow calendar
+- **Portfolio & Fixed Income Accounting** with dedicated bond parameters (`bond_type`, `maturity_date`, coupon schedules, step-up, bonus CUM), accrued interest (rateo passivo), net/gross YTM solver, Euronext live bond quote imports, coupon cash flow calendar, and a **dual-tone BaselineSeries spread chart** on holding details (green above Average Cost / PMC, red below)
 - **Stock Scouting & Trade Ideas Engine** with automated price triggers, proximity percentage delta, lifecycle state machine (`watching` → `triggered` → `stale` → `closed` / `converted`), and one-click conversion into executed trades
 - **Unified Notifications & Alert Center** with real-time Take Profit & Stop Loss alerts for open trades (evaluating Long/Short positions against live prices), today's coupon distribution alerts, and upcoming bond maturity countdowns with multi-device persistent acknowledgment and category filtering
-- **Multi-Agent Asset Analysis & AI Coaching Engine** with institutional dialectical debate (Technical, Fundamental/Equity Research, Cyclical/Hurst-FFT, Bull vs Bear adversarial debate, Lead Synthesis, and Personal Trading Coach with 1-10 scoring, behavioral bias alerts, and 1-click action conversion into scouting ideas or daily notes)
+- **Multi-Agent Asset Analysis & AI Coaching Engine** with streamlined 3-tab navigation prioritizing the historical analysis archive as default view, institutional dialectical debate (Technical, Fundamental/Equity Research, Cyclical/Hurst-FFT, Bull vs Bear adversarial debate, Lead Synthesis, and Personal Trading Coach with 1-10 scoring, behavioral bias alerts, and 1-click action conversion into scouting ideas or daily notes)
 - **Interactive LLM Setup Wizard** in Settings with live connection testing (latency in ms), model presets, protected API keys, and multi-provider support: Google Gemini, OpenAI, Anthropic Claude, Ollama (100% private local), and Mock simulation
 - **Daily Notes & Psychology Journal** with an integrated, zero-dependency WYSIWYG editor (forced word-wrapping and line break safety), emotional mood tracker, and **trading discipline checklist** (pre/post-trade psychology)
 - Image uploads for trade annotations (PNG/JPEG/GIF/WebP) with a dedicated serving endpoint
@@ -38,8 +38,8 @@ The entire project is meant to be used on localhost or private networks. **Do no
 
 ## Current version
 
-- Backend: `0.3.1` (`backend/pyproject.toml`)
-- Frontend: `0.3.1` (`frontend/package.json`)
+- Backend: `0.3.2` (`backend/pyproject.toml`)
+- Frontend: `0.3.2` (`frontend/package.json`)
 
 More details on change log and versioning strategy in the [changelog.md](changelog.md) file.
 

@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.2] - 2026-11-17
+
+- Trade Detail Dossier & Execution Cockpit Redesign
+  - Structured the trade dossier header into 3 focused financial cards:
+    - `Posizione & Carico`: Average Entry Price (PMC) hero metric, multi-entry count badge, 1st Entry reference price, open quantity, cumulative invested capital, total commissions, and holding duration.
+    - `Mercato & PnL`: live market quote with percentage delta vs Average Cost (PMC), unrealized PnL and current market value for open trades, or consolidated net and gross realized PnL for closed trades.
+    - `Target & Rischio`: Take Profit and Stop Loss levels with percentage distances, Risk/Reward ratio with visual color-coded bar gauge, and a collapsible secondary metadata panel.
+  - Overhauled the `Executions` tab with an executive summary strip (PMC, 1st Entry, Total Quantity, Cumulative Notional, Total Fees) and clear execution role badges (`★ 1° Ingresso`, `Incremento #N` with percentage variation vs 1st entry price, `Uscita`) with calculated line totals.
+  - Introduced a conditional `🤖 Coaching AI` tab on the trade detail page that automatically loads the latest completed multi-agent coaching report matching the trade ticker and trade ID. If no coaching exists for that ticker, the tab remains hidden.
+  - Added `trade_id` filtering to `GET /api/analysis/history` and included `trade_id` in `AnalysisReportSummary` schema with pytest coverage.
+- Holding Detail Price Spread Baseline Series
+  - Converted the market price vs purchase cost chart (`PriceSpreadChart` in `HoldingDetailPage.tsx`) from `AreaSeries` to a dual-tone `BaselineSeries` anchored to the average purchase cost (`avg_cost`).
+  - Trading above PMC is filled in green/teal, while dips below PMC render in red, providing immediate visual feedback on position health.
+- AI Analysis Navigation & History Default View
+  - Reordered tabs on `AnalysisPage.tsx`: `📜 Archivio Analisi` is now the default first view, enabling instant review of generated reports, followed by `📁 Asset in Portafoglio / Trade` and `🔍 Ticker Personalizzato`.
+  - Updated selection defaults, report counters, and context hints.
+- Dashboard Equity Curve Timeframe & Resizing Fixes
+  - Fixed monthly cutoff calculation in `DashboardPage.tsx` to anchor to the latest available historical data point instead of `new Date()`, correctly handling month-end boundaries (`setDate(0)`).
+  - Added `fixLeftEdge: true`, `fixRightEdge: true`, and continuous `ResizeObserver` auto-fitting (`chart.timeScale().fitContent()`).
+- Deployment & Development Workflow
+  - Parameterized backend and frontend bind mounts with `${APP_DIR:-.}` in `docker-compose.yml` to support isolated worktrees.
+- Version bump to 0.3.2 (Backend 0.3.2 / Frontend 0.3.2)
+
 ## [0.3.1] - 2026-11-16
 
 - Unified Notifications & Alert Center

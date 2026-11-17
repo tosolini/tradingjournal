@@ -57,16 +57,22 @@ Quando avvii un'analisi, diversi agenti specializzati collaborano e dibattono in
 
 ## 🔍 Come Utilizzare l'Analisi AI
 
-Nella sezione **Analisi AI** della barra laterale puoi operare in due modalità:
+La schermata **Analisi AI** è organizzata in tre schede principali con accesso prioritario ai report già generati:
 
-### 1. I Miei Asset & Trade
-- Seleziona dal menu a tendina qualsiasi asset già presente nel tuo giornale:
-  - ⚡ **Posizioni Azionarie Aperte (Trades)**: l'AI analizza la tua posizione specifica (prezzo medio di carico, PnL non realizzato, livello di Stop Loss e Take Profit impostato).
+### 1. 📜 Archivio Analisi (Vista Predefinita)
+- Accedi istantaneamente a tutti i report di analisi e coaching generati in precedenza.
+- **Metriche KPI Superiori**: conteggio totale report, punteggio medio di disciplina e indicatore di freschezza (analisi recenti entro 30 giorni vs analisi da riaggiornare).
+- **Filtri e Ricerca**: filtra per ticker, esito e data.
+- **Gestione e Pulizia**: elimina report obsoleti o singoli test con il comando di archiviazione / purge.
+
+### 2. 📁 Asset in Portafoglio / Trade
+- Seleziona dal menu qualsiasi asset già presente nel tuo giornale:
+  - ⚡ **Posizioni Azionarie Aperte (Trades)**: l'AI analizza la tua posizione specifica (prezzo medio di carico, PnL non realizzato, livelli di Stop Loss e Take Profit impostati). Inoltre, l'ultimo coaching completato per un trade è consultabile direttamente nella scheda del trade (tab **🤖 Coaching AI**).
   - 📊 **Holdings di Portafoglio**: per monitorare ETF e Obbligazioni in portafoglio.
   - 💡 **Trade Ideas & Scouting**: per verificare la validità di un setup prima di entrare.
 
-### 2. Cerca Qualsiasi Azione (Ticker Libero con Autocomplete)
-- Inserisci un ticker o una denominazione aziendale (es. `NVDA`, `PLTR`, `Ferrari`, `ENI`).
+### 3. 🔍 Ticker Personalizzato
+- Inserisci qualsiasi ticker o denominazione aziendale (es. `NVDA`, `PLTR`, `Ferrari`, `ENI`).
 - Il campo ricerca offre l'**autocomplete in tempo reale** collegato al database interno di borsa.
 - Seleziona il mercato principale (`NASDAQ`, `NYSE`, `Euronext Milan`, `XETRA`, ecc.) e premi **🚀 Avvia Analisi Azionaria**.
 
