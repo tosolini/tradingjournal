@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AreaSeries, createChart, LineSeries } from "lightweight-charts";
+import { BaselineSeries, createChart, LineSeries } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -121,16 +121,22 @@ function PriceSpreadChart({
       }))
     );
 
-    // 3. Serie Prezzo di Mercato Reale (AreaSeries basata solo sui dati storici effettivi)
+    // 3. Serie Prezzo di Mercato Reale (BaselineSeries basata sul prezzo medio di carico)
     const marketSeriesData = (historicalPoints.length > 0 ? historicalPoints : points).map((p) => ({
       time: p.date,
       value: asNumber(p.market_price),
     }));
 
-    const marketSeries = chart.addSeries(AreaSeries, {
-      lineColor: isDark ? "#2dd4bf" : "#0d9488",
-      topColor: isDark ? "rgba(45, 212, 191, 0.28)" : "rgba(13, 148, 136, 0.22)",
-      bottomColor: isDark ? "rgba(45, 212, 191, 0.02)" : "rgba(13, 148, 136, 0.02)",
+    const avgCostValue = asNumber(history.avg_cost) || (points.length > 0 ? asNumber(points[points.length - 1].avg_cost) : 0);
+
+    const marketSeries = chart.addSeries(BaselineSeries, {
+      baseValue: { type: "price", price: avgCostValue },
+      topLineColor: isDark ? "#2dd4bf" : "#0d9488",
+      topFillColor1: isDark ? "rgba(45, 212, 191, 0.28)" : "rgba(13, 148, 136, 0.22)",
+      topFillColor2: isDark ? "rgba(45, 212, 191, 0.02)" : "rgba(13, 148, 136, 0.02)",
+      bottomLineColor: isDark ? "#f87171" : "#dc2626",
+      bottomFillColor1: isDark ? "rgba(248, 113, 113, 0.02)" : "rgba(220, 38, 38, 0.02)",
+      bottomFillColor2: isDark ? "rgba(248, 113, 113, 0.28)" : "rgba(220, 38, 38, 0.22)",
       lineWidth: 2,
       title: t("holding_detail.chart.series_market"),
       priceLineVisible: true,
@@ -168,7 +174,7 @@ function PriceSpreadChart({
       window.removeEventListener("resize", resize);
       chart.remove();
     };
-  }, [points, historicalPoints, projectionPoints, showProjection, hasProjection, isDark, t]);
+  }, [points, historicalPoints, projectionPoints, showProjection, hasProjection, isDark, history.avg_cost, t]);
 
   const currentP = asNumber(history.current_price);
   const nominalP = asNumber(history.nominal_price) || 100;
