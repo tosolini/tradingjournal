@@ -81,10 +81,7 @@ function formatHoldHours(value: string | number | undefined): string {
   const totalHours = Math.max(0, Math.floor(asNumber(value)));
   const days = Math.floor(totalHours / 24);
   const hours = totalHours % 24;
-  if (days === 0 && hours === 0) {
-    return "< 1h";
-  }
-  return days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+  return `${days}d ${hours}h`;
 }
 
 function computeTpPct(side: string, entry: number, takeProfit: number): number | null {
@@ -539,7 +536,9 @@ export function TradeDetailPage() {
                   : "bg-rose-500/15 border border-rose-500/30 text-rose-400"
               }`}
             >
-              {trade.side.toLowerCase() === "long" ? "↗ LONG" : "↘ SHORT"}
+              {trade.side.toLowerCase() === "long"
+                ? `↗ ${t("trade_detail.side_long").toUpperCase()}`
+                : `↘ ${t("trade_detail.side_short").toUpperCase()}`}
             </span>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
@@ -560,14 +559,14 @@ export function TradeDetailPage() {
 
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400 dark:text-slate-600">
             <span className="rounded bg-slate-800/70 dark:bg-slate-200/80 px-2 py-0.5 font-medium text-slate-300 dark:text-slate-800">
-              {trade.market || "Market"}
+              {trade.market || t("trade_detail.fallback_market")}
             </span>
             <span className="rounded bg-slate-800/70 dark:bg-slate-200/80 px-2 py-0.5 font-medium capitalize text-slate-300 dark:text-slate-800">
-              {trade.instrument_type ? trade.instrument_type.replace("_", " ") : "Stock"}
+              {trade.instrument_type ? trade.instrument_type.replace("_", " ") : t("trade_detail.fallback_stock")}
             </span>
             {isGovBond && (
               <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-400 border border-emerald-500/20">
-                12.5% Gov
+                {t("trade_detail.gov_bond_badge")}
               </span>
             )}
             <span className="text-slate-500 dark:text-slate-400">•</span>
@@ -728,7 +727,7 @@ export function TradeDetailPage() {
                 </span>
                 {trade.status === "open" && data.current_price != null && (
                   <span className="rounded-full bg-slate-800/60 dark:bg-slate-200/80 px-2 py-0.5 text-[11px] font-mono font-medium text-slate-300 dark:text-slate-700">
-                    Live
+                    {t("trade_detail.live_badge")}
                   </span>
                 )}
               </div>
@@ -909,19 +908,23 @@ export function TradeDetailPage() {
             {tpPct !== null && slPct !== null && slPct > 0 && tpPct > 0 && (
               <div className="mt-4 pt-3 border-t border-slate-700/60 dark:border-slate-300/60 text-xs">
                 <div className="flex justify-between text-[11px] text-slate-400 dark:text-slate-600 mb-1">
-                  <span>Rischio: {slPct.toFixed(1)}%</span>
-                  <span>Rendimento: {tpPct.toFixed(1)}%</span>
+                  <span>
+                    {t("trade_detail.gauge_risk")}: {slPct.toFixed(1)}%
+                  </span>
+                  <span>
+                    {t("trade_detail.gauge_reward")}: {tpPct.toFixed(1)}%
+                  </span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-800 dark:bg-slate-200 rounded-full overflow-hidden flex">
                   <div
                     style={{ width: `${Math.min(100, Math.max(10, (slPct / (slPct + tpPct)) * 100))}%` }}
                     className="bg-rose-500"
-                    title={`Rischio: ${slPct.toFixed(2)}%`}
+                    title={`${t("trade_detail.gauge_risk")}: ${slPct.toFixed(2)}%`}
                   />
                   <div
                     style={{ width: `${Math.min(100, Math.max(10, (tpPct / (slPct + tpPct)) * 100))}%` }}
                     className="bg-emerald-500"
-                    title={`Target: ${tpPct.toFixed(2)}%`}
+                    title={`${t("trade_detail.gauge_target")}: ${tpPct.toFixed(2)}%`}
                   />
                 </div>
               </div>
@@ -1228,7 +1231,7 @@ export function TradeDetailPage() {
 
               <div className="rounded-xl bg-slate-800/40 dark:bg-white/60 border border-slate-700/50 dark:border-slate-300/60 p-3">
                 <div className="text-[11px] font-medium text-slate-400 dark:text-slate-600">
-                  {t("trade_detail.total_entry_fees")}
+                  {t("trade_detail.fields.total_fees")}
                 </div>
                 <div className="text-lg sm:text-xl font-bold font-mono text-slate-200 dark:text-slate-900 mt-0.5">
                   {formatMoney(totalAllFees, trade.account_currency)}

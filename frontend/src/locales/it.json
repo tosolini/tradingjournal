@@ -893,7 +893,16 @@
     "hold_duration": "Tempo in Posizione",
     "previous_trade": "Trade precedente",
     "next_trade": "Trade successivo",
-    "details_accordion": "Dettagli Aggiuntivi"
+    "details_accordion": "Dettagli Aggiuntivi",
+    "fallback_market": "Mercato",
+    "fallback_stock": "Azione",
+    "gov_bond_badge": "12,5% Tit. Stato",
+    "live_badge": "Live",
+    "side_long": "Long",
+    "side_short": "Short",
+    "gauge_risk": "Rischio",
+    "gauge_reward": "Rendimento",
+    "gauge_target": "Target"
   },
   "trades": {
     "title": "Trade",

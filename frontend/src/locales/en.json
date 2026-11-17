@@ -893,7 +893,16 @@
     "hold_duration": "Hold Duration",
     "previous_trade": "Previous trade",
     "next_trade": "Next trade",
-    "details_accordion": "Additional Details"
+    "details_accordion": "Additional Details",
+    "fallback_market": "Market",
+    "fallback_stock": "Stock",
+    "gov_bond_badge": "12.5% Gov",
+    "live_badge": "Live",
+    "side_long": "Long",
+    "side_short": "Short",
+    "gauge_risk": "Risk",
+    "gauge_reward": "Reward",
+    "gauge_target": "Target"
   },
   "trades": {
     "title": "Trades",
