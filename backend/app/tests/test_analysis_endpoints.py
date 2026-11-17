@@ -234,3 +234,75 @@ def test_purge_analysis_history(db, test_user):
 
     items_empty = list_analysis_history(symbol=None, limit=10, db=db, current_user=test_user)
     assert len(items_empty) == 0
+
+
+def test_list_analysis_history_filter_by_trade_id(db, test_user):
+    account = Account(
+        user_id=test_user.id,
+        name="Test Account For Trade Filter",
+        base_currency="EUR",
+    )
+    db.add(account)
+    db.commit()
+
+    trade_1 = Trade(
+        user_id=test_user.id,
+        account_id=account.id,
+        symbol="ENI",
+        market="Euronext Milan",
+        instrument_type="stock",
+        side="long",
+        status="open",
+    )
+    trade_2 = Trade(
+        user_id=test_user.id,
+        account_id=account.id,
+        symbol="ENI",
+        market="Euronext Milan",
+        instrument_type="stock",
+        side="long",
+        status="open",
+    )
+    db.add_all([trade_1, trade_2])
+    db.commit()
+
+    rep_trade_1 = AnalysisReport(
+        user_id=test_user.id,
+        symbol="ENI",
+        market="Euronext Milan",
+        language="it",
+        status="completed",
+        overall_score=7,
+        trade_id=trade_1.id,
+    )
+    rep_trade_2 = AnalysisReport(
+        user_id=test_user.id,
+        symbol="ENI",
+        market="Euronext Milan",
+        language="it",
+        status="completed",
+        overall_score=9,
+        trade_id=trade_2.id,
+    )
+    rep_no_trade = AnalysisReport(
+        user_id=test_user.id,
+        symbol="ENI",
+        market="Euronext Milan",
+        language="it",
+        status="completed",
+        overall_score=5,
+        trade_id=None,
+    )
+    db.add_all([rep_trade_1, rep_trade_2, rep_no_trade])
+    db.commit()
+
+    # Query with trade_id=trade_2.id
+    items_trade_2 = list_analysis_history(symbol=None, limit=20, trade_id=trade_2.id, db=db, current_user=test_user)
+    assert len(items_trade_2) == 1
+    assert items_trade_2[0].id == rep_trade_2.id
+    assert items_trade_2[0].trade_id == trade_2.id
+    assert items_trade_2[0].overall_score == 9
+
+    # Query without trade_id
+    items_all = list_analysis_history(symbol="ENI", limit=20, db=db, current_user=test_user)
+    assert len(items_all) == 3
