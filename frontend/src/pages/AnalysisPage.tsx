@@ -32,7 +32,7 @@ export const AnalysisPage: React.FC = () => {
     ? "en"
     : "it";
 
-  const [inputMode, setInputMode] = useState<"existing" | "custom" | "history">("existing");
+  const [inputMode, setInputMode] = useState<"history" | "existing" | "custom">("history");
   const [selectedTargetKey, setSelectedTargetKey] = useState<string>("");
   const [customSymbol, setCustomSymbol] = useState<string>("");
   const [customMarket, setCustomMarket] = useState<string>("NASDAQ");
@@ -140,14 +140,14 @@ export const AnalysisPage: React.FC = () => {
 
   // Select first target by default once loaded
   useEffect(() => {
-    if (targets.length > 0 && !selectedTargetKey && inputMode === "existing") {
+    if (targets.length > 0 && !selectedTargetKey) {
       const firstTarget = targets[0];
       const key = firstTarget.target_source === "trade"
         ? `trade:${firstTarget.trade_id}`
         : `${firstTarget.target_source}:${firstTarget.symbol}`;
       setSelectedTargetKey(key);
     }
-  }, [targets, selectedTargetKey, inputMode]);
+  }, [targets, selectedTargetKey]);
 
   // Select first completed report from history if none is active
   useEffect(() => {
@@ -273,6 +273,20 @@ export const AnalysisPage: React.FC = () => {
           <div className="inline-flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 self-start">
             <button
               type="button"
+              onClick={() => setInputMode("history")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                inputMode === "history"
+                  ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700/60"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <span>📜 {t("analysis.modes.history_archive")}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-900 text-slate-300 font-mono">
+                {history.length}
+              </span>
+            </button>
+            <button
+              type="button"
               onClick={() => setInputMode("existing")}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
                 inputMode === "existing"
@@ -296,27 +310,13 @@ export const AnalysisPage: React.FC = () => {
             >
               <span>🔍 {t("analysis.modes.custom_ticker")}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setInputMode("history")}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
-                inputMode === "history"
-                  ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700/60"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <span>📜 {t("analysis.modes.history_archive")}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-900 text-slate-300 font-mono">
-                {history.length}
-              </span>
-            </button>
           </div>
           <span className="text-xs text-slate-400 hidden sm:inline font-medium">
-            {inputMode === "existing"
+            {inputMode === "history"
+              ? t("analysis.modes.history_hint")
+              : inputMode === "existing"
               ? t("analysis.modes.existing_hint")
-              : inputMode === "custom"
-              ? t("analysis.modes.custom_hint")
-              : t("analysis.modes.history_hint")}
+              : t("analysis.modes.custom_hint")}
           </span>
         </div>
 
