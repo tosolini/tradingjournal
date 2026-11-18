@@ -225,7 +225,7 @@ export function LlmSettingsWizard() {
   }
 
   return (
-    <section className="card border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md">
+    <section id="llm-settings" className="card border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md">
       <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">

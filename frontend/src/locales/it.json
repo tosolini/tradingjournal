@@ -19,7 +19,9 @@
     },
     "actions": {
       "new_trade": "Nuovo Trade",
-      "new_note": "Nuova Nota"
+      "new_note": "Nuova Nota",
+      "new_analysis": "Nuova Analisi AI",
+      "llm_settings": "Configura Modelli AI (LLM)"
     },
     "alerts": {
       "title": "Notifiche e Alert di Trading & Portafoglio",
@@ -79,8 +81,15 @@
       "sub_brokers": "Configurazione broker, commissioni e mercati",
       "sub_settings": "Profilo utente, amministrazione e backup",
       "sub_help": "Manuale d'uso e documentazione",
+      "sub_analysis": "Report multi-agent, coaching e analisi ciclica",
       "act_new_trade_sub": "Apri il form rapido o il wizard per registrare un trade",
       "act_new_note_sub": "Scrivi una nuova riflessione nel diario di trading",
+      "act_new_analysis_sub": "Avvia scansione multi-agent su un asset o ticker",
+      "act_llm_settings_sub": "Gestisci provider e chiavi API (Gemini, Claude, GPT, Ollama)",
+      "category_ai": "Analisi AI",
+      "ai_report_label": "Report AI",
+      "run_analysis_for": "Avvia Analisi AI per {{symbol}}",
+      "run_analysis_for_sub": "Scansione tecnica, fondamentale e ciclica con Coach AI",
       "act_light_theme": "Passa a Tema Chiaro (Light Mode)",
       "act_dark_theme": "Passa a Tema Scuro (Dark Mode)",
       "act_toggle_theme_sub": "Inverti lo schema colore dell'interfaccia",

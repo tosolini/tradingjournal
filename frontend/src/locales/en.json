@@ -19,7 +19,9 @@
     },
     "actions": {
       "new_trade": "New Trade",
-      "new_note": "New Note"
+      "new_note": "New Note",
+      "new_analysis": "New AI Analysis",
+      "llm_settings": "Configure AI Models (LLM)"
     },
     "alerts": {
       "title": "Notifications & Trading/Portfolio Alerts",
@@ -79,8 +81,15 @@
       "sub_brokers": "Configure brokers, commissions, and exchanges",
       "sub_settings": "User profile, administration, and backups",
       "sub_help": "User guide and in-app documentation",
+      "sub_analysis": "Multi-agent reports, coaching and cyclical analysis",
       "act_new_trade_sub": "Open quick entry or guided wizard to log a trade",
       "act_new_note_sub": "Write a new reflection in your trading journal",
+      "act_new_analysis_sub": "Launch multi-agent analysis on an asset or ticker",
+      "act_llm_settings_sub": "Manage providers and API keys (Gemini, Claude, GPT, Ollama)",
+      "category_ai": "AI Analysis",
+      "ai_report_label": "AI Report",
+      "run_analysis_for": "Run AI Analysis for {{symbol}}",
+      "run_analysis_for_sub": "Technical, fundamental & cyclical scan with AI Coach",
       "act_light_theme": "Switch to Light Theme",
       "act_dark_theme": "Switch to Dark Theme",
       "act_toggle_theme_sub": "Toggle application color scheme",

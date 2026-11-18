@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../contexts/ThemeContext";
-import { Ticker, tickersApi } from "../lib/api";
+import { analysisApi, AnalysisReportSummary, Ticker, tickersApi } from "../lib/api";
 import {
   ActivityIcon,
   BookOpenIcon,
+  BotIcon,
   Building2Icon,
   CalendarIcon,
   CoinsIcon,
@@ -23,11 +24,13 @@ import {
   XIcon,
 } from "./icons";
 
+type CommandCategory = "navigation" | "action" | "ticker" | "ai";
+
 type CommandItem = {
   id: string;
   title: string;
   subtitle?: string;
-  category: "navigation" | "action" | "ticker";
+  category: CommandCategory;
   icon: React.ComponentType<{ className?: string }>;
   onSelect: () => void;
 };
@@ -46,15 +49,21 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [tickerResults, setTickerResults] = useState<Ticker[]>([]);
+  const [recentReports, setRecentReports] = useState<AnalysisReportSummary[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input on open
+  // Focus input on open & fetch recent AI reports
   useEffect(() => {
     if (open) {
       setQuery("");
       setSelectedIndex(0);
       setTickerResults([]);
       setTimeout(() => inputRef.current?.focus(), 50);
+
+      analysisApi
+        .getHistory(undefined, 20)
+        .then((data) => setRecentReports(data))
+        .catch(() => setRecentReports([]));
     }
   }, [open]);
 
@@ -95,6 +104,17 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
         icon: LayoutDashboardIcon,
         onSelect: () => {
           navigate("/");
+          onClose();
+        },
+      },
+      {
+        id: "nav-analysis",
+        title: t("layout.nav.analysis"),
+        subtitle: t("layout.command_palette.sub_analysis"),
+        category: "navigation",
+        icon: BotIcon,
+        onSelect: () => {
+          navigate("/analysis");
           onClose();
         },
       },
@@ -211,6 +231,17 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
 
       // Quick Actions
       {
+        id: "act-new-analysis",
+        title: t("layout.actions.new_analysis"),
+        subtitle: t("layout.command_palette.act_new_analysis_sub"),
+        category: "ai",
+        icon: BotIcon,
+        onSelect: () => {
+          navigate("/analysis?mode=new");
+          onClose();
+        },
+      },
+      {
         id: "act-new-trade",
         title: t("layout.actions.new_trade"),
         subtitle: t("layout.command_palette.act_new_trade_sub"),
@@ -229,6 +260,17 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
         icon: BookOpenIcon,
         onSelect: () => {
           navigate("/notes?new=1");
+          onClose();
+        },
+      },
+      {
+        id: "act-llm-settings",
+        title: t("layout.actions.llm_settings"),
+        subtitle: t("layout.command_palette.act_llm_settings_sub"),
+        category: "ai",
+        icon: SettingsIcon,
+        onSelect: () => {
+          navigate("/settings#llm-settings");
           onClose();
         },
       },
@@ -279,6 +321,52 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
         )
       : staticCommands;
 
+    const aiItems: CommandItem[] = [];
+
+    // If typing at least 2 chars, offer quick action to analyze query symbol with AI
+    if (q.length >= 2) {
+      const upperQuery = q.toUpperCase();
+      aiItems.push({
+        id: `ai-run-query-${upperQuery}`,
+        title: t("layout.command_palette.run_analysis_for", { symbol: upperQuery }),
+        subtitle: t("layout.command_palette.run_analysis_for_sub"),
+        category: "ai",
+        icon: BotIcon,
+        onSelect: () => {
+          navigate(`/analysis?symbol=${encodeURIComponent(upperQuery)}&mode=new`);
+          onClose();
+        },
+      });
+    }
+
+    // Matching recent reports
+    const matchingReports = q
+      ? recentReports.filter(
+          (r) =>
+            r.symbol.toLowerCase().includes(q) ||
+            (r.market && r.market.toLowerCase().includes(q)) ||
+            (r.status && r.status.toLowerCase().includes(q))
+        )
+      : recentReports.slice(0, 5); // Show up to 5 recent analyses when search is empty
+
+    matchingReports.forEach((r) => {
+      const scoreText = r.overall_score != null ? `Score: ${r.overall_score}/100` : "";
+      const dateText = r.created_at ? new Date(r.created_at).toLocaleDateString() : "";
+      const meta = [scoreText, dateText, r.market].filter(Boolean).join(" · ");
+
+      aiItems.push({
+        id: `ai-report-${r.id}`,
+        title: `${r.symbol} (${t("layout.command_palette.ai_report_label")})`,
+        subtitle: meta || t("layout.command_palette.sub_analysis"),
+        category: "ai",
+        icon: BotIcon,
+        onSelect: () => {
+          navigate(`/analysis/${r.id}`);
+          onClose();
+        },
+      });
+    });
+
     const tickerItems: CommandItem[] = tickerResults.map((ticker) => ({
       id: `ticker-${ticker.id}`,
       title: `${ticker.symbol} · ${ticker.name}`,
@@ -291,8 +379,12 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
     }));
 
-    return [...tickerItems, ...staticMatches];
-  }, [query, staticCommands, tickerResults, onClose, onOpenNewTrade]);
+    if (q) {
+      return [...aiItems, ...tickerItems, ...staticMatches];
+    }
+
+    return [...staticMatches, ...aiItems];
+  }, [query, staticCommands, tickerResults, recentReports, t, navigate, onClose, onOpenNewTrade]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -382,7 +474,9 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                       isSelected
-                        ? "bg-teal-500/15 text-teal-200 dark:bg-teal-50 dark:text-teal-900 border border-teal-500/30 dark:border-teal-300"
+                        ? cmd.category === "ai"
+                          ? "bg-purple-500/15 text-purple-200 dark:bg-purple-50 dark:text-purple-900 border border-purple-500/30 dark:border-purple-300"
+                          : "bg-teal-500/15 text-teal-200 dark:bg-teal-50 dark:text-teal-900 border border-teal-500/30 dark:border-teal-300"
                         : "text-slate-300 hover:bg-slate-800/50 dark:text-slate-700 dark:hover:bg-slate-100"
                     }`}
                   >
@@ -390,6 +484,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
                       className={`rounded-lg p-2 shrink-0 ${
                         cmd.category === "ticker"
                           ? "bg-indigo-500/15 text-indigo-400 dark:bg-indigo-100 dark:text-indigo-800"
+                          : cmd.category === "ai"
+                          ? "bg-purple-500/15 text-purple-400 dark:bg-purple-100 dark:text-purple-800"
                           : cmd.category === "action"
                           ? "bg-teal-500/15 text-teal-400 dark:bg-teal-100 dark:text-teal-800"
                           : "bg-slate-800 text-slate-400 dark:bg-slate-100 dark:text-slate-600"
@@ -398,7 +494,14 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold truncate">{cmd.title}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold truncate">{cmd.title}</span>
+                        {cmd.category === "ai" && (
+                          <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 dark:bg-purple-100 dark:text-purple-800 dark:border-purple-200">
+                            AI
+                          </span>
+                        )}
+                      </div>
                       {cmd.subtitle && (
                         <div className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
                           {cmd.subtitle}

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   api,
@@ -20,6 +20,7 @@ import { SearchIcon } from "../components/icons";
 export const AnalysisPage: React.FC = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { analysisId } = useParams<{ analysisId?: string }>();
   const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
 
@@ -118,11 +119,16 @@ export const AnalysisPage: React.FC = () => {
     queryFn: () => analysisApi.getHistory(),
   });
 
-  // Check URL query parameters (e.g. ?symbol=NVDA&market=NASDAQ&tradeId=5)
+  // Check URL query parameters (e.g. ?symbol=NVDA&market=NASDAQ&tradeId=5&mode=new)
   useEffect(() => {
     const querySymbol = searchParams.get("symbol");
     const queryMarket = searchParams.get("market");
     const queryTradeId = searchParams.get("tradeId");
+    const queryMode = searchParams.get("mode");
+
+    if (queryMode === "new") {
+      setInputMode("custom");
+    }
 
     if (querySymbol) {
       if (queryTradeId && targets.length > 0) {
@@ -139,23 +145,22 @@ export const AnalysisPage: React.FC = () => {
     }
   }, [searchParams, targets]);
 
-  // Select first target by default once loaded
+  // Handle direct navigation via /analysis/:analysisId
   useEffect(() => {
-    if (targets.length > 0 && !selectedTargetKey) {
-      const firstTarget = targets[0];
-      const key = firstTarget.target_source === "trade"
-        ? `trade:${firstTarget.trade_id}`
-        : `${firstTarget.target_source}:${firstTarget.symbol}`;
-      setSelectedTargetKey(key);
+    if (analysisId) {
+      const parsedId = Number(analysisId);
+      if (!isNaN(parsedId) && parsedId > 0) {
+        setActiveReportId(parsedId);
+      }
     }
-  }, [targets, selectedTargetKey]);
+  }, [analysisId]);
 
-  // Select first completed report from history if none is active
+  // Select first completed report from history if none is active and no route param
   useEffect(() => {
-    if (!activeReportId && history.length > 0) {
+    if (!activeReportId && !analysisId && history.length > 0) {
       setActiveReportId(history[0].id);
     }
-  }, [history, activeReportId]);
+  }, [history, activeReportId, analysisId]);
 
   // 3. Fetch active report detail (with polling if pending/running)
   const { data: activeReport, isLoading: reportLoading } = useQuery<AnalysisReportDetail>({

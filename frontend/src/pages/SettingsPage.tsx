@@ -1034,6 +1034,15 @@ export function SettingsPage() {
 
   const onboardingCompleted = prefData?.preferences?.onboarding_completed === true;
 
+  useEffect(() => {
+    if (window.location.hash) {
+      const el = document.querySelector(window.location.hash);
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 150);
+      }
+    }
+  }, []);
+
   const dismissOnboarding = useMutation({
     mutationFn: () =>
       api("/api/auth/preferences", {
