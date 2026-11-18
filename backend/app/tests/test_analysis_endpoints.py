@@ -138,6 +138,51 @@ def test_start_analysis_job_with_exploratory_direction(db, test_user):
     assert report.data_snapshot.get("target_direction") == "short"
 
 
+def test_get_analysis_chart_data_endpoint(db, test_user, monkeypatch):
+    import pandas as pd
+    from app.api.analysis import get_analysis_chart_data
+    from app.services.analysis.data_providers.yfinance_provider import YFinanceDataProvider
+
+    dates = pd.bdate_range(start="2024-01-01", periods=60)
+    fake_df = pd.DataFrame(
+        {
+            "Open": [10.0 + i * 0.1 for i in range(60)],
+            "High": [10.5 + i * 0.1 for i in range(60)],
+            "Low": [9.5 + i * 0.1 for i in range(60)],
+            "Close": [10.2 + i * 0.1 for i in range(60)],
+            "Volume": [100000.0] * 60,
+        },
+        index=dates,
+    )
+    monkeypatch.setattr(YFinanceDataProvider, "fetch_ohlcv", lambda self, s, market=None, period="2y", interval="1d": fake_df)
+
+    report = AnalysisReport(
+        user_id=test_user.id,
+        symbol="ENEL.MI",
+        market="Borsa Italiana",
+        language="it",
+        status="completed",
+        overall_score=8,
+        data_snapshot={
+            "technical": {"supports": [9.5], "resistances": [11.0]},
+            "cyclical": {"dominant_cycles": [{"period_trading_days": 20.0}]},
+        },
+    )
+    db.add(report)
+    db.commit()
+
+    chart_data = get_analysis_chart_data(
+        analysis_id=report.id,
+        db=db,
+        current_user=test_user,
+    )
+    assert chart_data["symbol"] == "ENEL.MI"
+    assert len(chart_data["candles"]) == 60
+    assert "sma_20" in chart_data["technical"]
+    assert "ema_20" in chart_data["technical"]
+    assert "composite_wave" in chart_data["cyclical"]
+
+
 def test_list_history_and_delete(db, test_user):
     report = AnalysisReport(
         user_id=test_user.id,

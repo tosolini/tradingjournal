@@ -1401,6 +1401,61 @@ export interface AnalysisPurgeResult {
   message: string;
 }
 
+export interface CandlePoint {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface LineDataPoint {
+  time: string;
+  value: number;
+}
+
+export interface CyclicalWavePoint {
+  time: string;
+  value: number;
+  is_projection: boolean;
+}
+
+export interface CyclicalTurningPoint {
+  date: string;
+  type: "trough" | "peak";
+  value: number;
+  label: string;
+}
+
+export interface AnalysisChartData {
+  symbol: string;
+  market: string;
+  candles: CandlePoint[];
+  technical: {
+    sma_20?: LineDataPoint[];
+    sma_50?: LineDataPoint[];
+    sma_200?: LineDataPoint[];
+    ema_20?: LineDataPoint[];
+    ema_50?: LineDataPoint[];
+    ema_200?: LineDataPoint[];
+    supports?: number[];
+    resistances?: number[];
+    coach_levels?: {
+      stop_loss?: number | null;
+      target_price?: number | null;
+    };
+  };
+  cyclical: {
+    hurst_exponent?: number | null;
+    regime?: string | null;
+    dominant_periods?: number[];
+    composite_wave?: CyclicalWavePoint[];
+    turning_points?: CyclicalTurningPoint[];
+    forward_days?: number;
+  };
+}
+
 export const analysisApi = {
   getTargets: (): Promise<AnalysisTargetItem[]> => api("/api/analysis/targets"),
   run: (payload: AnalysisRunPayload): Promise<AnalysisReportSummary> =>
@@ -1415,6 +1470,7 @@ export const analysisApi = {
     return api(`/api/analysis/history${query}`);
   },
   get: (id: number): Promise<AnalysisReportDetail> => api(`/api/analysis/${id}`),
+  getChartData: (id: number): Promise<AnalysisChartData> => api(`/api/analysis/${id}/chart-data`),
   delete: (id: number): Promise<{ ok: boolean }> => api(`/api/analysis/${id}`, { method: "DELETE" }),
   purge: (payload: AnalysisPurgePayload): Promise<AnalysisPurgeResult> =>
     api("/api/analysis/purge", { method: "POST", body: JSON.stringify(payload) }),

@@ -4,6 +4,7 @@ import { AnalysisReportDetail } from "../../lib/api";
 import { ScoreGauge } from "./ScoreGauge";
 import { ConvertAnalysisModal } from "./ConvertAnalysisModal";
 import { ReportMarkdownViewer } from "./ReportMarkdownViewer";
+import { AnalysisInteractiveChart } from "./AnalysisInteractiveChart";
 
 interface ReportViewerProps {
   report: AnalysisReportDetail;
@@ -424,6 +425,15 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             </div>
           </div>
 
+          {/* Interactive Cyclical Candlestick & FFT Harmonic Wave Chart */}
+          <AnalysisInteractiveChart
+            reportId={report.id}
+            symbol={report.symbol}
+            market={report.market}
+            mode="cyclical"
+            height={440}
+          />
+
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <span aria-hidden="true">🔄</span> {t("analysis.viewer.cyclical.report_title")}
@@ -438,14 +448,25 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
       {/* Tab 5: Technical Analysis */}
       {activeTab === "technical" && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span aria-hidden="true">📈</span> {t("analysis.viewer.technical.title")}
-          </h3>
-          <ReportMarkdownViewer
-            content={report.technical_report}
-            emptyText={t("analysis.viewer.technical.empty")}
+        <div className="space-y-6">
+          {/* Interactive Technical Candlestick & Moving Averages Chart */}
+          <AnalysisInteractiveChart
+            reportId={report.id}
+            symbol={report.symbol}
+            market={report.market}
+            mode="technical"
+            height={460}
           />
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span aria-hidden="true">📈</span> {t("analysis.viewer.technical.title")}
+            </h3>
+            <ReportMarkdownViewer
+              content={report.technical_report}
+              emptyText={t("analysis.viewer.technical.empty")}
+            />
+          </div>
         </div>
       )}
 

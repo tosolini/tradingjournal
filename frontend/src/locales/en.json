@@ -1634,6 +1634,21 @@
       "cautious": "Cautious",
       "na": "N/A"
     },
+    "charts": {
+      "loading_candles": "Loading candlestick and indicator data for {{symbol}}...",
+      "candles_unavailable": "Historical price data unavailable for {{symbol}}.",
+      "toggle_sr": "Supports & Resistances",
+      "toggle_sr_tooltip": "Show calculated horizontal support and resistance levels",
+      "toggle_coach_levels": "Coach Levels",
+      "toggle_harmonic_wave": "FFT Harmonic Wave",
+      "toggle_turning_points": "Turning Windows",
+      "cyclical_wave_title": "FFT Harmonic Wave",
+      "trough_badge": "Cycle Trough",
+      "peak_badge": "Cycle Peak",
+      "cyclical_projection_notice": "FFT harmonic algorithmic projection (next 40 business days). Estimates statistical timing windows for expected troughs and peaks. Does not imply certainty.",
+      "technical_chart_title": "Candlestick Chart & Technical Indicators",
+      "cyclical_chart_title": "Candlestick Chart & FFT Cyclical Projection"
+    },
     "viewer": {
       "completed_at": "Analysis completed on {{date}}",
       "in_progress": "In progress...",

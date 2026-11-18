@@ -1634,6 +1634,21 @@
       "cautious": "Prudenziale",
       "na": "N/D"
     },
+    "charts": {
+      "loading_candles": "Caricamento candele e indicatori per {{symbol}}...",
+      "candles_unavailable": "Dati storici di prezzo non disponibili per {{symbol}}.",
+      "toggle_sr": "Supporti & Resistenze",
+      "toggle_sr_tooltip": "Visualizza i livelli orizzontali di supporto e resistenza calcolati",
+      "toggle_coach_levels": "Livelli Coach",
+      "toggle_harmonic_wave": "Onda Armonica FFT",
+      "toggle_turning_points": "Finestre di Svolta",
+      "cyclical_wave_title": "Onda Armonica FFT",
+      "trough_badge": "Min Ciclico",
+      "peak_badge": "Max Ciclico",
+      "cyclical_projection_notice": "Proiezione algoritmica armonica FFT (prossimi 40 giorni). Identifica le finestre temporali statistiche di minimo e massimo atteso. Non costituisce certezza temporale.",
+      "technical_chart_title": "Grafico Candlestick & Indicatori Tecnici",
+      "cyclical_chart_title": "Grafico Candlestick & Proiezione Ciclica FFT"
+    },
     "viewer": {
       "completed_at": "Analisi completata il {{date}}",
       "in_progress": "In corso...",
