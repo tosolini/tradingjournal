@@ -49,38 +49,41 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [tickerResults, setTickerResults] = useState<Ticker[]>([]);
-  const [recentReports, setRecentReports] = useState<AnalysisReportSummary[]>([]);
+  const [latestMatchedReport, setLatestMatchedReport] = useState<AnalysisReportSummary | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input on open & fetch recent AI reports
+  // Focus input on open & clear state (no heavy fetching in empty state)
   useEffect(() => {
     if (open) {
       setQuery("");
       setSelectedIndex(0);
       setTickerResults([]);
+      setLatestMatchedReport(null);
       setTimeout(() => inputRef.current?.focus(), 50);
-
-      analysisApi
-        .getHistory(undefined, 20)
-        .then((data) => setRecentReports(data))
-        .catch(() => setRecentReports([]));
     }
   }, [open]);
 
-  // Search tickers with debounce when typing
+  // Debounced search on typing: only searches tickers and at most 1 latest matching report
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setTickerResults([]);
+      setLatestMatchedReport(null);
       return;
     }
 
     const timer = setTimeout(async () => {
       try {
-        const results = await tickersApi.search(trimmed, 5);
-        setTickerResults(results);
+        const [tickers, reports] = await Promise.all([
+          tickersApi.search(trimmed, 5).catch(() => []),
+          // Limit to at most 1 report to avoid flooding Command Palette even with 100+ reports
+          analysisApi.getHistory(trimmed, 1).catch(() => []),
+        ]);
+        setTickerResults(tickers);
+        setLatestMatchedReport(reports && reports.length > 0 ? reports[0] : null);
       } catch {
         setTickerResults([]);
+        setLatestMatchedReport(null);
       }
     }, 250);
 
@@ -321,9 +324,14 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
         )
       : staticCommands;
 
+    // When query is empty: return pure static commands (zero report noise)
+    if (!q) {
+      return staticMatches;
+    }
+
     const aiItems: CommandItem[] = [];
 
-    // If typing at least 2 chars, offer quick action to analyze query symbol with AI
+    // 1. If typing >= 2 chars, offer single clean action to run AI analysis for that symbol
     if (q.length >= 2) {
       const upperQuery = q.toUpperCase();
       aiItems.push({
@@ -339,17 +347,9 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       });
     }
 
-    // Matching recent reports
-    const matchingReports = q
-      ? recentReports.filter(
-          (r) =>
-            r.symbol.toLowerCase().includes(q) ||
-            (r.market && r.market.toLowerCase().includes(q)) ||
-            (r.status && r.status.toLowerCase().includes(q))
-        )
-      : recentReports.slice(0, 5); // Show up to 5 recent analyses when search is empty
-
-    matchingReports.forEach((r) => {
+    // 2. If a report matches, show AT MOST 1 item (the single latest report, never a flooded list)
+    if (latestMatchedReport) {
+      const r = latestMatchedReport;
       const scoreText = r.overall_score != null ? `Score: ${r.overall_score}/100` : "";
       const dateText = r.created_at ? new Date(r.created_at).toLocaleDateString() : "";
       const meta = [scoreText, dateText, r.market].filter(Boolean).join(" · ");
@@ -365,8 +365,9 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
           onClose();
         },
       });
-    });
+    }
 
+    // 3. Tickers from search (capped at 5)
     const tickerItems: CommandItem[] = tickerResults.map((ticker) => ({
       id: `ticker-${ticker.id}`,
       title: `${ticker.symbol} · ${ticker.name}`,
@@ -379,12 +380,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
       },
     }));
 
-    if (q) {
-      return [...aiItems, ...tickerItems, ...staticMatches];
-    }
-
-    return [...staticMatches, ...aiItems];
-  }, [query, staticCommands, tickerResults, recentReports, t, navigate, onClose, onOpenNewTrade]);
+    return [...aiItems, ...tickerItems, ...staticMatches];
+  }, [query, staticCommands, tickerResults, latestMatchedReport, t, navigate, onClose, onOpenNewTrade]);
 
   // Keyboard navigation
   useEffect(() => {
