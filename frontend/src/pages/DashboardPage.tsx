@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AreaSeries, ColorType, LineSeries, createChart } from "lightweight-charts";
+import { BaselineSeries, ColorType, LineSeries, createChart } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -207,17 +207,23 @@ function EquityChartPanel({
       },
     });
 
-    const area = chart.addSeries(AreaSeries, {
-      lineColor: isDark ? "#2dd4bf" : "#0d9488",
-      topColor: isDark ? "rgba(45,212,191,0.22)" : "rgba(13,148,136,0.2)",
-      bottomColor: isDark ? "rgba(45,212,191,0.02)" : "rgba(13,148,136,0.03)",
+    const hasCost = visible.some((p) => p.cost != null && p.cost > 0);
+    const lastCost = visible.length > 0 && visible[visible.length - 1].cost != null ? visible[visible.length - 1].cost : 0;
+    const basePrice = hasCost && lastCost > 0 ? lastCost : 0;
+
+    const area = chart.addSeries(BaselineSeries, {
+      baseValue: { type: "price", price: basePrice },
+      topLineColor: isDark ? "#2dd4bf" : "#0d9488",
+      topFillColor1: isDark ? "rgba(45, 212, 191, 0.28)" : "rgba(13, 148, 136, 0.22)",
+      topFillColor2: isDark ? "rgba(45, 212, 191, 0.02)" : "rgba(13, 148, 136, 0.02)",
+      bottomLineColor: isDark ? "#f87171" : "#dc2626",
+      bottomFillColor1: isDark ? "rgba(248, 113, 113, 0.02)" : "rgba(220, 38, 38, 0.02)",
+      bottomFillColor2: isDark ? "rgba(248, 113, 113, 0.28)" : "rgba(220, 38, 38, 0.22)",
       lineWidth: 2,
       priceFormat: { type: "price", precision: 2, minMove: 0.01 },
       title: t("dashboard.market_value"),
     });
     area.setData(visible.map((p) => ({ time: p.date, value: p.value })));
-
-    const hasCost = visible.some((p) => p.cost != null && p.cost > 0);
     if (hasCost) {
       const cost = chart.addSeries(LineSeries, {
         color: isDark ? "#fbbf24" : "#d97706",
