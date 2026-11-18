@@ -275,20 +275,31 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
         }));
         waveSeries.setData(waveData);
 
-        // Turning Point Markers (Future Troughs and Peaks)
+        // Turning Point Markers (Troughs and Peaks)
         if (showTurningPoints && cyc.turning_points && cyc.turning_points.length > 0) {
-          const markers = cyc.turning_points.map((tp) => ({
-            time: tp.date,
-            position: (tp.type === "trough" ? "belowBar" : "aboveBar") as "belowBar" | "aboveBar",
-            color: tp.type === "trough" ? "#10b981" : "#ef4444",
-            shape: (tp.type === "trough" ? "arrowUp" : "arrowDown") as "arrowUp" | "arrowDown",
-            text: tp.type === "trough" ? t("analysis.charts.trough_badge") : t("analysis.charts.peak_badge"),
-          }));
+          const markers = cyc.turning_points.map((tp) => {
+            const isTrough = tp.type === "trough";
+            const dateShort = tp.date.slice(5); // MM-DD
+            const badgeLabel = tp.is_projection
+              ? (isTrough ? t("analysis.charts.trough_badge", "Min Ciclico") : t("analysis.charts.peak_badge", "Max Ciclico"))
+              : (isTrough ? t("analysis.charts.trough_confirmed", "Min Storico") : t("analysis.charts.peak_confirmed", "Max Storico"));
+
+            return {
+              time: tp.date,
+              position: (isTrough ? "belowBar" : "aboveBar") as "belowBar" | "aboveBar",
+              color: isTrough ? "#10b981" : "#ef4444",
+              shape: (isTrough ? "arrowUp" : "arrowDown") as "arrowUp" | "arrowDown",
+              text: `${badgeLabel} (${dateShort})`,
+            };
+          });
+
+          // Markers must be sorted strictly ascending by time for Lightweight Charts
+          markers.sort((a, b) => (a.time > b.time ? 1 : -1));
 
           try {
             createSeriesMarkers(waveSeries, markers);
-          } catch {
-            // Fallback gracefully if marker time isn't strictly sorted
+          } catch (e) {
+            console.error("Failed to attach series markers:", e);
           }
         }
       }
@@ -346,7 +357,14 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
 
     const fromIdx = Math.max(0, n - barsBack);
     const fromTime = candles[fromIdx]?.time;
-    const toTime = candles[n - 1]?.time;
+
+    // In cyclical mode, extend the right boundary to display the projected wave and turning points
+    const cycPoints = chartData?.cyclical?.composite_wave;
+    const lastWaveTime = (mode === "cyclical" && cycPoints && cycPoints.length > 0)
+      ? cycPoints[cycPoints.length - 1]?.time
+      : undefined;
+
+    const toTime = lastWaveTime || candles[n - 1]?.time;
 
     if (fromTime && toTime) {
       try {
@@ -575,11 +593,54 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
         </div>
       </div>
 
-      {/* Cyclical Informative Banner */}
+      {/* Cyclical Informative Banner & Turning Windows Pills */}
       {mode === "cyclical" && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-300">
-          <span>ℹ️</span>
-          <span>{t("analysis.charts.cyclical_projection_notice")}</span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-300">
+            <span>ℹ️</span>
+            <span>{t("analysis.charts.cyclical_projection_notice")}</span>
+          </div>
+
+          {showTurningPoints && chartData.cyclical?.turning_points && chartData.cyclical.turning_points.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs">
+              <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                <span>🎯</span>
+                <span>{t("analysis.charts.turning_windows_detected")}:</span>
+              </span>
+              {chartData.cyclical.turning_points.map((tp, idx) => {
+                const isTrough = tp.type === "trough";
+                return (
+                  <div
+                    key={idx}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border ${
+                      isTrough
+                        ? "bg-emerald-950/40 text-emerald-300 border-emerald-500/40"
+                        : "bg-rose-950/40 text-rose-300 border-rose-500/40"
+                    }`}
+                  >
+                    <span>{isTrough ? "▲" : "▼"}</span>
+                    <span className="font-semibold">{tp.label}:</span>
+                    <span className="font-mono text-white">{tp.date}</span>
+                    <span className="text-slate-400">@ {tp.value.toFixed(2)}</span>
+                    {tp.window_start && tp.window_end && (
+                      <span className="text-[10px] text-slate-400 border-l border-slate-700 pl-1.5 font-mono">
+                        [{tp.window_start} ~ {tp.window_end}]
+                      </span>
+                    )}
+                    {tp.is_projection ? (
+                      <span className="text-[9px] uppercase px-1 py-0.5 rounded bg-cyan-900/60 text-cyan-300 font-semibold">
+                        stimato
+                      </span>
+                    ) : (
+                      <span className="text-[9px] uppercase px-1 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">
+                        storico
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

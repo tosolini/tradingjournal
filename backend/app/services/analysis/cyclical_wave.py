@@ -8,25 +8,28 @@ import pandas as pd
 def compute_harmonic_composite_wave(
     df: pd.DataFrame,
     dominant_cycles: list[dict[str, Any]],
-    forward_days: int = 40,
+    forward_days: Optional[int] = None,
     max_components: int = 3,
+    view_bars: int = 250,
 ) -> dict[str, Any]:
     """Fit dominant Fourier harmonics and project the composite cycle into the future.
 
     Args:
         df: Historical price dataframe with DatetimeIndex and 'Close' column.
         dominant_cycles: Extracted cyclical periodicities (from extract_dominant_cycles).
-        forward_days: Number of business days to project forward.
+        forward_days: Number of business days to project forward (if None, adaptively computed).
         max_components: Maximum number of harmonic waves to combine.
+        view_bars: Maximum number of historical bars to include in output wave.
 
     Returns:
-        Dictionary with composite wave points, future turning points, and metadata.
+        Dictionary with composite wave points, turning points (historical and future), and metadata.
     """
-    if df.empty or "Close" not in df.columns or len(df) < 30:
+    if df.empty or "Close" not in df.columns or len(df) < 20:
         return {
             "composite_wave": [],
             "turning_points": [],
             "dominant_periods": [],
+            "forward_days": forward_days or 60,
         }
 
     prices = df["Close"].values.astype(float)
@@ -38,11 +41,12 @@ def compute_harmonic_composite_wave(
     trend = poly[0] * t + poly[1]
     detrended = prices - trend
 
-    # Filter valid cycle periods
+    # Filter valid cycle periods (allow up to 90% of series length or 365 trading days)
+    max_allowed_period = min(float(n * 0.9), 365.0)
     valid_periods = []
     for c in dominant_cycles:
         p = c.get("period_trading_days")
-        if isinstance(p, (int, float)) and 5.0 <= p <= 250.0:
+        if isinstance(p, (int, float)) and 5.0 <= p <= max_allowed_period:
             valid_periods.append(float(p))
         if len(valid_periods) >= max_components:
             break
@@ -62,10 +66,10 @@ def compute_harmonic_composite_wave(
     design_matrix = np.column_stack(design_matrix_cols)
     coeffs, _, _, _ = np.linalg.lstsq(design_matrix, detrended, rcond=None)
 
-    # Historical composite wave
+    # Full historical composite wave
     hist_wave = trend + design_matrix @ coeffs
 
-    # Generate dates
+    # Dates extraction
     if isinstance(df.index, pd.DatetimeIndex):
         hist_dates = [d.strftime("%Y-%m-%d") for d in df.index]
         last_date = df.index[-1].to_pydatetime()
@@ -73,15 +77,11 @@ def compute_harmonic_composite_wave(
         hist_dates = [str(d)[:10] for d in df.index]
         last_date = datetime.now()
 
-    composite_points: list[dict[str, Any]] = []
-    # Sample last 120 bars for clean historical rendering
-    start_idx = max(0, n - 120)
-    for i in range(start_idx, n):
-        composite_points.append({
-            "time": hist_dates[i],
-            "value": round(float(hist_wave[i]), 3),
-            "is_projection": False,
-        })
+    # Determine forward projection horizon adaptively if not explicitly provided
+    if forward_days is None:
+        primary_p = valid_periods[0]
+        # Allow at least 60 days, up to 120 days or 60% of primary cycle
+        forward_days = max(60, min(120, int(primary_p * 0.6)))
 
     # Forward projection
     t_forward = np.arange(n, n + forward_days)
@@ -102,6 +102,16 @@ def compute_harmonic_composite_wave(
             forward_dates.append(cur_date.strftime("%Y-%m-%d"))
         cur_date += timedelta(days=1)
 
+    # Slice historical composite points to view_bars (matching chart candle window)
+    composite_points: list[dict[str, Any]] = []
+    start_idx = max(0, n - view_bars)
+    for i in range(start_idx, n):
+        composite_points.append({
+            "time": hist_dates[i],
+            "value": round(float(hist_wave[i]), 3),
+            "is_projection": False,
+        })
+
     for i in range(len(forward_dates)):
         composite_points.append({
             "time": forward_dates[i],
@@ -109,32 +119,80 @@ def compute_harmonic_composite_wave(
             "is_projection": True,
         })
 
-    # Detect future local extrema (turning points)
+    # Detect turning points:
+    # 1. Historical turning points in the visible recent window (last 90 bars)
     turning_points: list[dict[str, Any]] = []
-    for i in range(1, len(forward_wave) - 1):
-        val = forward_wave[i]
-        prev_val = forward_wave[i - 1]
-        next_val = forward_wave[i + 1]
+    hist_scan_start = max(1, n - min(view_bars, 90))
+    for i in range(hist_scan_start, n - 1):
+        val = hist_wave[i]
+        prev_val = hist_wave[i - 1]
+        next_val = hist_wave[i + 1]
+
+        w_start = hist_dates[max(0, i - 2)]
+        w_end = hist_dates[min(n - 1, i + 2)]
 
         if val < prev_val and val < next_val:
             turning_points.append({
-                "date": forward_dates[i],
+                "date": hist_dates[i],
                 "type": "trough",
                 "value": round(float(val), 2),
-                "label": "Minimo ciclico stimato",
+                "label": "Minimo Ciclico",
+                "is_projection": False,
+                "window_start": w_start,
+                "window_end": w_end,
             })
         elif val > prev_val and val > next_val:
             turning_points.append({
-                "date": forward_dates[i],
+                "date": hist_dates[i],
                 "type": "peak",
                 "value": round(float(val), 2),
-                "label": "Massimo ciclico stimato",
+                "label": "Massimo Ciclico",
+                "is_projection": False,
+                "window_start": w_start,
+                "window_end": w_end,
             })
+
+    # 2. Forward projection turning points
+    # Stitch edge bar to seamlessly detect extrema across the transition boundary
+    full_forward_vals = np.concatenate([hist_wave[-1:], forward_wave])
+    full_forward_dates = [hist_dates[-1]] + forward_dates
+    for i in range(1, len(full_forward_vals) - 1):
+        val = full_forward_vals[i]
+        prev_val = full_forward_vals[i - 1]
+        next_val = full_forward_vals[i + 1]
+
+        w_start = full_forward_dates[max(0, i - 2)]
+        w_end = full_forward_dates[min(len(full_forward_dates) - 1, i + 2)]
+
+        if val < prev_val and val < next_val:
+            turning_points.append({
+                "date": full_forward_dates[i],
+                "type": "trough",
+                "value": round(float(val), 2),
+                "label": "Finestra Minimo Ciclico",
+                "is_projection": True,
+                "window_start": w_start,
+                "window_end": w_end,
+            })
+        elif val > prev_val and val > next_val:
+            turning_points.append({
+                "date": full_forward_dates[i],
+                "type": "peak",
+                "value": round(float(val), 2),
+                "label": "Finestra Massimo Ciclico",
+                "is_projection": True,
+                "window_start": w_start,
+                "window_end": w_end,
+            })
+
+    # Ensure strictly sorted by date (required for chart series markers)
+    turning_points.sort(key=lambda x: x["date"])
 
     return {
         "composite_wave": composite_points,
         "turning_points": turning_points,
         "dominant_periods": valid_periods,
+        "forward_days": forward_days,
     }
 
 
@@ -167,7 +225,7 @@ def compute_chart_dataset(
         }
 
     # Slice to last max_bars for fast network transfer and smooth client rendering
-    # Keep extra 200 bars before for accurate SMA/EMA 200 calculation
+    # Compute moving averages on the full df first for accurate 200-day rolling values
     close = df["Close"]
     sma_20 = close.rolling(20).mean()
     sma_50 = close.rolling(50).mean()
@@ -177,7 +235,7 @@ def compute_chart_dataset(
     ema_50 = close.ewm(span=50).mean()
     ema_200 = close.ewm(span=200).mean()
 
-    # Slice the view window
+    # Slice the view window for candles
     view_df = df.iloc[-max_bars:].copy()
 
     candles: list[dict[str, Any]] = []
@@ -236,9 +294,13 @@ def compute_chart_dataset(
         elif idea_ctx.get("target_price"):
             coach_levels["target_price"] = float(idea_ctx["target_price"])
 
-    # Cyclical harmonic wave
+    # Cyclical harmonic wave: compute with full df for high Fourier resolution
     dominant_cycles = (cyclical_bundle or {}).get("dominant_cycles", [])
-    wave_data = compute_harmonic_composite_wave(view_df, dominant_cycles, forward_days=40)
+    wave_data = compute_harmonic_composite_wave(
+        df=df,
+        dominant_cycles=dominant_cycles,
+        view_bars=max_bars,
+    )
 
     return {
         "symbol": symbol,
@@ -261,6 +323,6 @@ def compute_chart_dataset(
             "dominant_periods": wave_data.get("dominant_periods", []),
             "composite_wave": wave_data.get("composite_wave", []),
             "turning_points": wave_data.get("turning_points", []),
-            "forward_days": 40,
+            "forward_days": wave_data.get("forward_days", 60),
         },
     }

@@ -1645,7 +1645,10 @@
       "cyclical_wave_title": "FFT Harmonic Wave",
       "trough_badge": "Cycle Trough",
       "peak_badge": "Cycle Peak",
-      "cyclical_projection_notice": "FFT harmonic algorithmic projection (next 40 business days). Estimates statistical timing windows for expected troughs and peaks. Does not imply certainty.",
+      "trough_confirmed": "Confirmed Trough",
+      "peak_confirmed": "Confirmed Peak",
+      "turning_windows_detected": "Turning Windows Detected",
+      "cyclical_projection_notice": "Harmonic FFT projection and statistical turning windows (expected cycle bottoms and tops). Markers highlight turning windows.",
       "technical_chart_title": "Candlestick Chart & Technical Indicators",
       "cyclical_chart_title": "Candlestick Chart & FFT Cyclical Projection"
     },

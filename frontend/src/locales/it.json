@@ -1645,7 +1645,10 @@
       "cyclical_wave_title": "Onda Armonica FFT",
       "trough_badge": "Min Ciclico",
       "peak_badge": "Max Ciclico",
-      "cyclical_projection_notice": "Proiezione algoritmica armonica FFT (prossimi 40 giorni). Identifica le finestre temporali statistiche di minimo e massimo atteso. Non costituisce certezza temporale.",
+      "trough_confirmed": "Min Confermato",
+      "peak_confirmed": "Max Confermato",
+      "turning_windows_detected": "Finestre di Svolta Rilevate",
+      "cyclical_projection_notice": "Proiezione armonica FFT e finestre temporali di svolta (minimi e massimi ciclici attesi). I marcatori evidenziano le finestre statistiche di svolta.",
       "technical_chart_title": "Grafico Candlestick & Indicatori Tecnici",
       "cyclical_chart_title": "Grafico Candlestick & Proiezione Ciclica FFT"
     },

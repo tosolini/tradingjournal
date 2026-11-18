@@ -1426,6 +1426,9 @@ export interface CyclicalTurningPoint {
   type: "trough" | "peak";
   value: number;
   label: string;
+  is_projection?: boolean;
+  window_start?: string;
+  window_end?: string;
 }
 
 export interface AnalysisChartData {
