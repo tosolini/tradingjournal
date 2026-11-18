@@ -119,6 +119,25 @@ def test_start_analysis_job_and_get_details(db, test_user):
     assert detail.symbol == "ENEL.MI"
 
 
+def test_start_analysis_job_with_exploratory_direction(db, test_user):
+    bg_tasks = BackgroundTasks()
+    payload = AnalysisRunRequest(
+        symbol="TSLA",
+        market="NASDAQ",
+        language="it",
+        direction="short",
+    )
+    report = start_analysis_job(
+        payload=payload,
+        background_tasks=bg_tasks,
+        db=db,
+        current_user=test_user,
+    )
+    assert report.symbol == "TSLA"
+    assert report.target_direction == "short"
+    assert report.data_snapshot.get("target_direction") == "short"
+
+
 def test_list_history_and_delete(db, test_user):
     report = AnalysisReport(
         user_id=test_user.id,

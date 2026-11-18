@@ -1533,7 +1533,14 @@
       "searching": "Searching...",
       "symbol_placeholder": "e.g. NVDA, PLTR, Apple, Tesla...",
       "market_label": "Stock Market",
-      "verified_db_ticker": "Verified ticker from database"
+      "verified_db_ticker": "Verified ticker from database",
+      "direction_label": "Directional Bias",
+      "direction_both": "Auto",
+      "direction_both_tooltip": "Agnostic: determines the best setup based on trend and cycles",
+      "direction_long": "Long",
+      "direction_long_tooltip": "Bullish idea: plans buy setup and stop below supports",
+      "direction_short": "Short",
+      "direction_short_tooltip": "Bearish idea: plans short setup and stop above resistances"
     },
     "markets": {
       "nasdaq": "NASDAQ (USA)",
@@ -1631,6 +1638,10 @@
       "completed_at": "Analysis completed on {{date}}",
       "in_progress": "In progress...",
       "model": "Model: {{model}}",
+      "direction_badge": "Direction: {{direction}}",
+      "direction_both": "Auto (Long/Short)",
+      "direction_long": "Long",
+      "direction_short": "Short",
       "turn_into_action": "Turn into Action",
       "action_sub": "(Scouting / Note)",
       "convert_tooltip": "Convert this analysis into a Scouting Idea or a Journal Note",

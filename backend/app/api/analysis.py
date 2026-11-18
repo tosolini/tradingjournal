@@ -42,6 +42,7 @@ def _execute_analysis_background(report_id: int):
             db.commit()
 
             # 1. Collect data bundle
+            target_direction = (report.data_snapshot or {}).get("target_direction", "both")
             bundle = collect_analysis_data(
                 db=db,
                 user_id=report.user_id,
@@ -50,6 +51,7 @@ def _execute_analysis_background(report_id: int):
                 holding_id=report.holding_id,
                 trade_idea_id=report.trade_idea_id,
                 trade_id=report.trade_id,
+                target_direction=target_direction,
             )
 
             # 2. Resolve client from user preferences or system fallback
@@ -202,6 +204,9 @@ def start_analysis_job(
     """Launch asynchronous multi-agent asset coaching analysis."""
     lang = (payload.language or settings.analysis_default_language or "it").lower()
     selected_language = "en" if lang.startswith("en") else "it"
+    direction = (payload.direction or "both").lower()
+    if direction not in ("both", "long", "short"):
+        direction = "both"
 
     report = AnalysisReport(
         user_id=current_user.id,
@@ -213,6 +218,7 @@ def start_analysis_job(
         language=selected_language,
         trigger_mode="manual",
         status="pending",
+        data_snapshot={"target_direction": direction},
     )
     db.add(report)
     db.commit()

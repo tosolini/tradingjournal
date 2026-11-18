@@ -36,6 +36,7 @@ export const AnalysisPage: React.FC = () => {
   const [selectedTargetKey, setSelectedTargetKey] = useState<string>("");
   const [customSymbol, setCustomSymbol] = useState<string>("");
   const [customMarket, setCustomMarket] = useState<string>("NASDAQ");
+  const [customDirection, setCustomDirection] = useState<"both" | "long" | "short">("both");
   const [selectedDbTicker, setSelectedDbTicker] = useState<Ticker | null>(null);
   const [tickerSuggestions, setTickerSuggestions] = useState<Ticker[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
@@ -200,6 +201,7 @@ export const AnalysisPage: React.FC = () => {
         symbol: customSymbol.trim().toUpperCase(),
         market: customMarket,
         language: appLanguage,
+        direction: customDirection,
       });
       return;
     }
@@ -424,11 +426,11 @@ export const AnalysisPage: React.FC = () => {
             )}
           </div>
         ) : inputMode === "custom" ? (
-          /* Custom Mode: 5 cols for ticker, 4 cols for market, 3 cols for button */
+          /* Custom Mode: 4 cols ticker, 3 cols market, 3 cols direction, 2 cols button */
           <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
               {/* Col 1: Ticker Input */}
-              <div ref={autocompleteRef} className="md:col-span-5 relative">
+              <div ref={autocompleteRef} className="md:col-span-4 relative">
                 <div className="flex items-center justify-between mb-1.5 h-4">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                     {t("analysis.custom.symbol_label")}
@@ -497,7 +499,7 @@ export const AnalysisPage: React.FC = () => {
               </div>
 
               {/* Col 2: Market Selector */}
-              <div className="md:col-span-4">
+              <div className="md:col-span-3">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 h-4">
                   {t("analysis.custom.market_label")}
                 </label>
@@ -536,14 +538,62 @@ export const AnalysisPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Col 3: Action Button */}
+              {/* Col 3: Directional Bias Selector */}
               <div className="md:col-span-3">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 h-4 flex items-center justify-between">
+                  <span>{t("analysis.custom.direction_label")}</span>
+                </label>
+                <div className="h-11 rounded-xl border border-slate-700/80 bg-slate-950/60 p-1 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCustomDirection("both")}
+                    title={t("analysis.custom.direction_both_tooltip")}
+                    className={`flex-1 h-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      customDirection === "both"
+                        ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700/80"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <span>⚖️</span>
+                    <span>{t("analysis.custom.direction_both")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomDirection("long")}
+                    title={t("analysis.custom.direction_long_tooltip")}
+                    className={`flex-1 h-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      customDirection === "long"
+                        ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40 shadow-sm shadow-emerald-950/40"
+                        : "text-slate-400 hover:text-emerald-300"
+                    }`}
+                  >
+                    <span className="text-[10px]">🟢</span>
+                    <span>{t("analysis.custom.direction_long")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomDirection("short")}
+                    title={t("analysis.custom.direction_short_tooltip")}
+                    className={`flex-1 h-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      customDirection === "short"
+                        ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40 shadow-sm shadow-rose-950/40"
+                        : "text-slate-400 hover:text-rose-300"
+                    }`}
+                  >
+                    <span className="text-[10px]">🔴</span>
+                    <span>{t("analysis.custom.direction_short")}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Col 4: Action Button */}
+              <div className="md:col-span-2">
                 <div className="h-4 hidden md:block mb-1.5" />
                 <button
                   type="button"
                   onClick={handleStartAnalysis}
                   disabled={runMutation.isPending || !customSymbol.trim()}
-                  className="w-full h-11 px-5 rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary-hover hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center gap-2 cursor-pointer group active:scale-[0.99]"
+                  className="w-full h-11 px-3 rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary-hover hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer group active:scale-[0.99]"
                 >
                   {runMutation.isPending ? (
                     <>
@@ -551,12 +601,12 @@ export const AnalysisPage: React.FC = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                       </svg>
-                      <span>{t("analysis.actions.running")}</span>
+                      <span className="truncate">{t("analysis.actions.running")}</span>
                     </>
                   ) : (
                     <>
                       <span className="group-hover:scale-110 transition-transform">🚀</span>
-                      <span>{t("analysis.actions.generate")}</span>
+                      <span className="truncate">{t("analysis.actions.generate")}</span>
                     </>
                   )}
                 </button>

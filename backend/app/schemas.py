@@ -934,6 +934,7 @@ class AnalysisRunRequest(BaseModel):
     trade_idea_id: Optional[int] = None
     trade_id: Optional[int] = None
     language: Optional[str] = None
+    direction: Optional[str] = "both"  # "both" | "long" | "short"
 
 
 class TestLlmRequest(BaseModel):
@@ -961,6 +962,7 @@ class AnalysisReportSummary(BaseModel):
     language: str
     trigger_mode: str
     overall_score: Optional[int] = None
+    target_direction: Optional[str] = None
     llm_model_used: Optional[str] = None
     error_message: Optional[str] = None
     created_at: datetime

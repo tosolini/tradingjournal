@@ -209,16 +209,112 @@ def run_agentic_analysis(
             if is_en
             else "=== SINTESI DELLA COMMISSIONE D'INVESTIMENTO ==="
         )
-        header_ctx = (
-            "=== USER PERSONAL CONTEXT ON ASSET (OPEN TRADE / POSITION / HOLDING) ==="
-            if is_en
-            else "=== CONTESTO PERSONALE DELL'UTENTE SUL TITOLO (POSIZIONE APERTA / TRADE / HOLDING) ==="
-        )
-        coach_input = (
-            f"{header_comm}\n{state.lead_synthesis}\n\n"
-            f"{header_ctx}\n"
-            f"{json.dumps({'trade_context': bundle_dict.get('trade_context'), 'holding_context': bundle_dict.get('holding_context'), 'idea_context': bundle_dict.get('trade_idea_context'), 'past_trades': bundle_dict.get('past_trades_summary')}, indent=2)}\n"
-        )
+
+        has_trade = bundle_dict.get("trade_context") is not None
+        has_holding = bundle_dict.get("holding_context") is not None
+        has_idea = bundle_dict.get("trade_idea_context") is not None
+        past_trades = bundle_dict.get("past_trades_summary")
+        has_past = bool(past_trades)
+
+        has_personal_context = has_trade or has_holding or has_idea or has_past
+        target_dir = str(bundle_dict.get("target_direction") or "both").lower()
+        if target_dir not in ("both", "long", "short"):
+            target_dir = "both"
+
+        if has_personal_context:
+            header_ctx = (
+                "=== USER PERSONAL CONTEXT ON ASSET (OPEN TRADE / POSITION / HOLDING) ==="
+                if is_en
+                else "=== CONTESTO PERSONALE DELL'UTENTE SUL TITOLO (POSIZIONE APERTA / TRADE / HOLDING) ==="
+            )
+            context_data = {}
+            if has_trade:
+                context_data["trade_context"] = bundle_dict["trade_context"]
+            if has_holding:
+                context_data["holding_context"] = bundle_dict["holding_context"]
+            if has_idea:
+                context_data["idea_context"] = bundle_dict["trade_idea_context"]
+            if has_past:
+                context_data["past_trades"] = past_trades
+
+            ctx_text = f"{header_ctx}\n{json.dumps(context_data, indent=2)}\n"
+        else:
+            # Asset in exploration / watchlist (no personal context)
+            if target_dir == "short":
+                header_ctx = (
+                    "=== USER POSITION STATUS: NOT IN PORTFOLIO (EXPLORATORY SHORT SETUP EVALUATION) ==="
+                    if is_en
+                    else "=== STATO POSIZIONE UTENTE: TITOLO NON IN PORTAFOGLIO (VALUTAZIONE PROSPETTICA SETUP SHORT / RIBASSISTA) ==="
+                )
+                ctx_text = (
+                    f"{header_ctx}\n"
+                    + (
+                        "The user DOES NOT currently hold this asset and is exploring a potential SHORT (Bearish / Short Selling) setup.\n"
+                        "Provide prospective SHORT coaching directly:\n"
+                        "- Actionable short entry setup/triggers (e.g. breakdown below key support, bearish rejection at resistance);\n"
+                        "- Invalidation / Stop Loss levels placed strictly ABOVE key technical resistance or recent swing highs;\n"
+                        "- Downside profit targets and favorable Risk/Reward ratio calculation;\n"
+                        "- Position sizing discipline and specific short-selling risks (e.g. short squeeze risk, borrowing/overnight fees, counter-trend risks)."
+                        if is_en
+                        else "L'utente NON possiede attualmente questo titolo e sta valutando un potenziale setup SHORT (Ribassista / Vendita allo scoperto).\n"
+                        "Fornisci direttamente un coaching prospettico SHORT:\n"
+                        "- Setup e trigger di ingresso short (es. rottura/breakdown di supporto chiave, rigetto ribassista o pullback verso resistenza);\n"
+                        "- Livello di invalidazione / Stop Loss posizionato rigorosamente SOPRA la resistenza tecnica o massimo di swing recente;\n"
+                        "- Target di profitto al ribasso e calcolo del rapporto Rischio/Rendimento (R:R);\n"
+                        "- Linee guida di dimensionamento del rischio e avvertenze specifiche per lo short selling (es. rischio short squeeze, costi di prestito/mantenimento overnight, rischio contro-trend)."
+                    )
+                    + "\n"
+                )
+            elif target_dir == "long":
+                header_ctx = (
+                    "=== USER POSITION STATUS: NOT IN PORTFOLIO (EXPLORATORY LONG SETUP EVALUATION) ==="
+                    if is_en
+                    else "=== STATO POSIZIONE UTENTE: TITOLO NON IN PORTAFOGLIO (VALUTAZIONE PROSPETTICA SETUP LONG / RIALZISTA) ==="
+                )
+                ctx_text = (
+                    f"{header_ctx}\n"
+                    + (
+                        "The user DOES NOT currently hold this asset and is exploring a potential LONG (Bullish / Buy) setup.\n"
+                        "Provide prospective LONG coaching directly:\n"
+                        "- Actionable entry setup/triggers (e.g. breakout above resistance with volume, confirmation pullback to support);\n"
+                        "- Invalidation / Stop Loss levels placed strictly BELOW key technical supports or recent swing lows;\n"
+                        "- Upside profit targets and Risk/Reward assessment;\n"
+                        "- Position sizing discipline and emotional discipline (avoiding FOMO or chasing extended green candles)."
+                        if is_en
+                        else "L'utente NON possiede attualmente questo titolo e sta valutando un potenziale setup LONG (Rialzista / Acquisto).\n"
+                        "Fornisci direttamente un coaching prospettico LONG:\n"
+                        "- Setup e trigger di ingresso (es. breakout confermato di resistenza con volumi, pullback su supporto chiave);\n"
+                        "- Livello di invalidazione / Stop Loss posizionato rigorosamente SOTTO i supporti tecnici o minimi di swing recenti;\n"
+                        "- Target di profitto al rialzo e valutazione del rapporto Rischio/Rendimento (R:R);\n"
+                        "- Dimensionamento disciplinato della posizione ed errori emotivi da evitare (es. FOMO o inseguire candele verdi estese)."
+                    )
+                    + "\n"
+                )
+            else:
+                header_ctx = (
+                    "=== USER POSITION STATUS: NOT IN PORTFOLIO (AGNOSTIC EXPLORATION: EVALUATE BOTH LONG & SHORT) ==="
+                    if is_en
+                    else "=== STATO POSIZIONE UTENTE: TITOLO NON IN PORTAFOGLIO (VALUTAZIONE AGNOSTICA: ESPLORA SIA LONG CHE SHORT) ==="
+                )
+                ctx_text = (
+                    f"{header_ctx}\n"
+                    + (
+                        "The user DOES NOT currently hold this asset and has NO prior directional bias (agnostic / exploring both LONG and SHORT).\n"
+                        "Based on the committee synthesis, fractal regime, and technical/fundamental indicators, determine the most favorable asymmetric setup:\n"
+                        "- If the dominant evidence is Bullish: recommend a prospective LONG setup with entry triggers and stop loss below support;\n"
+                        "- If the dominant evidence is Bearish: recommend a prospective SHORT setup with breakdown triggers and stop loss above resistance;\n"
+                        "- If neutral/consolidating: outline dual boundary triggers (what would trigger a Long vs what would trigger a Short) or advise waiting."
+                        if is_en
+                        else "L'utente NON possiede attualmente questo titolo e non ha espresso un bias direzionale a priori (agnostico / valuta sia LONG che SHORT).\n"
+                        "In base alla sintesi della commissione, al regime frattale/ciclico e agli indicatori tecnici/fondamentali, determina l'opportunità asimmetrica più favorevole:\n"
+                        "- Se l'evidenza dominante è Rialzista: raccomanda un setup prospettico LONG con trigger di ingresso e stop loss sotto il supporto;\n"
+                        "- Se l'evidenza dominante è Ribassista: raccomanda un setup prospettico SHORT con trigger di rottura e stop loss sopra la resistenza;\n"
+                        "- Se la situazione è neutrale/in congestione: definisci i trigger per entrambi gli scenari (condizioni per il Long vs condizioni per lo Short) oppure consiglia di attendere una direzione chiara."
+                    )
+                    + "\n"
+                )
+
+        coach_input = f"{header_comm}\n{state.lead_synthesis}\n\n{ctx_text}"
         coach_msg = (
             f"Provide personalized trading coaching for {bundle.symbol}:\n{coach_input}"
             if is_en

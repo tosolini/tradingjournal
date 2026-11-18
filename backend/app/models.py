@@ -446,3 +446,9 @@ class AnalysisReport(TimestampMixin, Base):
     holding: Mapped[Optional["Holding"]] = relationship()
     trade_idea: Mapped[Optional["TradeIdea"]] = relationship()
     trade: Mapped[Optional["Trade"]] = relationship()
+
+    @property
+    def target_direction(self) -> Optional[str]:
+        if self.data_snapshot and isinstance(self.data_snapshot, dict):
+            return self.data_snapshot.get("target_direction")
+        return None

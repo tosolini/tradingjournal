@@ -57,6 +57,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
   // Extract trade context if present
   const tradeCtx = (report.data_snapshot?.trade_context as Record<string, any>) || null;
+  const targetDirection = (report.data_snapshot?.target_direction as string) || null;
 
   // Extract fundamental snapshot metrics
   const fundSnapshot = (report.data_snapshot?.fundamental as Record<string, any>) || {};
@@ -90,6 +91,23 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
               <span className="text-xs px-2 py-0.5 rounded capitalize text-slate-400 bg-slate-800/80">
                 {report.trigger_mode}
               </span>
+              {targetDirection && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded font-semibold border ${
+                    targetDirection === "short"
+                      ? "bg-rose-500/20 text-rose-300 border-rose-500/30"
+                      : targetDirection === "long"
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                      : "bg-slate-800 text-slate-300 border-slate-700"
+                  }`}
+                >
+                  {targetDirection === "short"
+                    ? `🔴 ${t("analysis.viewer.direction_short")}`
+                    : targetDirection === "long"
+                    ? `🟢 ${t("analysis.viewer.direction_long")}`
+                    : `⚖️ ${t("analysis.viewer.direction_both")}`}
+                </span>
+              )}
             </div>
             <p className="text-sm text-slate-400">
               {report.completed_at

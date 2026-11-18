@@ -1321,6 +1321,7 @@ export interface AnalysisRunPayload {
   trade_idea_id?: number | null;
   trade_id?: number | null;
   language?: "it" | "en";
+  direction?: "both" | "long" | "short";
 }
 
 export interface AnalysisReportSummary {
@@ -1332,6 +1333,7 @@ export interface AnalysisReportSummary {
   language: "it" | "en";
   trigger_mode: "manual" | "scheduled";
   overall_score?: number | null;
+  target_direction?: string | null;
   llm_model_used?: string | null;
   error_message?: string | null;
   created_at: string;

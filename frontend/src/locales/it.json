@@ -1533,7 +1533,14 @@
       "searching": "Ricerca...",
       "symbol_placeholder": "Es. NVDA, PLTR, Ferrari, Eni...",
       "market_label": "Mercato di Borsa",
-      "verified_db_ticker": "Titolo verificato da database"
+      "verified_db_ticker": "Titolo verificato da database",
+      "direction_label": "Orientamento / Bias",
+      "direction_both": "Auto",
+      "direction_both_tooltip": "Agnostico: determina il miglior setup in base al trend e ai cicli",
+      "direction_long": "Long",
+      "direction_long_tooltip": "Idea rialzista: orienta il piano su acquisto e stop sotto i supporti",
+      "direction_short": "Short",
+      "direction_short_tooltip": "Idea ribassista: orienta il piano su vendita allo scoperto e stop sopra le resistenze"
     },
     "markets": {
       "nasdaq": "NASDAQ (USA)",
@@ -1631,6 +1638,10 @@
       "completed_at": "Analisi completata il {{date}}",
       "in_progress": "In corso...",
       "model": "Modello: {{model}}",
+      "direction_badge": "Orientamento: {{direction}}",
+      "direction_both": "Auto (Long/Short)",
+      "direction_long": "Long",
+      "direction_short": "Short",
       "turn_into_action": "Trasforma in Azione",
       "action_sub": "(Scouting / Nota)",
       "convert_tooltip": "Converti questa analisi in un'Idea di Scouting o in una Nota di Diario",

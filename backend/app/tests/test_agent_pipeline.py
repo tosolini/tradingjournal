@@ -158,3 +158,244 @@ def test_coaching_only_machine_json_does_not_fallback():
     # Verify that coaching_report is empty and does not fall back to raw JSON
     assert state.coaching_report == ""
     assert "overall_score" not in state.coaching_report
+
+
+def test_coaching_input_without_personal_context_omits_null_keys_it():
+    bundle = _make_dummy_bundle()
+    assert bundle.trade_context is None
+    assert bundle.holding_context is None
+
+    mock_responses = {
+        "coach": """
+            Coaching prospettico: attendi pullback verso 6.50.
+            ```json
+            {
+                "overall_score": 7,
+                "action_suggestions": ["Impostare alert su 6.50"],
+                "risk_warnings": ["Evitare FOMO su breakout non confermato"]
+            }
+            ```
+        """,
+        "technical": "Tech",
+        "fundamental": "Fund",
+        "cyclical": "Cyc",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="it", client=client)
+    assert state.error is None
+    assert state.overall_score == 7
+
+    # Find the call to coach in client.call_history
+    coach_calls = [c for c in client.call_history if "personalizzato" in c["user"]]
+    assert len(coach_calls) == 1
+    user_prompt = coach_calls[0]["user"]
+
+    assert "TITOLO NON IN PORTAFOGLIO" in user_prompt
+    assert '"trade_context": null' not in user_prompt
+    assert '"holding_context": null' not in user_prompt
+    assert '"idea_context": null' not in user_prompt
+    assert '"past_trades": null' not in user_prompt
+
+
+def test_coaching_input_without_personal_context_omits_null_keys_en():
+    bundle = _make_dummy_bundle()
+    mock_responses = {
+        "coach": """
+            Prospective coaching: watch for consolidation.
+            ```json
+            {
+                "overall_score": 6,
+                "action_suggestions": ["Wait for confirmation"],
+                "risk_warnings": ["Do not chase"]
+            }
+            ```
+        """,
+        "technical": "Tech",
+        "fundamental": "Fund",
+        "cyclical": "Cyc",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="en", client=client)
+    assert state.error is None
+    assert state.overall_score == 6
+
+    coach_calls = [c for c in client.call_history if "personalized" in c["user"].lower()]
+    assert len(coach_calls) == 1
+    user_prompt = coach_calls[0]["user"]
+
+    assert "NOT IN PORTFOLIO" in user_prompt
+    assert '"trade_context": null' not in user_prompt
+    assert '"holding_context": null' not in user_prompt
+
+
+def test_coaching_input_with_personal_context_includes_only_active_context():
+    from app.services.analysis.data_collector import TradeContext
+
+    bundle = _make_dummy_bundle()
+    bundle.trade_context = TradeContext(
+        trade_id=42,
+        account_name="Trading Account",
+        side="LONG",
+        status="OPEN",
+        strategy_name="Trend Following",
+        open_quantity=Decimal("100"),
+        average_entry_price=Decimal("6.50"),
+        current_price=Decimal("6.85"),
+        unrealized_pnl=Decimal("35.00"),
+        unrealized_pnl_pct=Decimal("5.38"),
+        target_price=Decimal("7.50"),
+        stop_loss=Decimal("6.20"),
+        confidence_score=4,
+        journal_notes="Test trade",
+    )
+
+    mock_responses = {
+        "coach": """
+            Coaching posizione aperta: mantieni stop loss a 6.20.
+            ```json
+            {
+                "overall_score": 8,
+                "action_suggestions": ["Alzare trailing stop"],
+                "risk_warnings": ["Proteggere profitto"]
+            }
+            ```
+        """,
+        "technical": "Tech",
+        "fundamental": "Fund",
+        "cyclical": "Cyc",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="it", client=client)
+    assert state.error is None
+    assert state.overall_score == 8
+
+    coach_calls = [c for c in client.call_history if "personalizzato" in c["user"]]
+    assert len(coach_calls) == 1
+    user_prompt = coach_calls[0]["user"]
+
+    assert "CONTESTO PERSONALE DELL'UTENTE" in user_prompt
+    assert '"trade_context"' in user_prompt
+    assert '"average_entry_price": 6.5' in user_prompt
+    assert '"holding_context"' not in user_prompt
+    assert '"idea_context"' not in user_prompt
+
+
+def test_coaching_exploratory_short_setup():
+    bundle = _make_dummy_bundle()
+    bundle.target_direction = "short"
+
+    mock_responses = {
+        "coach": """
+            Coaching short: vendi alla rottura di 6.50 con stop a 6.95.
+            ```json
+            {
+                "overall_score": 7,
+                "action_suggestions": ["Sell stop sotto 6.50", "Stop loss a 6.95"],
+                "risk_warnings": ["Rischio rimbalzo su supporto"]
+            }
+            ```
+        """,
+        "technical": "Tech",
+        "fundamental": "Fund",
+        "cyclical": "Cyc",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="it", client=client)
+    assert state.error is None
+    assert state.overall_score == 7
+
+    coach_calls = [c for c in client.call_history if "personalizzato" in c["user"]]
+    assert len(coach_calls) == 1
+    user_prompt = coach_calls[0]["user"]
+
+    assert "SETUP SHORT / RIBASSISTA" in user_prompt
+    assert "SOPRA la resistenza" in user_prompt
+    assert "short squeeze" in user_prompt
+
+
+def test_coaching_exploratory_long_setup():
+    bundle = _make_dummy_bundle()
+    bundle.target_direction = "long"
+
+    mock_responses = {
+        "coach": """
+            Coaching long: compra su pullback a 6.60.
+            ```json
+            {
+                "overall_score": 8,
+                "action_suggestions": ["Buy limit a 6.60"],
+                "risk_warnings": ["Stop loss a 6.30"]
+            }
+            ```
+        """,
+        "technical": "Tech",
+        "fundamental": "Fund",
+        "cyclical": "Cyc",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="it", client=client)
+    assert state.error is None
+    assert state.overall_score == 8
+
+    coach_calls = [c for c in client.call_history if "personalizzato" in c["user"]]
+    assert len(coach_calls) == 1
+    user_prompt = coach_calls[0]["user"]
+
+    assert "SETUP LONG / RIALZISTA" in user_prompt
+    assert "SOTTO i supporti" in user_prompt
+
+
+def test_coaching_exploratory_agnostic_setup():
+    bundle = _make_dummy_bundle()
+    bundle.target_direction = "both"
+
+    mock_responses = {
+        "coach": """
+            Coaching agnostico: mercato in compressione.
+            ```json
+            {
+                "overall_score": 6,
+                "action_suggestions": ["Attendere rottura 7.10 per long o 6.50 per short"],
+                "risk_warnings": ["Non anticipare il breakout"]
+            }
+            ```
+        """,
+        "technical": "Tech",
+        "fundamental": "Fund",
+        "cyclical": "Cyc",
+        "bull": "Bull",
+        "bear": "Bear",
+        "lead": "Lead",
+    }
+    client = MockChatClient(responses=mock_responses)
+
+    state = run_agentic_analysis(bundle, language="it", client=client)
+    assert state.error is None
+    assert state.overall_score == 6
+
+    coach_calls = [c for c in client.call_history if "personalizzato" in c["user"]]
+    assert len(coach_calls) == 1
+    user_prompt = coach_calls[0]["user"]
+
+    assert "VALUTAZIONE AGNOSTICA: ESPLORA SIA LONG CHE SHORT" in user_prompt
+
