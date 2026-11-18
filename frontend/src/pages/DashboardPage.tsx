@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { BaselineSeries, ColorType, LineSeries, createChart } from "lightweight-charts";
+import { AreaSeries, ColorType, LineSeries, createChart } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -208,22 +208,44 @@ function EquityChartPanel({
     });
 
     const hasCost = visible.some((p) => p.cost != null && p.cost > 0);
-    const lastCost = visible.length > 0 && visible[visible.length - 1].cost != null ? visible[visible.length - 1].cost : 0;
-    const basePrice = hasCost && lastCost > 0 ? lastCost : 0;
 
-    const area = chart.addSeries(BaselineSeries, {
-      baseValue: { type: "price", price: basePrice },
-      topLineColor: isDark ? "#2dd4bf" : "#0d9488",
-      topFillColor1: isDark ? "rgba(45, 212, 191, 0.28)" : "rgba(13, 148, 136, 0.22)",
-      topFillColor2: isDark ? "rgba(45, 212, 191, 0.02)" : "rgba(13, 148, 136, 0.02)",
-      bottomLineColor: isDark ? "#f87171" : "#dc2626",
-      bottomFillColor1: isDark ? "rgba(248, 113, 113, 0.02)" : "rgba(220, 38, 38, 0.02)",
-      bottomFillColor2: isDark ? "rgba(248, 113, 113, 0.28)" : "rgba(220, 38, 38, 0.22)",
-      lineWidth: 2,
+    // Subtle area fill behind the value line
+    const area = chart.addSeries(AreaSeries, {
+      lineColor: "transparent",
+      lineVisible: false,
+      topColor: isDark ? "rgba(45, 212, 191, 0.18)" : "rgba(13, 148, 136, 0.16)",
+      bottomColor: isDark ? "rgba(45, 212, 191, 0.01)" : "rgba(13, 148, 136, 0.02)",
+      lineWidth: 1,
+      priceLineVisible: false,
+      priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+    });
+    area.setData(visible.map((p) => ({ time: p.date, value: p.value })));
+
+    // Dynamic market value line: colored green/teal above cost, red below cost per date
+    const valueLine = chart.addSeries(LineSeries, {
+      lineWidth: 3,
       priceFormat: { type: "price", precision: 2, minMove: 0.01 },
       title: t("dashboard.market_value"),
     });
-    area.setData(visible.map((p) => ({ time: p.date, value: p.value })));
+
+    const linePoints = visible.map((p) => {
+      const isProfit = p.cost == null || p.cost <= 0 ? true : p.value >= p.cost;
+      const pointColor = isProfit
+        ? isDark
+          ? "#2dd4bf"
+          : "#0d9488" // Teal / Emerald when above cost
+        : isDark
+        ? "#f87171"
+        : "#dc2626"; // Red when below cost
+
+      return {
+        time: p.date,
+        value: p.value,
+        color: pointColor,
+      };
+    });
+    valueLine.setData(linePoints);
+
     if (hasCost) {
       const cost = chart.addSeries(LineSeries, {
         color: isDark ? "#fbbf24" : "#d97706",
