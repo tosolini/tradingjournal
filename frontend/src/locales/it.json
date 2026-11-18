@@ -1646,6 +1646,8 @@
       "no_selection_subtitle": "Seleziona una posizione azionaria o digita qualsiasi simbolo sopra per avviare il coaching multi-agente.",
       "running_title": "Analisi Multi-Agente in corso...",
       "running_subtitle": "La squadra di analisti (Tecnico, Equity Research Fondamentale e Ciclico con Hurst) sta raccogliendo i dati ed elaborando il dibattito con il Coach.",
+      "running_wait_time_title": "Tempo di attesa stimato",
+      "running_wait_time_desc": "L'elaborazione approfondita del team di analisti può richiedere anche oltre 5 minuti di attesa. Ti invitiamo a pazientare: il report apparirà automaticamente.",
       "running_refresh_hint": "Aggiornamento automatico ogni 3 secondi",
       "failed_title": "Analisi non riuscita",
       "failed_default_message": "Si è verificato un errore durante l'esecuzione del team di analisi.",

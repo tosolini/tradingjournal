@@ -1646,6 +1646,8 @@
       "no_selection_subtitle": "Select a stock position or enter any symbol above to start multi-agent coaching.",
       "running_title": "Multi-Agent Analysis in progress...",
       "running_subtitle": "The analyst team (Technical, Fundamental Equity Research, and Cyclical with Hurst) is gathering data and preparing the debate with the Coach.",
+      "running_wait_time_title": "Estimated wait time",
+      "running_wait_time_desc": "Full processing by the analyst team can take over 5 minutes. Please be patient: the report will appear automatically.",
       "running_refresh_hint": "Auto-updating every 3 seconds",
       "failed_title": "Analysis failed",
       "failed_default_message": "An error occurred while executing the analysis team.",

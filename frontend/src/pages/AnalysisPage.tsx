@@ -673,12 +673,23 @@ export const AnalysisPage: React.FC = () => {
               )}
             </div>
           ) : activeReport.status === "pending" || activeReport.status === "running" ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center space-y-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 sm:p-16 text-center space-y-4">
               <div className="inline-block animate-spin h-10 w-10 border-4 border-amber-500 border-t-transparent rounded-full" />
               <h3 className="text-lg font-bold text-white">{t("analysis.display.running_title")}</h3>
               <p className="text-sm text-slate-400 max-w-md mx-auto">
                 {t("analysis.display.running_subtitle")}
               </p>
+              <div className="max-w-md mx-auto rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-200 flex items-start gap-3 text-left">
+                <span className="text-base shrink-0 mt-0.5">⏳</span>
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-amber-300 block">
+                    {t("analysis.display.running_wait_time_title")}
+                  </span>
+                  <p className="text-amber-200/90 leading-relaxed">
+                    {t("analysis.display.running_wait_time_desc")}
+                  </p>
+                </div>
+              </div>
               <div className="text-xs font-mono text-slate-500">{t("analysis.display.running_refresh_hint")}</div>
             </div>
           ) : activeReport.status === "failed" ? (
