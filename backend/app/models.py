@@ -190,6 +190,7 @@ class TradeImage(TimestampMixin, Base):
     trade_id: Mapped[int] = mapped_column(ForeignKey("trades.id"), index=True)
     original_path: Mapped[str] = mapped_column(String(255))
     annotated_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    annotations_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     mime_type: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
 
     trade: Mapped[Trade] = relationship(back_populates="images")

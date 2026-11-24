@@ -7,11 +7,13 @@ import {
   createChart,
   createSeriesMarkers,
   IChartApi,
+  IPriceLine,
   ISeriesApi,
   LineSeries,
   LineStyle,
 } from "lightweight-charts";
 import { analysisApi, AnalysisChartData } from "../../lib/api";
+import { useChartLabels } from "../../lib/useChartLabels";
 import { useTheme } from "../../contexts/ThemeContext";
 
 interface AnalysisInteractiveChartProps {
@@ -37,6 +39,11 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<IChartApi | null>(null);
+  const seriesTitleRefs = useRef<Array<{ series: ISeriesApi<"Line">; title: string }>>([]);
+  const priceLineTitleRefs = useRef<Array<{ line: IPriceLine; title: string }>>([]);
+  const [showLabels, toggleLabels] = useChartLabels();
+  const showLabelsRef = useRef(showLabels);
+  showLabelsRef.current = showLabels;
 
   // Technical Toolbar State
   const [maType, setMaType] = useState<MaType>("SMA");
@@ -116,6 +123,7 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
         borderColor: isDark ? "#334155" : "#cbd5e1",
         timeVisible: true,
         secondsVisible: false,
+        rightOffsetPixels: showLabelsRef.current ? 100 : 12,
       },
       rightPriceScale: {
         borderColor: isDark ? "#334155" : "#cbd5e1",
@@ -127,6 +135,8 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
     });
 
     chartInstanceRef.current = chart;
+    seriesTitleRefs.current = [];
+    priceLineTitleRefs.current = [];
 
     // 1. Candlestick Series
     const candleSeries = chart.addSeries(CandlestickSeries, {
@@ -177,81 +187,95 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
       const ma200Data = maType === "SMA" ? tech.sma_200 : tech.ema_200;
 
       if (showMa20 && ma20Data && ma20Data.length > 0) {
+        const title = `${maType} 20`;
         const ma20Series = chart.addSeries(LineSeries, {
           color: "#f59e0b", // Amber-500
           lineWidth: 1,
           priceLineVisible: false,
-          title: `${maType} 20`,
+          title: showLabelsRef.current ? title : "",
         });
         ma20Series.setData(ma20Data);
+        seriesTitleRefs.current.push({ series: ma20Series, title });
       }
 
       if (showMa50 && ma50Data && ma50Data.length > 0) {
+        const title = `${maType} 50`;
         const ma50Series = chart.addSeries(LineSeries, {
           color: "#38bdf8", // Sky-400
           lineWidth: 1,
           priceLineVisible: false,
-          title: `${maType} 50`,
+          title: showLabelsRef.current ? title : "",
         });
         ma50Series.setData(ma50Data);
+        seriesTitleRefs.current.push({ series: ma50Series, title });
       }
 
       if (showMa200 && ma200Data && ma200Data.length > 0) {
+        const title = `${maType} 200`;
         const ma200Series = chart.addSeries(LineSeries, {
           color: "#a855f7", // Purple-500
           lineWidth: 2,
           priceLineVisible: false,
-          title: `${maType} 200`,
+          title: showLabelsRef.current ? title : "",
         });
         ma200Series.setData(ma200Data);
+        seriesTitleRefs.current.push({ series: ma200Series, title });
       }
 
       // Supports & Resistances
       if (showLevels) {
         (tech.supports || []).forEach((sup, idx) => {
-          candleSeries.createPriceLine({
+          const title = `Sup ${idx + 1} (${sup.toFixed(2)})`;
+          const line = candleSeries.createPriceLine({
             price: sup,
             color: "#10b981", // Emerald
             lineWidth: 1,
             lineStyle: LineStyle.Dashed,
             axisLabelVisible: true,
-            title: `Sup ${idx + 1} (${sup.toFixed(2)})`,
+            title: showLabelsRef.current ? title : "",
           });
+          priceLineTitleRefs.current.push({ line, title });
         });
 
         (tech.resistances || []).forEach((res, idx) => {
-          candleSeries.createPriceLine({
+          const title = `Res ${idx + 1} (${res.toFixed(2)})`;
+          const line = candleSeries.createPriceLine({
             price: res,
             color: "#f43f5e", // Rose
             lineWidth: 1,
             lineStyle: LineStyle.Dashed,
             axisLabelVisible: true,
-            title: `Res ${idx + 1} (${res.toFixed(2)})`,
+            title: showLabelsRef.current ? title : "",
           });
+          priceLineTitleRefs.current.push({ line, title });
         });
       }
 
       // Coach Target & Stop Loss Levels
       if (showCoachLevels && tech.coach_levels) {
         if (tech.coach_levels.stop_loss) {
-          candleSeries.createPriceLine({
+          const title = `Stop Loss (${tech.coach_levels.stop_loss.toFixed(2)})`;
+          const line = candleSeries.createPriceLine({
             price: tech.coach_levels.stop_loss,
             color: "#ef4444", // Red solid
             lineWidth: 2,
             lineStyle: LineStyle.Solid,
             axisLabelVisible: true,
-            title: `Stop Loss (${tech.coach_levels.stop_loss.toFixed(2)})`,
+            title: showLabelsRef.current ? title : "",
           });
+          priceLineTitleRefs.current.push({ line, title });
         }
         if (tech.coach_levels.target_price) {
-          candleSeries.createPriceLine({
+          const title = `Target (${tech.coach_levels.target_price.toFixed(2)})`;
+          const line = candleSeries.createPriceLine({
             price: tech.coach_levels.target_price,
             color: "#10b981", // Emerald solid
             lineWidth: 2,
             lineStyle: LineStyle.Solid,
             axisLabelVisible: true,
-            title: `Target (${tech.coach_levels.target_price.toFixed(2)})`,
+            title: showLabelsRef.current ? title : "",
           });
+          priceLineTitleRefs.current.push({ line, title });
         }
       }
     }
@@ -262,12 +286,14 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
 
       // Harmonic Composite Wave
       if (showCyclicalWave && cyc.composite_wave && cyc.composite_wave.length > 0) {
+        const title = t("analysis.charts.cyclical_wave_title");
         const waveSeries = chart.addSeries(LineSeries, {
           color: "#06b6d4", // Cyan-500
           lineWidth: 2,
           priceLineVisible: false,
-          title: t("analysis.charts.cyclical_wave_title"),
+          title: showLabelsRef.current ? title : "",
         });
+        seriesTitleRefs.current.push({ series: waveSeries, title });
 
         const waveData = cyc.composite_wave.map((p) => ({
           time: p.time,
@@ -320,6 +346,8 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      seriesTitleRefs.current = [];
+      priceLineTitleRefs.current = [];
       chart.remove();
       chartInstanceRef.current = null;
     };
@@ -339,6 +367,18 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
     timeframe,
     t,
   ]);
+
+  useEffect(() => {
+    seriesTitleRefs.current.forEach(({ series, title }) => {
+      series.applyOptions({ title: showLabels ? title : "" });
+    });
+    priceLineTitleRefs.current.forEach(({ line, title }) => {
+      line.applyOptions({ title: showLabels ? title : "" });
+    });
+    chartInstanceRef.current?.timeScale().applyOptions({
+      rightOffsetPixels: showLabels ? 100 : 12,
+    });
+  }, [showLabels]);
 
   // Helper to zoom chart timescale based on selected timeframe
   const applyTimeframe = (chart: IChartApi, candles: any[], tf: TimeframeOption) => {
@@ -590,6 +630,21 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
               </button>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={toggleLabels}
+            aria-pressed={showLabels}
+            title={t("charts.toggle_labels_tooltip")}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+              showLabels
+                ? "bg-teal-500/15 text-teal-300 border-teal-500/40"
+                : "bg-slate-950/60 text-slate-500 border-slate-800 hover:text-slate-300"
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${showLabels ? "bg-teal-400" : "bg-slate-500"}`} />
+            <span>{t("charts.labels")}</span>
+          </button>
         </div>
       </div>
 

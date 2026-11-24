@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BaselineSeries, createChart, LineSeries } from "lightweight-charts";
+import { BaselineSeries, createChart, LineSeries, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
+import { useChartLabels } from "../lib/useChartLabels";
 import {
   deleteHolding,
   deleteHoldingExit,
@@ -57,10 +58,20 @@ function PriceSpreadChart({
   locale?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRefs = useRef<{
+    nominal?: ISeriesApi<"Line">;
+    cost?: ISeriesApi<"Line">;
+    market?: ISeriesApi<"Baseline">;
+    projection?: ISeriesApi<"Line">;
+  }>({});
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const [showProjection, setShowProjection] = useState(false);
+  const [showLabels, toggleLabels] = useChartLabels();
+  const showLabelsRef = useRef(showLabels);
+  showLabelsRef.current = showLabels;
 
   const points = history.points || [];
   const historicalPoints = useMemo(() => points.filter((p) => !p.is_projection), [points]);
@@ -86,6 +97,7 @@ function PriceSpreadChart({
       },
       timeScale: {
         borderColor: isDark ? "#334155" : "#cbd5e1",
+        rightOffsetPixels: showLabelsRef.current ? 90 : 10,
       },
     });
 
@@ -96,7 +108,7 @@ function PriceSpreadChart({
       color: isDark ? "#94a3b8" : "#64748b",
       lineWidth: 2,
       lineStyle: 2, // Dashed
-      title: t("holding_detail.chart.series_nominal"),
+      title: showLabelsRef.current ? t("holding_detail.chart.series_nominal") : "",
       priceLineVisible: false,
     });
     nominalSeries.setData(
@@ -111,7 +123,7 @@ function PriceSpreadChart({
       color: "#f59e0b", // Amber
       lineWidth: 2,
       lineStyle: 3, // Dotted
-      title: t("holding_detail.chart.series_cost"),
+      title: showLabelsRef.current ? t("holding_detail.chart.series_cost") : "",
       priceLineVisible: false,
     });
     costSeries.setData(
@@ -138,18 +150,19 @@ function PriceSpreadChart({
       bottomFillColor1: isDark ? "rgba(248, 113, 113, 0.02)" : "rgba(220, 38, 38, 0.02)",
       bottomFillColor2: isDark ? "rgba(248, 113, 113, 0.28)" : "rgba(220, 38, 38, 0.22)",
       lineWidth: 2,
-      title: t("holding_detail.chart.series_market"),
+      title: showLabelsRef.current ? t("holding_detail.chart.series_market") : "",
       priceLineVisible: true,
     });
     marketSeries.setData(marketSeriesData);
 
     // 4. Se abilitata, linea di proiezione Pull-to-Par a scadenza (tratteggiata)
+    let projectionSeries: ISeriesApi<"Line"> | undefined;
     if (showProjection && hasProjection) {
-      const projectionSeries = chart.addSeries(LineSeries, {
+      projectionSeries = chart.addSeries(LineSeries, {
         color: isDark ? "#2dd4bf" : "#0d9488",
         lineWidth: 2,
         lineStyle: 2, // Dashed
-        title: t("holding_detail.chart.series_projection"),
+        title: showLabelsRef.current ? t("holding_detail.chart.series_projection") : "",
         priceLineVisible: false,
       });
 
@@ -160,6 +173,14 @@ function PriceSpreadChart({
       ];
       projectionSeries.setData(projData);
     }
+
+    chartRef.current = chart;
+    seriesRefs.current = {
+      nominal: nominalSeries,
+      cost: costSeries,
+      market: marketSeries,
+      projection: projectionSeries,
+    };
 
     chart.timeScale().fitContent();
 
@@ -172,9 +193,22 @@ function PriceSpreadChart({
 
     return () => {
       window.removeEventListener("resize", resize);
+      chartRef.current = null;
+      seriesRefs.current = {};
       chart.remove();
     };
   }, [points, historicalPoints, projectionPoints, showProjection, hasProjection, isDark, history.avg_cost, t]);
+
+  useEffect(() => {
+    const { nominal, cost, market, projection } = seriesRefs.current;
+    nominal?.applyOptions({ title: showLabels ? t("holding_detail.chart.series_nominal") : "" });
+    cost?.applyOptions({ title: showLabels ? t("holding_detail.chart.series_cost") : "" });
+    market?.applyOptions({ title: showLabels ? t("holding_detail.chart.series_market") : "" });
+    projection?.applyOptions({ title: showLabels ? t("holding_detail.chart.series_projection") : "" });
+    chartRef.current?.timeScale().applyOptions({
+      rightOffsetPixels: showLabels ? 90 : 10,
+    });
+  }, [showLabels, t]);
 
   const currentP = asNumber(history.current_price);
   const nominalP = asNumber(history.nominal_price) || 100;
@@ -239,6 +273,21 @@ function PriceSpreadChart({
               <span>{showProjection ? t("holding_detail.chart.hide_projection") : t("holding_detail.chart.show_projection")}</span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={toggleLabels}
+            aria-pressed={showLabels}
+            title={t("charts.toggle_labels_tooltip")}
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-medium transition-colors ${
+              showLabels
+                ? "border-teal-500 bg-teal-500/20 text-teal-300 dark:border-teal-600 dark:text-teal-900"
+                : "border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-700"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${showLabels ? "bg-teal-400" : "bg-slate-400"}`} />
+            <span>{t("charts.labels")}</span>
+          </button>
         </div>
       </div>
 

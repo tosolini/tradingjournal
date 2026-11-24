@@ -81,6 +81,7 @@ export type TradeImage = {
   trade_id: number;
   original_path: string;
   annotated_path?: string | null;
+  annotations_json?: string | null;
   mime_type?: string | null;
 };
 
@@ -617,12 +618,19 @@ export async function fetchTradeImageBlobUrl(imageId: number, variant: "original
   const token = localStorage.getItem("token");
   const response = await fetch(`${API_BASE}/api/uploads/trade-images/${imageId}/content?variant=${variant}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    cache: "no-store",
   });
   if (!response.ok) {
     throw new Error(await response.text());
   }
   const blob = await response.blob();
   return URL.createObjectURL(blob);
+}
+
+export async function deleteTradeImage(imageId: number) {
+  return api<{ deleted: boolean; id: number }>(`/api/uploads/trade-images/${imageId}`, {
+    method: "DELETE",
+  });
 }
 
 // ── Assets ──────────────────────────────────────────

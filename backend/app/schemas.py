@@ -389,6 +389,7 @@ class TradeImageResponse(BaseModel):
     trade_id: int
     original_path: str
     annotated_path: Optional[str]
+    annotations_json: Optional[str] = None
     mime_type: Optional[str]
 
     model_config = ConfigDict(from_attributes=True)
