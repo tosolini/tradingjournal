@@ -21,6 +21,7 @@ interface ProviderPreset {
   linkUrl?: string;
   defaultBaseUrl?: string;
   requiresKey: boolean;
+  allowsKey?: boolean;
 }
 
 const PROVIDERS: ProviderPreset[] = [
@@ -31,6 +32,7 @@ const PROVIDERS: ProviderPreset[] = [
     linkKey: "settings.llm.gemini_link",
     linkUrl: "https://aistudio.google.com/app/apikey",
     requiresKey: true,
+    allowsKey: true,
   },
   {
     id: "openai",
@@ -39,6 +41,7 @@ const PROVIDERS: ProviderPreset[] = [
     linkKey: "settings.llm.openai_link",
     linkUrl: "https://platform.openai.com/api-keys",
     requiresKey: true,
+    allowsKey: true,
   },
   {
     id: "anthropic",
@@ -47,6 +50,7 @@ const PROVIDERS: ProviderPreset[] = [
     linkKey: "settings.llm.anthropic_link",
     linkUrl: "https://console.anthropic.com/settings/keys",
     requiresKey: true,
+    allowsKey: true,
   },
   {
     id: "openrouter",
@@ -56,6 +60,7 @@ const PROVIDERS: ProviderPreset[] = [
     linkUrl: "https://openrouter.ai/keys",
     defaultBaseUrl: "https://openrouter.ai/api/v1",
     requiresKey: true,
+    allowsKey: true,
   },
   {
     id: "ollama",
@@ -67,6 +72,7 @@ const PROVIDERS: ProviderPreset[] = [
     linkUrl: "https://ollama.com",
     defaultBaseUrl: "http://localhost:11434/v1",
     requiresKey: false,
+    allowsKey: true,
   },
   {
     id: "mock",
@@ -75,6 +81,7 @@ const PROVIDERS: ProviderPreset[] = [
     badgeColor: "bg-slate-700/40 text-slate-300 border-slate-600/40",
     descKey: "settings.llm.mock_desc",
     requiresKey: false,
+    allowsKey: false,
   },
 ];
 
@@ -320,12 +327,19 @@ export function LlmSettingsWizard() {
           </div>
         )}
 
-        {/* API Key Field (if required by provider) */}
-        {activeProviderDef.requiresKey && (
+        {/* API Key Field (if required or allowed by provider) */}
+        {(activeProviderDef.requiresKey || activeProviderDef.allowsKey) && (
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-              {t("settings.llm.api_key_label")}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {t("settings.llm.api_key_label")}
+                {!activeProviderDef.requiresKey && (
+                  <span className="ml-1.5 text-[11px] font-normal text-slate-400">
+                    ({t("settings.llm.optional_for_ollama")})
+                  </span>
+                )}
+              </label>
+            </div>
             <div className="relative mt-2">
               <input
                 type={showKey ? "text" : "password"}
@@ -334,7 +348,9 @@ export function LlmSettingsWizard() {
                 placeholder={
                   hasSavedKeyForProvider && !apiKey
                     ? "•••••••• (configurata)"
-                    : t("settings.llm.api_key_placeholder")
+                    : activeProviderDef.requiresKey
+                    ? t("settings.llm.api_key_placeholder")
+                    : t("settings.llm.api_key_placeholder_local")
                 }
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 pr-10 pl-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
               />
@@ -356,9 +372,37 @@ export function LlmSettingsWizard() {
         {/* Base URL (Shown automatically for Ollama, toggleable for others) */}
         {(provider === "ollama" || showAdvanced) && (
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-              {t("settings.llm.base_url_label")}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {t("settings.llm.base_url_label")}
+              </label>
+              {provider === "ollama" && (
+                <div className="flex flex-wrap gap-1.5 text-[11px]">
+                  <span className="text-slate-400">Predefiniti:</span>
+                  <button
+                    type="button"
+                    onClick={() => setBaseUrl("http://host.docker.internal:8000/v1")}
+                    className="rounded bg-slate-800 px-1.5 py-0.5 text-emerald-400 hover:bg-slate-700 font-mono"
+                  >
+                    host:8000/v1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBaseUrl("http://host.docker.internal:11434/v1")}
+                    className="rounded bg-slate-800 px-1.5 py-0.5 text-purple-400 hover:bg-slate-700 font-mono"
+                  >
+                    host:11434/v1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBaseUrl("http://127.0.0.1:8000/v1")}
+                    className="rounded bg-slate-800 px-1.5 py-0.5 text-slate-300 hover:bg-slate-700 font-mono"
+                  >
+                    127.0.0.1:8000/v1
+                  </button>
+                </div>
+              )}
+            </div>
             <input
               type="text"
               value={baseUrl}
@@ -368,7 +412,7 @@ export function LlmSettingsWizard() {
             />
             <p className="mt-1.5 text-xs text-slate-400">
               {t("settings.llm.base_url_hint")}{" "}
-              <span className="text-slate-300">{t("settings.llm.docker_note")}</span>
+              <span className="text-slate-300 font-medium">{t("settings.llm.docker_note")}</span>
             </p>
           </div>
         )}
