@@ -95,7 +95,7 @@ Each table row offers one-click action icons:
 - **👁️ View** — opens the full trade dossier and analytics
 - **✏️ Edit** — update trade parameters or TP/SL levels
 - **⚡ Quick Close** — slide-out drawer to liquidate the position with exit price, exit reason (`Manual`, `Take profit`, `Stop loss`), and instant PnL & tax estimation
-- **🖼️ Images** — screenshot gallery manager to attach charts and trade annotations
+- **🖼️ Images (Chart Annotation Studio)** — upload or paste (`⌘V` / `Ctrl+V`) chart screenshots and annotate them with a TradingView-inspired toolbar (Trendline, Horizontal Level, Zone, Long/Short R:R Box, Arrow, Highlighter, inline Text Notes) with non-destructive saving and gallery management
 - **🗑️ Delete** — secure deletion with confirmation dialog
 
 ---

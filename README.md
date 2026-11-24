@@ -19,7 +19,7 @@ This project is a personal trading journal application designed to help traders 
 - **Multi-Agent Asset Analysis & AI Coaching Engine** with streamlined 3-tab navigation prioritizing the historical analysis archive as default view, institutional dialectical debate (Technical, Fundamental/Equity Research, Cyclical/Hurst-FFT, Bull vs Bear adversarial debate, Lead Synthesis, and Personal Trading Coach with 1-10 scoring, behavioral bias alerts, and 1-click action conversion into scouting ideas or daily notes)
 - **Interactive LLM Setup Wizard** in Settings with live connection testing (latency in ms), model presets, protected API keys, and multi-provider support: Google Gemini, OpenAI, Anthropic Claude, Ollama (100% private local), and Mock simulation
 - **Daily Notes & Psychology Journal** with an integrated, zero-dependency WYSIWYG editor (forced word-wrapping and line break safety), emotional mood tracker, and **trading discipline checklist** (pre/post-trade psychology)
-- Image uploads for trade annotations (PNG/JPEG/GIF/WebP) with a dedicated serving endpoint
+- **Chart Annotation Studio (`/trades/:id/images`)** powered by `react-konva` with a TradingView-inspired vertical drawing toolbar (Trendline, Horizontal Level, Arrow, Zone/Rectangle, Ellipse, Long/Short R:R Position Box, Highlighter, inline Text Notes), cursor-anchored zoom/pan, clipboard paste (`⌘V`/`Ctrl+V`), non-destructive vector persistence (`annotations_json`), "Save as new" snapshots, and full gallery management
 - Broker-level commission and capital-gain tax configuration
 - Cash ledger (deposits/withdrawals) per account
 - Daily snapshots (positions + portfolio) computed automatically at a configurable time
@@ -38,8 +38,8 @@ The entire project is meant to be used on localhost or private networks. **Do no
 
 ## Current version
 
-- Backend: `0.3.2` (`backend/pyproject.toml`)
-- Frontend: `0.3.2` (`frontend/package.json`)
+- Backend: `0.3.3` (`backend/pyproject.toml`)
+- Frontend: `0.3.3` (`frontend/package.json`)
 
 More details on change log and versioning strategy in the [changelog.md](changelog.md) file.
 

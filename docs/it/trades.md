@@ -95,7 +95,7 @@ Su ciascuna riga della tabella sono disponibili azioni immediate:
 - **👁️ Visualizza** — apre la pagina di dettaglio del trade
 - **✏️ Modifica** — aggiorna i parametri operativi o i livelli di TP/SL
 - **⚡ Chiusura Rapida** — pannello scorrevole per liquidare la posizione con prezzo di uscita, motivo (`Manuale`, `Take profit`, `Stop loss`) e calcolo immediato di PnL e imposte
-- **🖼️ Immagini** — gestore screenshot per allegare grafici di analisi
+- **🖼️ Immagini (Chart Annotation Studio)** — carica o incolla (`⌘V` / `Ctrl+V`) screenshot dei grafici e annotali con una toolbar stile TradingView (Trendline, Livello Orizzontale, Zona, Box R:R Long/Short, Freccia, Evidenziatore, Note testuali inline) con salvataggio non distruttivo e gestione galleria
 - **🗑️ Elimina** — cancellazione sicura con richiesta di conferma
 
 ---
