@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AreaSeries, ColorType, createChart } from "lightweight-charts";
+import { AreaSeries, ColorType, LineSeries, createChart } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../contexts/ThemeContext";
@@ -77,11 +77,12 @@ function Panel({
 }
 
 /* ─── Equity curve chart (lightweight-charts) ── */
-function EquityChartPanel({ data }: { data: DailyPnlPoint[] }) {
+function EquityChartPanel({ data, locale }: { data: DailyPnlPoint[]; locale: string }) {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const ref = useRef<HTMLDivElement | null>(null);
   const [mode, setMode] = useState<"invested" | "wealth">("invested");
+  const [hoveredPoint, setHoveredPoint] = useState<DailyPnlPoint | null>(null);
 
   useEffect(() => {
     if (!ref.current || data.length < 2) return;
@@ -106,26 +107,82 @@ function EquityChartPanel({ data }: { data: DailyPnlPoint[] }) {
       },
     });
 
+    const hasCost = data.some((p) => asNumber(p.total_cost) > 0);
+    const getMarketValue = (p: DailyPnlPoint) =>
+      mode === "wealth" ? asNumber(p.total_wealth ?? p.total_value) : asNumber(p.total_value);
+
     const areaSeries = chart.addSeries(AreaSeries, {
-      lineColor: isDark ? "#2dd4bf" : "#0d9488",
-      topColor: isDark ? "rgba(45,212,191,0.35)" : "rgba(13,148,136,0.28)",
-      bottomColor: isDark ? "rgba(45,212,191,0.02)" : "rgba(13,148,136,0.02)",
-      lineWidth: 2,
+      lineColor: "transparent",
+      lineVisible: false,
+      topColor: isDark ? "rgba(45,212,191,0.18)" : "rgba(13,148,136,0.16)",
+      bottomColor: isDark ? "rgba(45,212,191,0.01)" : "rgba(13,148,136,0.02)",
+      lineWidth: 1,
+      priceLineVisible: false,
       priceFormat: { type: "price", precision: 2, minMove: 0.01 },
     });
     areaSeries.setData(
       data.map((p) => ({
         time: p.date,
-        value:
-          mode === "wealth"
-            ? asNumber(p.total_wealth ?? p.total_value)
-            : asNumber(p.total_value),
+        value: getMarketValue(p),
       }))
     );
+
+    const valueLine = chart.addSeries(LineSeries, {
+      lineWidth: 3,
+      priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+    });
+    valueLine.setData(
+      data.map((p) => {
+        const val = getMarketValue(p);
+        const cost = asNumber(p.total_cost);
+        const isProfit = cost <= 0 ? true : val >= cost;
+        return {
+          time: p.date,
+          value: val,
+          color: isProfit
+            ? isDark
+              ? "#2dd4bf"
+              : "#0d9488"
+            : isDark
+            ? "#f87171"
+            : "#dc2626",
+        };
+      })
+    );
+
+    if (hasCost) {
+      const costLine = chart.addSeries(LineSeries, {
+        color: isDark ? "#fbbf24" : "#d97706",
+        lineWidth: 2,
+        lineStyle: 2 as const,
+        priceLineVisible: false,
+        priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+      });
+      costLine.setData(
+        data.map((p) => ({
+          time: p.date,
+          value: asNumber(p.total_cost),
+        }))
+      );
+    }
 
     chart.timeScale().fitContent();
     const resizeObserver = new ResizeObserver(() => chart.applyOptions({}));
     resizeObserver.observe(ref.current);
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!param || !param.time || !param.point) {
+        setHoveredPoint(null);
+        return;
+      }
+      const timeStr = typeof param.time === "string" ? param.time : "";
+      if (!timeStr) {
+        setHoveredPoint(null);
+        return;
+      }
+      const match = data.find((p) => p.date === timeStr);
+      setHoveredPoint(match ?? null);
+    });
 
     return () => {
       resizeObserver.disconnect();
@@ -141,32 +198,91 @@ function EquityChartPanel({ data }: { data: DailyPnlPoint[] }) {
     );
   }
 
+  const latest = data[data.length - 1];
+  const active = hoveredPoint ?? latest;
+  const isHovered = hoveredPoint !== null;
+  const activeValue = mode === "wealth" ? asNumber(active.total_wealth ?? active.total_value) : asNumber(active.total_value);
+  const activeCost = asNumber(active.total_cost);
+  const activeDelta = activeValue - activeCost;
+  const activeDeltaPct = activeCost > 0 ? (activeDelta / activeCost) * 100 : 0;
+
   return (
-    <div>
-      <div className="mb-2 flex justify-end gap-1 text-[10px]">
-        <button
-          type="button"
-          onClick={() => setMode("invested")}
-          className={`rounded px-2 py-1 font-medium transition ${
-            mode === "invested"
-              ? "bg-teal-500 font-bold text-slate-950"
-              : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
-          }`}
-        >
-          {t("performance.mode_invested")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("wealth")}
-          title={t("performance.mode_wealth_hint")}
-          className={`rounded px-2 py-1 font-medium transition ${
-            mode === "wealth"
-              ? "bg-teal-500 font-bold text-slate-950"
-              : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
-          }`}
-        >
-          {t("performance.mode_wealth")}
-        </button>
+    <div className="p-4 pt-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/40 pb-3 text-xs dark:border-slate-200/60">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1.5 rounded-md border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-teal-300 dark:border-teal-300 dark:bg-teal-50 dark:text-teal-700">
+            <span className="h-2 w-2 rounded-full bg-teal-400 ring-2 ring-teal-400/20 dark:bg-teal-600" />
+            <span className="font-medium text-slate-300 dark:text-slate-600">{t("performance.market_value")}:</span>
+            <span className="font-bold tabular-nums text-slate-100 dark:text-slate-900">
+              {formatMoney(activeValue, locale)}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300 dark:border-amber-300 dark:bg-amber-50 dark:text-amber-700">
+            <span className="h-0.5 w-3.5 border-t-2 border-dashed border-amber-400 dark:border-amber-600" />
+            <span className="font-medium text-slate-300 dark:text-slate-600">{t("performance.total_cost")}:</span>
+            <span className="font-bold tabular-nums text-slate-100 dark:text-slate-900">
+              {formatMoney(activeCost, locale)}
+            </span>
+          </div>
+
+          <div
+            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 tabular-nums ${
+              activeDelta >= 0
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 dark:border-emerald-200 dark:bg-emerald-50 dark:text-emerald-700"
+                : "border-rose-500/30 bg-rose-500/10 text-rose-300 dark:border-rose-200 dark:bg-rose-50 dark:text-rose-700"
+            }`}
+          >
+            <span className="font-medium text-slate-300 dark:text-slate-600">{t("performance.vs_cost_delta")}:</span>
+            <span className="font-bold">
+              {formatSignedMoney(activeDelta, locale)} ({activeDelta >= 0 ? "+" : ""}{activeDeltaPct.toFixed(2)}%)
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+            {isHovered ? (
+              <span className="font-semibold text-teal-400 dark:text-teal-600">📅 {active.date}</span>
+            ) : (
+              <span>
+                {t("performance.updated")}{" "}
+                <strong className="text-slate-300 dark:text-slate-700">{latest.date}</strong>
+              </span>
+            )}
+          </div>
+          <div className="flex gap-1 text-[10px]">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("invested");
+                setHoveredPoint(null);
+              }}
+              className={`rounded px-2 py-1 font-medium transition ${
+                mode === "invested"
+                  ? "bg-teal-500 font-bold text-slate-950"
+                  : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
+              }`}
+            >
+              {t("performance.mode_invested")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("wealth");
+                setHoveredPoint(null);
+              }}
+              title={t("performance.mode_wealth_hint")}
+              className={`rounded px-2 py-1 font-medium transition ${
+                mode === "wealth"
+                  ? "bg-teal-500 font-bold text-slate-950"
+                  : "text-slate-400 hover:text-slate-200 dark:text-slate-500"
+              }`}
+            >
+              {t("performance.mode_wealth")}
+            </button>
+          </div>
+        </div>
       </div>
       <div ref={ref} />
     </div>
@@ -426,7 +542,7 @@ export function PerformancePage() {
           ) : undefined
         }
       >
-        <EquityChartPanel data={data} />
+        <EquityChartPanel data={data} locale={locale} />
       </Panel>
 
       <div className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
@@ -466,10 +582,14 @@ export function PerformancePage() {
 
       {selectedPoint && selectedDate && (
         <Panel title={t("performance.day_detail", { date: selectedDate })}>
-          <div className="grid gap-3 p-4 text-sm sm:grid-cols-3">
+          <div className="grid gap-3 p-4 text-sm sm:grid-cols-4">
             <div>
               <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("performance.total_value")}</div>
               <div className="mt-1 font-semibold tabular-nums text-slate-200 dark:text-slate-800">{formatMoney(asNumber(selectedPoint.total_value), locale)}</div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("performance.total_cost")}</div>
+              <div className="mt-1 font-semibold tabular-nums text-amber-300 dark:text-amber-700">{formatMoney(asNumber(selectedPoint.total_cost), locale)}</div>
             </div>
             <div>
               <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("performance.day_pnl")}</div>

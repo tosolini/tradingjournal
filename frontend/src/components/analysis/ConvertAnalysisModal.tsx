@@ -59,7 +59,9 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
     const isBearish = score !== null && score !== undefined ? score <= 4 : false;
 
     // Scouting Defaults
-    const defaultDir: "long" | "short" = isBearish ? "short" : "long";
+    const targetDir = report.data_snapshot?.target_direction as string | undefined;
+    const defaultDir: "long" | "short" =
+      targetDir === "short" ? "short" : targetDir === "long" ? "long" : isBearish ? "short" : "long";
     setDirection(defaultDir);
     setTriggerCondition(defaultDir === "long" ? "<=" : ">=");
 
@@ -69,22 +71,40 @@ export const ConvertAnalysisModal: React.FC<ConvertAnalysisModalProps> = ({
       setTriggerPrice("");
     }
 
-    if (tech.support) {
-      setStopLoss(Number(tech.support).toFixed(2));
-    } else if (quote) {
-      setStopLoss((Number(quote) * 0.94).toFixed(2));
-    } else {
-      setStopLoss("");
-    }
+    if (defaultDir === "short") {
+      if (tech.resistance) {
+        setStopLoss(Number(tech.resistance).toFixed(2));
+      } else if (quote) {
+        setStopLoss((Number(quote) * 1.06).toFixed(2));
+      } else {
+        setStopLoss("");
+      }
 
-    if (fund.target_mean_price) {
-      setTargetPrice(Number(fund.target_mean_price).toFixed(2));
-    } else if (tech.resistance) {
-      setTargetPrice(Number(tech.resistance).toFixed(2));
-    } else if (quote) {
-      setTargetPrice((Number(quote) * 1.15).toFixed(2));
+      if (tech.support) {
+        setTargetPrice(Number(tech.support).toFixed(2));
+      } else if (quote) {
+        setTargetPrice((Number(quote) * 0.85).toFixed(2));
+      } else {
+        setTargetPrice("");
+      }
     } else {
-      setTargetPrice("");
+      if (tech.support) {
+        setStopLoss(Number(tech.support).toFixed(2));
+      } else if (quote) {
+        setStopLoss((Number(quote) * 0.94).toFixed(2));
+      } else {
+        setStopLoss("");
+      }
+
+      if (fund.target_mean_price) {
+        setTargetPrice(Number(fund.target_mean_price).toFixed(2));
+      } else if (tech.resistance) {
+        setTargetPrice(Number(tech.resistance).toFixed(2));
+      } else if (quote) {
+        setTargetPrice((Number(quote) * 1.15).toFixed(2));
+      } else {
+        setTargetPrice("");
+      }
     }
 
     // Curated thesis text

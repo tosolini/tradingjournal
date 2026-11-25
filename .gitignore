@@ -14,3 +14,5 @@ PROGRESS.md
 requisites.md
 opencode.json
 *.tsbuildinfo
+.gemini
+.venv

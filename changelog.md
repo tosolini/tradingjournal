@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.3] - 2026-11-24
+
+- TradingView-Inspired Chart Annotation Studio (`/trades/:id/images`)
+  - Redesigned `TradeImagesPage.tsx` and `ImageAnnotationEditor.tsx` with `react-konva` (`konva`) into a viewport-first Chart Annotation Studio.
+  - Added a left vertical drawing toolbar with keyboard shortcuts (`V` Select/Move/Resize, `H` Pan / `Space+Drag`, `T` Trendline, `L` Horizontal Level with inline label, `A` Arrow, `R` Zone/Rectangle, `C` Ellipse, `P` Long/Short R:R Position Box, `M` Highlighter, `N` Inline Text Note without `window.prompt`).
+  - Added non-destructive vector persistence (`annotations_json` on `TradeImage` via Alembic migration `20261124_0020`), lossless full-resolution PNG export, "Save as new" gallery snapshot creation, global clipboard screenshot paste (`⌘V`/`Ctrl+V`), drag-and-drop upload, explicit Zoom/Delete gallery controls, and `DELETE /api/uploads/trade-images/{image_id}` endpoint.
+- Interactive Candlestick & Cyclical FFT Charts + Directional AI Coaching
+  - Added interactive candlestick charts with cyclical FFT projection waves, turning windows, and SMA/EMA overlays (`AnalysisInteractiveChart.tsx`), plus directional bias (`long`/`short`/`auto`) for exploratory AI coaching.
+  - Highlighted estimated wait time in the AI analysis loading screen (`AnalysisPage.tsx`, `AnalysisHistoryView.tsx`).
+- Custom Local OpenAI-Compatible LLM Endpoints & Command+K Enhancements
+  - Added support for custom local OpenAI-compatible endpoints with optional API keys in Settings.
+  - Added AI analysis commands and dynamic search to the `Cmd+K` / `Ctrl+K` Command Palette.
+- Dashboard Equity Curve & Chart Label Toggles
+  - Switched Dashboard equity curve to a dual-tone `BaselineSeries` with dynamic per-point profit/loss colors against historical cost, and added persistent chart label visibility toggles (`useChartLabels.ts`).
+- Development Workflow
+  - Added `scripts/dev-worktree.sh`, `scripts/worktree-setup.sh`, and `scripts/worktree-sync.sh` for automated Docker/worktree alignment.
+- Version bump to 0.3.3 (Backend 0.3.3 / Frontend 0.3.3)
+
 ## [0.3.2] - 2026-11-17
 
 - Trade Detail Dossier & Execution Cockpit Redesign

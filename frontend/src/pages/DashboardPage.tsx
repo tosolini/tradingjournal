@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { AreaSeries, ColorType, LineSeries, createChart } from "lightweight-charts";
+import { AreaSeries, ColorType, LineSeries, createChart, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { AllAssetsPnlPoint, DashboardAllocation, DashboardKpis, MonthlyPnlPoint, PortfolioHistoryPoint, TradeStat, WeeklyPnlPoint, api, dashboardKpis } from "../lib/api";
+import { useChartLabels } from "../lib/useChartLabels";
 import { DashboardSkeleton } from "../components/DashboardSkeleton";
 
 function asNumber(value: string | number | undefined): number {
@@ -117,6 +118,11 @@ function EquityChartPanel({
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const ref = useRef<HTMLDivElement | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRefs = useRef<{ valueLine?: ISeriesApi<"Line">; cost?: ISeriesApi<"Line"> }>({});
+  const [showLabels, toggleLabels] = useChartLabels();
+  const showLabelsRef = useRef(showLabels);
+  showLabelsRef.current = showLabels;
   const [range, setRange] = useState<RangeKey>("ALL");
   const [filter, setFilter] = useState<ChartAssetFilter>(defaultFilter);
   const [hasUserChangedFilter, setHasUserChangedFilter] = useState(false);
@@ -193,7 +199,7 @@ function EquityChartPanel({
         borderVisible: false,
         timeVisible: false,
         fixLeftEdge: true,
-        fixRightEdge: true,
+        rightOffsetPixels: showLabelsRef.current ? 90 : 10,
       },
       crosshair: {
         vertLine: {
@@ -207,28 +213,60 @@ function EquityChartPanel({
       },
     });
 
+    const hasCost = visible.some((p) => p.cost != null && p.cost > 0);
+
+    // Subtle area fill behind the value line
     const area = chart.addSeries(AreaSeries, {
-      lineColor: isDark ? "#2dd4bf" : "#0d9488",
-      topColor: isDark ? "rgba(45,212,191,0.22)" : "rgba(13,148,136,0.2)",
-      bottomColor: isDark ? "rgba(45,212,191,0.02)" : "rgba(13,148,136,0.03)",
-      lineWidth: 2,
+      lineColor: "transparent",
+      lineVisible: false,
+      topColor: isDark ? "rgba(45, 212, 191, 0.18)" : "rgba(13, 148, 136, 0.16)",
+      bottomColor: isDark ? "rgba(45, 212, 191, 0.01)" : "rgba(13, 148, 136, 0.02)",
+      lineWidth: 1,
+      priceLineVisible: false,
       priceFormat: { type: "price", precision: 2, minMove: 0.01 },
-      title: t("dashboard.market_value"),
     });
     area.setData(visible.map((p) => ({ time: p.date, value: p.value })));
 
-    const hasCost = visible.some((p) => p.cost != null && p.cost > 0);
+    // Dynamic market value line: colored green/teal above cost, red below cost per date
+    const valueLine = chart.addSeries(LineSeries, {
+      lineWidth: 3,
+      priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+      title: showLabelsRef.current ? t("dashboard.market_value") : "",
+    });
+
+    const linePoints = visible.map((p) => {
+      const isProfit = p.cost == null || p.cost <= 0 ? true : p.value >= p.cost;
+      const pointColor = isProfit
+        ? isDark
+          ? "#2dd4bf"
+          : "#0d9488" // Teal / Emerald when above cost
+        : isDark
+        ? "#f87171"
+        : "#dc2626"; // Red when below cost
+
+      return {
+        time: p.date,
+        value: p.value,
+        color: pointColor,
+      };
+    });
+    valueLine.setData(linePoints);
+
+    let cost: ISeriesApi<"Line"> | undefined;
     if (hasCost) {
-      const cost = chart.addSeries(LineSeries, {
+      cost = chart.addSeries(LineSeries, {
         color: isDark ? "#fbbf24" : "#d97706",
         lineWidth: 2,
         lineStyle: 2 as const,
         priceLineVisible: false,
         priceFormat: { type: "price", precision: 2, minMove: 0.01 },
-        title: t("dashboard.nominal_cost_short"),
+        title: showLabelsRef.current ? t("dashboard.nominal_cost_short") : "",
       });
       cost.setData(visible.map((p) => ({ time: p.date, value: p.cost })));
     }
+
+    chartRef.current = chart;
+    seriesRefs.current = { valueLine, cost };
 
     chart.timeScale().fitContent();
 
@@ -253,9 +291,20 @@ function EquityChartPanel({
 
     return () => {
       resizeObserver.disconnect();
+      chartRef.current = null;
+      seriesRefs.current = {};
       chart.remove();
     };
   }, [visible, theme, t]);
+
+  useEffect(() => {
+    const { valueLine, cost } = seriesRefs.current;
+    valueLine?.applyOptions({ title: showLabels ? t("dashboard.market_value") : "" });
+    cost?.applyOptions({ title: showLabels ? t("dashboard.nominal_cost_short") : "" });
+    chartRef.current?.timeScale().applyOptions({
+      rightOffsetPixels: showLabels ? 90 : 10,
+    });
+  }, [showLabels, t]);
 
   const latest = visible[visible.length - 1];
   const active = hoveredPoint ?? latest;
@@ -349,6 +398,20 @@ function EquityChartPanel({
               </button>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={toggleLabels}
+            aria-pressed={showLabels}
+            title={t("charts.toggle_labels_tooltip")}
+            className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+              showLabels
+                ? "border-teal-500/40 bg-teal-500/15 text-teal-300 dark:border-teal-600/40 dark:text-teal-800"
+                : "border-slate-600/50 text-slate-400 hover:text-slate-200 dark:border-slate-300/60 dark:text-slate-500 dark:hover:text-slate-800"
+            }`}
+          >
+            {t("charts.labels")}
+          </button>
         </div>
       }
     >

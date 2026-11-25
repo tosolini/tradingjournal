@@ -2,7 +2,7 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -80,6 +80,7 @@ def save_annotated_trade_image(
     image_id: int,
     request: Request,
     file: UploadFile = File(...),
+    annotations_json: str | None = Form(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -100,7 +101,17 @@ def save_annotated_trade_image(
     with destination.open("wb") as out:
         shutil.copyfileobj(file.file, out)
 
+    if image.annotated_path:
+        try:
+            old_annotated = _resolve_media_path(image.annotated_path)
+            if old_annotated.exists() and old_annotated != destination:
+                old_annotated.unlink()
+        except (ValueError, OSError):
+            pass
+
     image.annotated_path = str(destination)
+    if annotations_json is not None:
+        image.annotations_json = annotations_json
     db.commit()
     db.refresh(image)
 
@@ -109,8 +120,39 @@ def save_annotated_trade_image(
         "trade_id": image.trade_id,
         "original_path": image.original_path,
         "annotated_path": image.annotated_path,
+        "annotations_json": image.annotations_json,
         "mime_type": image.mime_type,
     }
+
+
+@router.delete("/trade-images/{image_id}")
+def delete_trade_image(
+    image_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    image = db.get(TradeImage, image_id)
+    if not image:
+        raise localized_error(status_code=404, code="errors.image_not_found", request=request)
+
+    trade = db.get(Trade, image.trade_id)
+    if not trade or trade.user_id != current_user.id:
+        raise localized_error(status_code=404, code="errors.trade_not_found", request=request)
+
+    for raw_path in (image.original_path, image.annotated_path):
+        if not raw_path:
+            continue
+        try:
+            file_path = _resolve_media_path(raw_path)
+            if file_path.exists():
+                file_path.unlink()
+        except (ValueError, OSError):
+            pass
+
+    db.delete(image)
+    db.commit()
+    return {"deleted": True, "id": image_id}
 
 
 @router.get("/trade-images/{image_id}/content")

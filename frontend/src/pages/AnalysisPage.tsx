@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   api,
@@ -20,6 +20,7 @@ import { SearchIcon } from "../components/icons";
 export const AnalysisPage: React.FC = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { analysisId } = useParams<{ analysisId?: string }>();
   const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
 
@@ -36,6 +37,7 @@ export const AnalysisPage: React.FC = () => {
   const [selectedTargetKey, setSelectedTargetKey] = useState<string>("");
   const [customSymbol, setCustomSymbol] = useState<string>("");
   const [customMarket, setCustomMarket] = useState<string>("NASDAQ");
+  const [customDirection, setCustomDirection] = useState<"both" | "long" | "short">("both");
   const [selectedDbTicker, setSelectedDbTicker] = useState<Ticker | null>(null);
   const [tickerSuggestions, setTickerSuggestions] = useState<Ticker[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
@@ -117,11 +119,16 @@ export const AnalysisPage: React.FC = () => {
     queryFn: () => analysisApi.getHistory(),
   });
 
-  // Check URL query parameters (e.g. ?symbol=NVDA&market=NASDAQ&tradeId=5)
+  // Check URL query parameters (e.g. ?symbol=NVDA&market=NASDAQ&tradeId=5&mode=new)
   useEffect(() => {
     const querySymbol = searchParams.get("symbol");
     const queryMarket = searchParams.get("market");
     const queryTradeId = searchParams.get("tradeId");
+    const queryMode = searchParams.get("mode");
+
+    if (queryMode === "new") {
+      setInputMode("custom");
+    }
 
     if (querySymbol) {
       if (queryTradeId && targets.length > 0) {
@@ -138,23 +145,22 @@ export const AnalysisPage: React.FC = () => {
     }
   }, [searchParams, targets]);
 
-  // Select first target by default once loaded
+  // Handle direct navigation via /analysis/:analysisId
   useEffect(() => {
-    if (targets.length > 0 && !selectedTargetKey) {
-      const firstTarget = targets[0];
-      const key = firstTarget.target_source === "trade"
-        ? `trade:${firstTarget.trade_id}`
-        : `${firstTarget.target_source}:${firstTarget.symbol}`;
-      setSelectedTargetKey(key);
+    if (analysisId) {
+      const parsedId = Number(analysisId);
+      if (!isNaN(parsedId) && parsedId > 0) {
+        setActiveReportId(parsedId);
+      }
     }
-  }, [targets, selectedTargetKey]);
+  }, [analysisId]);
 
-  // Select first completed report from history if none is active
+  // Select first completed report from history if none is active and no route param
   useEffect(() => {
-    if (!activeReportId && history.length > 0) {
+    if (!activeReportId && !analysisId && history.length > 0) {
       setActiveReportId(history[0].id);
     }
-  }, [history, activeReportId]);
+  }, [history, activeReportId, analysisId]);
 
   // 3. Fetch active report detail (with polling if pending/running)
   const { data: activeReport, isLoading: reportLoading } = useQuery<AnalysisReportDetail>({
@@ -200,6 +206,7 @@ export const AnalysisPage: React.FC = () => {
         symbol: customSymbol.trim().toUpperCase(),
         market: customMarket,
         language: appLanguage,
+        direction: customDirection,
       });
       return;
     }
@@ -424,11 +431,11 @@ export const AnalysisPage: React.FC = () => {
             )}
           </div>
         ) : inputMode === "custom" ? (
-          /* Custom Mode: 5 cols for ticker, 4 cols for market, 3 cols for button */
+          /* Custom Mode: 4 cols ticker, 3 cols market, 3 cols direction, 2 cols button */
           <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
               {/* Col 1: Ticker Input */}
-              <div ref={autocompleteRef} className="md:col-span-5 relative">
+              <div ref={autocompleteRef} className="md:col-span-4 relative">
                 <div className="flex items-center justify-between mb-1.5 h-4">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                     {t("analysis.custom.symbol_label")}
@@ -497,7 +504,7 @@ export const AnalysisPage: React.FC = () => {
               </div>
 
               {/* Col 2: Market Selector */}
-              <div className="md:col-span-4">
+              <div className="md:col-span-3">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 h-4">
                   {t("analysis.custom.market_label")}
                 </label>
@@ -536,14 +543,62 @@ export const AnalysisPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Col 3: Action Button */}
+              {/* Col 3: Directional Bias Selector */}
               <div className="md:col-span-3">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 h-4 flex items-center justify-between">
+                  <span>{t("analysis.custom.direction_label")}</span>
+                </label>
+                <div className="h-11 rounded-xl border border-slate-700/80 bg-slate-950/60 p-1 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCustomDirection("both")}
+                    title={t("analysis.custom.direction_both_tooltip")}
+                    className={`flex-1 h-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      customDirection === "both"
+                        ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700/80"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <span>⚖️</span>
+                    <span>{t("analysis.custom.direction_both")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomDirection("long")}
+                    title={t("analysis.custom.direction_long_tooltip")}
+                    className={`flex-1 h-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      customDirection === "long"
+                        ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40 shadow-sm shadow-emerald-950/40"
+                        : "text-slate-400 hover:text-emerald-300"
+                    }`}
+                  >
+                    <span className="text-[10px]">🟢</span>
+                    <span>{t("analysis.custom.direction_long")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomDirection("short")}
+                    title={t("analysis.custom.direction_short_tooltip")}
+                    className={`flex-1 h-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      customDirection === "short"
+                        ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40 shadow-sm shadow-rose-950/40"
+                        : "text-slate-400 hover:text-rose-300"
+                    }`}
+                  >
+                    <span className="text-[10px]">🔴</span>
+                    <span>{t("analysis.custom.direction_short")}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Col 4: Action Button */}
+              <div className="md:col-span-2">
                 <div className="h-4 hidden md:block mb-1.5" />
                 <button
                   type="button"
                   onClick={handleStartAnalysis}
                   disabled={runMutation.isPending || !customSymbol.trim()}
-                  className="w-full h-11 px-5 rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary-hover hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center gap-2 cursor-pointer group active:scale-[0.99]"
+                  className="w-full h-11 px-3 rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary-hover hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer group active:scale-[0.99]"
                 >
                   {runMutation.isPending ? (
                     <>
@@ -551,12 +606,12 @@ export const AnalysisPage: React.FC = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                       </svg>
-                      <span>{t("analysis.actions.running")}</span>
+                      <span className="truncate">{t("analysis.actions.running")}</span>
                     </>
                   ) : (
                     <>
                       <span className="group-hover:scale-110 transition-transform">🚀</span>
-                      <span>{t("analysis.actions.generate")}</span>
+                      <span className="truncate">{t("analysis.actions.generate")}</span>
                     </>
                   )}
                 </button>
@@ -618,12 +673,23 @@ export const AnalysisPage: React.FC = () => {
               )}
             </div>
           ) : activeReport.status === "pending" || activeReport.status === "running" ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center space-y-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 sm:p-16 text-center space-y-4">
               <div className="inline-block animate-spin h-10 w-10 border-4 border-amber-500 border-t-transparent rounded-full" />
               <h3 className="text-lg font-bold text-white">{t("analysis.display.running_title")}</h3>
               <p className="text-sm text-slate-400 max-w-md mx-auto">
                 {t("analysis.display.running_subtitle")}
               </p>
+              <div className="max-w-md mx-auto rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-200 flex items-start gap-3 text-left">
+                <span className="text-base shrink-0 mt-0.5">⏳</span>
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-amber-300 block">
+                    {t("analysis.display.running_wait_time_title")}
+                  </span>
+                  <p className="text-amber-200/90 leading-relaxed">
+                    {t("analysis.display.running_wait_time_desc")}
+                  </p>
+                </div>
+              </div>
               <div className="text-xs font-mono text-slate-500">{t("analysis.display.running_refresh_hint")}</div>
             </div>
           ) : activeReport.status === "failed" ? (

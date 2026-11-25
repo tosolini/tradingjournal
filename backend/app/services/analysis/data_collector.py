@@ -81,6 +81,7 @@ class AnalysisDataBundle:
     trade_idea_context: Optional[TradeIdeaContext] = None
     trade_context: Optional[TradeContext] = None
     past_trades_summary: list[dict[str, Any]] = field(default_factory=list)
+    target_direction: Optional[str] = "both"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert bundle to JSON-serializable dictionary for agent state."""
@@ -89,6 +90,7 @@ class AnalysisDataBundle:
             "market": self.market,
             "instrument_type": self.instrument_type,
             "current_price": float(self.current_price) if self.current_price is not None else None,
+            "target_direction": self.target_direction,
             "technical": self.technical,
             "cyclical": self.cyclical,
             "fundamentals": self.fundamentals,
@@ -157,6 +159,7 @@ def collect_analysis_data(
     holding_id: Optional[int] = None,
     trade_idea_id: Optional[int] = None,
     trade_id: Optional[int] = None,
+    target_direction: Optional[str] = "both",
     provider: Optional[BaseDataProvider] = None,
 ) -> AnalysisDataBundle:
     """Consolidate market data, math indicators, and DB portfolio context."""
@@ -298,6 +301,17 @@ def collect_analysis_data(
             "close_reason": pt.close_reason,
         })
 
+    # Resolve target direction bias
+    resolved_direction = (target_direction or "both").lower()
+    if trade_ctx:
+        resolved_direction = (trade_ctx.side or "long").lower()
+    elif idea_ctx:
+        resolved_direction = (idea_ctx.direction or "long").lower()
+    elif holding_ctx:
+        resolved_direction = "long"
+    elif resolved_direction not in ("both", "long", "short"):
+        resolved_direction = "both"
+
     return AnalysisDataBundle(
         symbol=symbol,
         market=market,
@@ -311,4 +325,5 @@ def collect_analysis_data(
         trade_idea_context=idea_ctx,
         trade_context=trade_ctx,
         past_trades_summary=past_trades_summary,
+        target_direction=resolved_direction,
     )

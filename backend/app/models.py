@@ -190,6 +190,7 @@ class TradeImage(TimestampMixin, Base):
     trade_id: Mapped[int] = mapped_column(ForeignKey("trades.id"), index=True)
     original_path: Mapped[str] = mapped_column(String(255))
     annotated_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    annotations_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     mime_type: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
 
     trade: Mapped[Trade] = relationship(back_populates="images")
@@ -446,3 +447,9 @@ class AnalysisReport(TimestampMixin, Base):
     holding: Mapped[Optional["Holding"]] = relationship()
     trade_idea: Mapped[Optional["TradeIdea"]] = relationship()
     trade: Mapped[Optional["Trade"]] = relationship()
+
+    @property
+    def target_direction(self) -> Optional[str]:
+        if self.data_snapshot and isinstance(self.data_snapshot, dict):
+            return self.data_snapshot.get("target_direction")
+        return None

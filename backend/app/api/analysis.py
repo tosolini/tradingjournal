@@ -23,7 +23,9 @@ from app.schemas import (
 )
 from app.services.analysis.agents.llm_factory import get_user_llm_client, test_llm_connection
 from app.services.analysis.agents.pipeline import run_agentic_analysis
+from app.services.analysis.cyclical_wave import compute_chart_dataset
 from app.services.analysis.data_collector import collect_analysis_data
+from app.services.analysis.data_providers.yfinance_provider import YFinanceDataProvider
 
 router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
@@ -42,6 +44,7 @@ def _execute_analysis_background(report_id: int):
             db.commit()
 
             # 1. Collect data bundle
+            target_direction = (report.data_snapshot or {}).get("target_direction", "both")
             bundle = collect_analysis_data(
                 db=db,
                 user_id=report.user_id,
@@ -50,6 +53,7 @@ def _execute_analysis_background(report_id: int):
                 holding_id=report.holding_id,
                 trade_idea_id=report.trade_idea_id,
                 trade_id=report.trade_id,
+                target_direction=target_direction,
             )
 
             # 2. Resolve client from user preferences or system fallback
@@ -202,6 +206,9 @@ def start_analysis_job(
     """Launch asynchronous multi-agent asset coaching analysis."""
     lang = (payload.language or settings.analysis_default_language or "it").lower()
     selected_language = "en" if lang.startswith("en") else "it"
+    direction = (payload.direction or "both").lower()
+    if direction not in ("both", "long", "short"):
+        direction = "both"
 
     report = AnalysisReport(
         user_id=current_user.id,
@@ -213,6 +220,7 @@ def start_analysis_job(
         language=selected_language,
         trigger_mode="manual",
         status="pending",
+        data_snapshot={"target_direction": direction},
     )
     db.add(report)
     db.commit()
@@ -303,6 +311,40 @@ def get_analysis_report(
     if not report:
         raise HTTPException(status_code=404, detail="Analysis report not found")
     return report
+
+
+@router.get("/{analysis_id}/chart-data")
+def get_analysis_chart_data(
+    analysis_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve full candlestick and overlay indicator datasets for interactive charts."""
+    report = db.execute(
+        select(AnalysisReport).where(
+            AnalysisReport.id == analysis_id,
+            AnalysisReport.user_id == current_user.id,
+        )
+    ).scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Analysis report not found")
+
+    provider = YFinanceDataProvider()
+    ohlcv = provider.fetch_ohlcv(report.symbol, market=report.market, period="2y", interval="1d")
+
+    data_snapshot = report.data_snapshot or {}
+    tech_bundle = data_snapshot.get("technical") or {}
+    cyc_bundle = data_snapshot.get("cyclical") or {}
+
+    chart_dataset = compute_chart_dataset(
+        df=ohlcv,
+        symbol=report.symbol,
+        market=report.market,
+        cyclical_bundle=cyc_bundle,
+        technical_bundle=tech_bundle,
+        coach_snapshot=data_snapshot,
+    )
+    return chart_dataset
 
 
 @router.delete("/{analysis_id}")

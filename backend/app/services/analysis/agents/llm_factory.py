@@ -157,7 +157,8 @@ def get_llm_client(
 
     elif prov == "ollama":
         ollama_url = b_url or "http://localhost:11434/v1"
-        return OpenAIChatClient(api_key="ollama", model=mod or "llama3.2", base_url=ollama_url)
+        effective_key = key or "ollama"
+        return OpenAIChatClient(api_key=effective_key, model=mod or "llama3.2", base_url=ollama_url)
 
     elif prov == "openai":
         if not key:
@@ -309,15 +310,40 @@ def test_llm_connection(
 
         elif prov == "ollama":
             eff_base_url = (base_url or settings.analysis_base_url or "http://localhost:11434").rstrip("/")
-            # Remove trailing /v1 if present for tags check
+            headers = {}
+            if effective_key and effective_key.lower() != "ollama":
+                headers["Authorization"] = f"Bearer {effective_key}"
+
+            # 1. If an API key is provided, or the URL targets an OpenAI-style endpoint (/v1) or custom port, test /chat/completions first
+            if headers or eff_base_url.endswith("/v1") or ":8000" in eff_base_url:
+                chat_url = f"{eff_base_url}/chat/completions" if eff_base_url.endswith("/v1") else f"{eff_base_url}/v1/chat/completions"
+                payload = {
+                    "model": (model or "llama3.2").strip(),
+                    "messages": [{"role": "user", "content": "Ping"}],
+                    "max_tokens": 5,
+                }
+                try:
+                    resp = requests.post(chat_url, headers={"Content-Type": "application/json", **headers}, json=payload, timeout=12)
+                    latency_ms = int((time.perf_counter() - t_start) * 1000)
+                    if resp.status_code == 200:
+                        return True, latency_ms, _tr("test.success_ollama", url=eff_base_url), None
+                    if resp.status_code in (401, 403):
+                        return False, latency_ms, _tr("test.ollama_error"), f"HTTP {resp.status_code}: {resp.text[:200]}"
+                except Exception as ex:
+                    logger.debug("OpenAI-compatible check on %s failed: %s", chat_url, ex)
+
+            # 2. Try native Ollama /api/tags
             root_url = eff_base_url[:-3] if eff_base_url.endswith("/v1") else eff_base_url
             tags_url = f"{root_url}/api/tags"
-            resp = requests.get(tags_url, timeout=6)
-            latency_ms = int((time.perf_counter() - t_start) * 1000)
-            if resp.status_code == 200:
-                return True, latency_ms, _tr("test.success_ollama", url=root_url), None
-            else:
-                return False, latency_ms, _tr("test.ollama_error"), f"HTTP {resp.status_code}: {resp.text[:200]}"
+            try:
+                resp = requests.get(tags_url, headers=headers, timeout=6)
+                latency_ms = int((time.perf_counter() - t_start) * 1000)
+                if resp.status_code == 200:
+                    return True, latency_ms, _tr("test.success_ollama", url=root_url), None
+                else:
+                    return False, latency_ms, _tr("test.ollama_error"), f"HTTP {resp.status_code}: {resp.text[:200]}"
+            except Exception as e:
+                return False, None, _tr("test.connection_failed"), str(e)
 
         elif prov == "openrouter":
             if not effective_key:

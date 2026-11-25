@@ -4,6 +4,7 @@ import { AnalysisReportDetail } from "../../lib/api";
 import { ScoreGauge } from "./ScoreGauge";
 import { ConvertAnalysisModal } from "./ConvertAnalysisModal";
 import { ReportMarkdownViewer } from "./ReportMarkdownViewer";
+import { AnalysisInteractiveChart } from "./AnalysisInteractiveChart";
 
 interface ReportViewerProps {
   report: AnalysisReportDetail;
@@ -57,6 +58,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
   // Extract trade context if present
   const tradeCtx = (report.data_snapshot?.trade_context as Record<string, any>) || null;
+  const targetDirection = (report.data_snapshot?.target_direction as string) || null;
 
   // Extract fundamental snapshot metrics
   const fundSnapshot = (report.data_snapshot?.fundamental as Record<string, any>) || {};
@@ -90,6 +92,23 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
               <span className="text-xs px-2 py-0.5 rounded capitalize text-slate-400 bg-slate-800/80">
                 {report.trigger_mode}
               </span>
+              {targetDirection && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded font-semibold border ${
+                    targetDirection === "short"
+                      ? "bg-rose-500/20 text-rose-300 border-rose-500/30"
+                      : targetDirection === "long"
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                      : "bg-slate-800 text-slate-300 border-slate-700"
+                  }`}
+                >
+                  {targetDirection === "short"
+                    ? `🔴 ${t("analysis.viewer.direction_short")}`
+                    : targetDirection === "long"
+                    ? `🟢 ${t("analysis.viewer.direction_long")}`
+                    : `⚖️ ${t("analysis.viewer.direction_both")}`}
+                </span>
+              )}
             </div>
             <p className="text-sm text-slate-400">
               {report.completed_at
@@ -406,6 +425,15 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
             </div>
           </div>
 
+          {/* Interactive Cyclical Candlestick & FFT Harmonic Wave Chart */}
+          <AnalysisInteractiveChart
+            reportId={report.id}
+            symbol={report.symbol}
+            market={report.market}
+            mode="cyclical"
+            height={440}
+          />
+
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <span aria-hidden="true">🔄</span> {t("analysis.viewer.cyclical.report_title")}
@@ -420,14 +448,25 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report }) => {
 
       {/* Tab 5: Technical Analysis */}
       {activeTab === "technical" && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span aria-hidden="true">📈</span> {t("analysis.viewer.technical.title")}
-          </h3>
-          <ReportMarkdownViewer
-            content={report.technical_report}
-            emptyText={t("analysis.viewer.technical.empty")}
+        <div className="space-y-6">
+          {/* Interactive Technical Candlestick & Moving Averages Chart */}
+          <AnalysisInteractiveChart
+            reportId={report.id}
+            symbol={report.symbol}
+            market={report.market}
+            mode="technical"
+            height={460}
           />
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span aria-hidden="true">📈</span> {t("analysis.viewer.technical.title")}
+            </h3>
+            <ReportMarkdownViewer
+              content={report.technical_report}
+              emptyText={t("analysis.viewer.technical.empty")}
+            />
+          </div>
         </div>
       )}
 
