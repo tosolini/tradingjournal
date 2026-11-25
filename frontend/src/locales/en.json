@@ -298,6 +298,9 @@
       "optional_for_ollama": "optional for standard Ollama, required for authenticated local servers like oMLX/vLLM",
       "api_key_placeholder": "Enter your API key (e.g. AIza... / sk-...)",
       "api_key_placeholder_local": "Optional: e.g. sk-omlx-... or leave empty for Ollama",
+      "api_key_configured_placeholder": "•••••••• (configured)",
+      "show_api_key": "Show API key",
+      "hide_api_key": "Hide API key",
       "api_key_hint": "Your API key is securely stored in your local database and never shared externally.",
       "base_url_label": "Base URL Endpoint (optional)",
       "base_url_placeholder": "e.g. http://localhost:11434/v1 or http://host.docker.internal:11434/v1",
@@ -1677,7 +1680,11 @@
       "turning_windows_detected": "Turning Windows Detected",
       "cyclical_projection_notice": "Harmonic FFT projection and statistical turning windows (expected cycle bottoms and tops). Markers highlight turning windows.",
       "technical_chart_title": "Candlestick Chart & Technical Indicators",
-      "cyclical_chart_title": "Candlestick Chart & FFT Cyclical Projection"
+      "cyclical_chart_title": "Candlestick Chart & FFT Cyclical Projection",
+      "support_short": "Sup",
+      "resistance_short": "Res",
+      "estimated": "estimated",
+      "historical": "historical"
     },
     "viewer": {
       "completed_at": "Analysis completed on {{date}}",

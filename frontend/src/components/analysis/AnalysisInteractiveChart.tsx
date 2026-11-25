@@ -33,7 +33,12 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
   mode,
   height = 460,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const formatPrice = (val: number) =>
+    new Intl.NumberFormat(i18n.language || undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(val);
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -225,7 +230,7 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
       // Supports & Resistances
       if (showLevels) {
         (tech.supports || []).forEach((sup, idx) => {
-          const title = `Sup ${idx + 1} (${sup.toFixed(2)})`;
+          const title = `${t("analysis.charts.support_short")} ${idx + 1} (${formatPrice(sup)})`;
           const line = candleSeries.createPriceLine({
             price: sup,
             color: "#10b981", // Emerald
@@ -238,7 +243,7 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
         });
 
         (tech.resistances || []).forEach((res, idx) => {
-          const title = `Res ${idx + 1} (${res.toFixed(2)})`;
+          const title = `${t("analysis.charts.resistance_short")} ${idx + 1} (${formatPrice(res)})`;
           const line = candleSeries.createPriceLine({
             price: res,
             color: "#f43f5e", // Rose
@@ -676,7 +681,7 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
                     <span>{isTrough ? "▲" : "▼"}</span>
                     <span className="font-semibold">{tp.label}:</span>
                     <span className="font-mono text-white">{tp.date}</span>
-                    <span className="text-slate-400">@ {tp.value.toFixed(2)}</span>
+                    <span className="text-slate-400">@ {formatPrice(tp.value)}</span>
                     {tp.window_start && tp.window_end && (
                       <span className="text-[10px] text-slate-400 border-l border-slate-700 pl-1.5 font-mono">
                         [{tp.window_start} ~ {tp.window_end}]
@@ -684,11 +689,11 @@ export const AnalysisInteractiveChart: React.FC<AnalysisInteractiveChartProps> =
                     )}
                     {tp.is_projection ? (
                       <span className="text-[9px] uppercase px-1 py-0.5 rounded bg-cyan-900/60 text-cyan-300 font-semibold">
-                        stimato
+                        {t("analysis.charts.estimated")}
                       </span>
                     ) : (
                       <span className="text-[9px] uppercase px-1 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">
-                        storico
+                        {t("analysis.charts.historical")}
                       </span>
                     )}
                   </div>

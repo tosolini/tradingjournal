@@ -347,7 +347,7 @@ export function LlmSettingsWizard() {
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder={
                   hasSavedKeyForProvider && !apiKey
-                    ? "•••••••• (configurata)"
+                    ? t("settings.llm.api_key_configured_placeholder")
                     : activeProviderDef.requiresKey
                     ? t("settings.llm.api_key_placeholder")
                     : t("settings.llm.api_key_placeholder_local")
@@ -357,7 +357,7 @@ export function LlmSettingsWizard() {
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
-                aria-label={showKey ? "Nascondi chiave" : "Mostra chiave"}
+                aria-label={showKey ? t("settings.llm.hide_api_key") : t("settings.llm.show_api_key")}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200"
               >
                 {showKey ? "🔒" : "👁️"}

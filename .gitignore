@@ -16,4 +16,3 @@ opencode.json
 *.tsbuildinfo
 .gemini
 .venv
-scripts/

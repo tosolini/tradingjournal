@@ -350,7 +350,8 @@ export function CommandPalette({ open, onClose, onOpenNewTrade, onOpenCredits }:
     // 2. If a report matches, show AT MOST 1 item (the single latest report, never a flooded list)
     if (latestMatchedReport) {
       const r = latestMatchedReport;
-      const scoreText = r.overall_score != null ? `Score: ${r.overall_score}/100` : "";
+      const scoreText =
+        r.overall_score != null ? `${t("analysis.viewer.coach_score")}: ${r.overall_score}/100` : "";
       const dateText = r.created_at ? new Date(r.created_at).toLocaleDateString() : "";
       const meta = [scoreText, dateText, r.market].filter(Boolean).join(" · ");
 
